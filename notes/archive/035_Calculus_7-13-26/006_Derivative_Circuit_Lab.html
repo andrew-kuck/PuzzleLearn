@@ -1,0 +1,1657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Derivative Circuit Lab</title>
+<style>
+  :root {
+    --bg: #08111f;
+    --panel: #111c2e;
+    --panel2: #16243a;
+    --ink: #eef6ff;
+    --muted: #9fb3c8;
+    --blue: #38bdf8;
+    --cyan: #67e8f9;
+    --green: #4ade80;
+    --yellow: #fde047;
+    --orange: #fb923c;
+    --red: #fb7185;
+    --purple: #c084fc;
+    --wire: #51657e;
+    --slot: #22344f;
+    --shadow: rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(circle at top left, rgba(56,189,248,.18), transparent 32rem),
+      radial-gradient(circle at top right, rgba(192,132,252,.16), transparent 30rem),
+      linear-gradient(135deg, #050912, #0b1220 55%, #08111f);
+    min-height: 100vh;
+  }
+
+  header {
+    padding: 18px 22px;
+    border-bottom: 1px solid rgba(255,255,255,.09);
+    background: rgba(8,17,31,.78);
+    backdrop-filter: blur(10px);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(1.55rem, 3vw, 2.35rem);
+    letter-spacing: .02em;
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+  }
+
+  h1 span.logo {
+    width: 38px;
+    height: 38px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--blue), var(--purple));
+    color: #03101c;
+    font-weight: 900;
+    box-shadow: 0 0 24px rgba(56,189,248,.42);
+  }
+
+  header p {
+    margin: 7px 0 0;
+    color: var(--muted);
+    max-width: 1050px;
+    line-height: 1.45;
+  }
+
+  main {
+    display: grid;
+    grid-template-columns: 310px minmax(440px, 1fr) 410px;
+    gap: 14px;
+    padding: 14px;
+  }
+
+  @media (max-width: 1180px) {
+    main {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  section, aside {
+    background: rgba(17,28,46,.88);
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 18px;
+    box-shadow: 0 18px 40px var(--shadow);
+    overflow: hidden;
+  }
+
+  .panel-head {
+    padding: 13px 15px;
+    background: linear-gradient(90deg, rgba(56,189,248,.14), rgba(192,132,252,.08));
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .panel-head h2 {
+    font-size: 1rem;
+    margin: 0;
+    letter-spacing: .03em;
+  }
+
+  .panel-body {
+    padding: 14px;
+  }
+
+  .level-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  button {
+    border: 0;
+    cursor: pointer;
+    color: var(--ink);
+    background: #22344f;
+    border: 1px solid rgba(255,255,255,.09);
+    padding: 9px 11px;
+    border-radius: 12px;
+    font-weight: 700;
+    transition: transform .12s ease, background .12s ease, border-color .12s ease;
+  }
+
+  button:hover {
+    transform: translateY(-1px);
+    background: #2a4265;
+    border-color: rgba(103,232,249,.4);
+  }
+
+  button.active {
+    background: linear-gradient(135deg, rgba(56,189,248,.95), rgba(192,132,252,.9));
+    color: #06111e;
+  }
+
+  button.primary {
+    background: linear-gradient(135deg, var(--blue), var(--purple));
+    color: #06111e;
+  }
+
+  button.good {
+    background: linear-gradient(135deg, #22c55e, #86efac);
+    color: #062111;
+  }
+
+  button.warn {
+    background: linear-gradient(135deg, #f97316, #facc15);
+    color: #211006;
+  }
+
+  .small {
+    color: var(--muted);
+    font-size: .88rem;
+    line-height: 1.42;
+  }
+
+  .formula {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: #dbeafe;
+    background: rgba(0,0,0,.22);
+    border: 1px solid rgba(255,255,255,.08);
+    padding: 8px 10px;
+    border-radius: 11px;
+    overflow-wrap: anywhere;
+  }
+
+  .palette-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .palette-title {
+    margin: 15px 0 8px;
+    color: var(--cyan);
+    font-size: .82rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    font-weight: 900;
+  }
+
+  .drag {
+    user-select: none;
+    padding: 9px 9px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #243854, #1a2a43);
+    border: 1px solid rgba(255,255,255,.11);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 7px;
+    min-height: 42px;
+    cursor: grab;
+  }
+
+  .drag:active { cursor: grabbing; }
+
+  .drag .tag {
+    font-size: .74rem;
+    color: #07111f;
+    background: var(--cyan);
+    border-radius: 999px;
+    padding: 2px 6px;
+    font-weight: 900;
+  }
+
+  .drag.chip-drag {
+    border-color: rgba(253,224,71,.35);
+    background: linear-gradient(180deg, #3a321a, #231f13);
+  }
+
+  .drag.chip-drag .tag {
+    background: var(--yellow);
+  }
+
+  .hint-box, .status-box {
+    margin-top: 12px;
+    padding: 11px;
+    background: rgba(0,0,0,.22);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 14px;
+    color: #dbeafe;
+    line-height: 1.45;
+  }
+
+  .status-box {
+    min-height: 58px;
+  }
+
+  .status-box.success {
+    border-color: rgba(74,222,128,.55);
+    box-shadow: 0 0 18px rgba(74,222,128,.15);
+  }
+
+  .status-box.failure {
+    border-color: rgba(251,113,133,.55);
+    box-shadow: 0 0 18px rgba(251,113,133,.15);
+  }
+
+  .circuit-wrap {
+    position: relative;
+    min-height: 310px;
+    overflow: auto;
+    background:
+      linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px),
+      rgba(5,10,18,.28);
+    background-size: 24px 24px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,.07);
+    padding: 18px;
+  }
+
+  .wire-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wire {
+    fill: none;
+    stroke: var(--wire);
+    stroke-width: 3;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 3px rgba(103,232,249,.08));
+  }
+
+  .powered .wire {
+    stroke: var(--green);
+    filter: drop-shadow(0 0 8px rgba(74,222,128,.8));
+    animation: flow 1.2s linear infinite;
+    stroke-dasharray: 8 7;
+  }
+
+  @keyframes flow {
+    to { stroke-dashoffset: -30; }
+  }
+
+  .tree {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 100%;
+  }
+
+  .slot {
+    min-width: 96px;
+    min-height: 48px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .slot.empty {
+    border: 2px dashed rgba(103,232,249,.45);
+    background: rgba(34,52,79,.66);
+    color: var(--muted);
+    padding: 7px 10px;
+  }
+
+  .slot.empty::after {
+    content: "drop module";
+    font-size: .78rem;
+    color: #bfd7ee;
+  }
+
+  .slot.drag-over {
+    background: rgba(103,232,249,.25);
+    border-color: var(--cyan);
+    box-shadow: 0 0 18px rgba(103,232,249,.3);
+  }
+
+  .module {
+    min-width: 96px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,.14);
+    background: linear-gradient(180deg, #273c5a, #17273f);
+    box-shadow: 0 12px 20px rgba(0,0,0,.24);
+    position: relative;
+    z-index: 2;
+  }
+
+  .module.original-node {
+    background: linear-gradient(180deg, #283752, #152235);
+  }
+
+  .module.builder-node {
+    animation: pop .14s ease;
+  }
+
+  @keyframes pop {
+    from { transform: scale(.96); opacity: .6; }
+  }
+
+  .powered .module.builder-node {
+    border-color: rgba(74,222,128,.8);
+    box-shadow: 0 0 18px rgba(74,222,128,.3), 0 12px 20px rgba(0,0,0,.24);
+  }
+
+  .warning-pulse .module.builder-node {
+    border-color: rgba(251,113,133,.75);
+    animation: warningPulse .55s ease-in-out 3;
+  }
+
+  @keyframes warningPulse {
+    50% {
+      transform: translateX(2px);
+      box-shadow: 0 0 22px rgba(251,113,133,.45);
+    }
+  }
+
+  .module-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 9px 10px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+
+  .module-title {
+    font-weight: 900;
+    color: #eef6ff;
+    white-space: nowrap;
+  }
+
+  .module-kind {
+    font-size: .71rem;
+    color: #07111f;
+    background: var(--blue);
+    padding: 2px 6px;
+    border-radius: 999px;
+    font-weight: 900;
+    margin-left: 5px;
+  }
+
+  .module.chip {
+    border-color: rgba(253,224,71,.4);
+    background: linear-gradient(180deg, #4a3a19, #221d11);
+  }
+
+  .module.chip .module-kind {
+    background: var(--yellow);
+  }
+
+  .module.const .module-kind {
+    background: #a7f3d0;
+  }
+
+  .module.op-add .module-kind,
+  .module.op-sub .module-kind {
+    background: #93c5fd;
+  }
+
+  .module.op-mul .module-kind,
+  .module.op-div .module-kind {
+    background: #c4b5fd;
+  }
+
+  .module.op-sin .module-kind,
+  .module.op-cos .module-kind,
+  .module.op-exp .module-kind {
+    background: #f0abfc;
+  }
+
+  .module.op-pow .module-kind {
+    background: #fdba74;
+  }
+
+  .remove {
+    border: 0;
+    background: rgba(251,113,133,.2);
+    color: #fecdd3;
+    border-radius: 8px;
+    padding: 2px 7px;
+    font-size: .82rem;
+  }
+
+  .remove:hover {
+    background: rgba(251,113,133,.36);
+    transform: none;
+  }
+
+  .children {
+    display: flex;
+    gap: 28px;
+    padding: 18px 12px 10px;
+    align-items: flex-start;
+    justify-content: center;
+  }
+
+  .children.unary {
+    gap: 0;
+  }
+
+  .child-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .child-label {
+    color: var(--muted);
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    font-weight: 900;
+  }
+
+  input.const-input {
+    width: 70px;
+    background: rgba(0,0,0,.25);
+    color: var(--ink);
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 9px;
+    padding: 4px 6px;
+    font-weight: 800;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .graph {
+    background: #050912;
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 14px;
+    width: 100%;
+    height: 310px;
+  }
+
+  .graph text {
+    font-size: 12px;
+    fill: #b8c7d8;
+  }
+
+  .engine {
+    margin-top: 12px;
+    min-height: 96px;
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,.1);
+    background:
+      radial-gradient(circle at center, rgba(56,189,248,.16), transparent 45%),
+      linear-gradient(180deg, #17243a, #0c1524);
+    display: grid;
+    place-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .engine-core {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    border: 4px solid #344b6b;
+    display: grid;
+    place-items: center;
+    font-weight: 1000;
+    color: var(--muted);
+    background: #07111f;
+    box-shadow: inset 0 0 18px rgba(0,0,0,.8);
+  }
+
+  .engine.powered .engine-core {
+    border-color: var(--green);
+    color: #dcfce7;
+    box-shadow: 0 0 32px rgba(74,222,128,.55), inset 0 0 18px rgba(74,222,128,.18);
+    animation: engineSpin 2.2s linear infinite;
+  }
+
+  @keyframes engineSpin {
+    to { transform: rotate(360deg); }
+  }
+
+  .spark {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--orange);
+    box-shadow: 0 0 12px var(--orange);
+    animation: sparkFly .75s ease-out forwards;
+  }
+
+  @keyframes sparkFly {
+    to {
+      transform: translate(var(--dx), var(--dy));
+      opacity: 0;
+    }
+  }
+
+  .chip-list {
+    display: grid;
+    gap: 8px;
+  }
+
+  .chip-card {
+    padding: 8px 10px;
+    border-radius: 12px;
+    background: rgba(253,224,71,.08);
+    border: 1px solid rgba(253,224,71,.18);
+  }
+
+  .chip-card strong {
+    color: var(--yellow);
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(103,232,249,.17);
+    border: 1px solid rgba(103,232,249,.25);
+    color: #dffbff;
+    font-size: .75rem;
+    font-weight: 900;
+  }
+
+  .legend-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: .84rem;
+  }
+
+  .legend-dot {
+    display: inline-block;
+    width: 12px;
+    height: 3px;
+    vertical-align: middle;
+    margin-right: 4px;
+    border-radius: 999px;
+  }
+
+  .sr-only {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="logo">d</span> Derivative Circuit Lab</h1>
+  <p>
+    Build a derivative circuit from modules. The original function is shown as a machine;
+    your job is to wire a new machine whose output matches the instantaneous slope.
+    Numerical testing accepts algebraically equivalent derivative circuits.
+  </p>
+</header>
+
+<main>
+  <aside>
+    <div class="panel-head">
+      <h2>Levels</h2>
+      <span class="badge" id="solvedBadge">0 / 6 powered</span>
+    </div>
+    <div class="panel-body">
+      <div class="level-buttons" id="levelButtons"></div>
+
+      <div class="palette-title">Operation modules</div>
+      <div class="palette-grid" id="opPalette"></div>
+
+      <div class="palette-title">Number modules</div>
+      <div class="palette-grid" id="constPalette"></div>
+
+      <div class="palette-title">Structure boxes</div>
+      <p class="small">
+        These boxes are named pieces of the original circuit. Use them when the derivative rule
+        depends on “inside,” “outside,” factors, or numerator/denominator.
+      </p>
+      <div class="palette-grid" id="chipPalette"></div>
+
+      <div class="hint-box" id="hintBox">
+        Select a level to see structure hints.
+      </div>
+
+      <div class="actions">
+        <button id="hintBtn">Reveal structure hint</button>
+        <button id="resetBtn">Reset circuit</button>
+      </div>
+    </div>
+  </aside>
+
+  <section>
+    <div class="panel-head">
+      <h2>Original Function Circuit</h2>
+      <span class="badge" id="levelName"></span>
+    </div>
+    <div class="panel-body">
+      <div class="formula" id="formulaText"></div>
+      <div class="circuit-wrap" id="originalCanvas">
+        <svg class="wire-svg" id="originalWires"></svg>
+        <div class="tree" id="originalTree"></div>
+      </div>
+
+      <div class="palette-title">Visual decomposition scanner</div>
+      <div class="chip-list" id="decompList"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="panel-head">
+      <h2>Your Derivative Circuit</h2>
+      <span class="badge" id="scoreBadge">Efficiency: —</span>
+    </div>
+    <div class="panel-body">
+      <div class="circuit-wrap" id="builderCanvas">
+        <svg class="wire-svg" id="builderWires"></svg>
+        <div class="tree">
+          <div id="builderRoot"></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="primary" id="checkBtn">Test derivative circuit</button>
+        <button id="nextBtn">Next level</button>
+      </div>
+
+      <div class="status-box" id="statusBox">
+        Drag a module into the root slot. Wires appear automatically between connected modules.
+      </div>
+
+      <div class="palette-title">Slope comparison graph</div>
+      <svg class="graph" id="graphSvg" viewBox="0 0 400 310" role="img" aria-label="Graph comparing actual derivative and student derivative"></svg>
+      <div class="legend-row">
+        <span><span class="legend-dot" style="background:#64748b"></span>original function</span>
+        <span><span class="legend-dot" style="background:#fde047"></span>actual slope</span>
+        <span><span class="legend-dot" style="background:#67e8f9"></span>your circuit</span>
+      </div>
+
+      <div class="engine" id="engine">
+        <div class="engine-core">∂</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* =========================================================
+   Expression helpers
+   ========================================================= */
+const X = () => ({ op: "x" });
+const C = value => ({ op: "const", value });
+const Chip = id => ({ op: "chip", id });
+const N = (op, a, b) => ({ op, a, b });
+const U = (op, a) => ({ op, a });
+
+function clone(e) {
+  return JSON.parse(JSON.stringify(e));
+}
+
+function add(a,b){ return N("add", a, b); }
+function sub(a,b){ return N("sub", a, b); }
+function mul(a,b){ return N("mul", a, b); }
+function div(a,b){ return N("div", a, b); }
+function pow(a,b){ return N("pow", a, b); }
+function sin(a){ return U("sin", a); }
+function cos(a){ return U("cos", a); }
+function exp(a){ return U("exp", a); }
+function neg(a){ return U("neg", a); }
+
+function exprToText(e, level = currentLevel()) {
+  if (!e) return "□";
+  switch (e.op) {
+    case "x": return "x";
+    case "const": return String(Number(e.value));
+    case "chip": return level?.chips?.[e.id]?.label || e.id;
+    case "add": return "(" + exprToText(e.a, level) + " + " + exprToText(e.b, level) + ")";
+    case "sub": return "(" + exprToText(e.a, level) + " − " + exprToText(e.b, level) + ")";
+    case "mul": return "(" + exprToText(e.a, level) + " · " + exprToText(e.b, level) + ")";
+    case "div": return "(" + exprToText(e.a, level) + " / " + exprToText(e.b, level) + ")";
+    case "pow": return "(" + exprToText(e.a, level) + "^" + exprToText(e.b, level) + ")";
+    case "sin": return "sin(" + exprToText(e.a, level) + ")";
+    case "cos": return "cos(" + exprToText(e.a, level) + ")";
+    case "exp": return "exp(" + exprToText(e.a, level) + ")";
+    case "neg": return "−(" + exprToText(e.a, level) + ")";
+  }
+  return "?";
+}
+
+function evalExpr(e, x, level = currentLevel()) {
+  if (!e) return NaN;
+  try {
+    switch (e.op) {
+      case "x": return x;
+      case "const": return Number(e.value);
+      case "chip": {
+        const chip = level.chips[e.id];
+        if (!chip) return NaN;
+        return evalExpr(chip.expr, x, level);
+      }
+      case "add": return evalExpr(e.a, x, level) + evalExpr(e.b, x, level);
+      case "sub": return evalExpr(e.a, x, level) - evalExpr(e.b, x, level);
+      case "mul": return evalExpr(e.a, x, level) * evalExpr(e.b, x, level);
+      case "div": return evalExpr(e.a, x, level) / evalExpr(e.b, x, level);
+      case "pow": return Math.pow(evalExpr(e.a, x, level), evalExpr(e.b, x, level));
+      case "sin": return Math.sin(evalExpr(e.a, x, level));
+      case "cos": return Math.cos(evalExpr(e.a, x, level));
+      case "exp": return Math.exp(evalExpr(e.a, x, level));
+      case "neg": return -evalExpr(e.a, x, level);
+    }
+  } catch {
+    return NaN;
+  }
+  return NaN;
+}
+
+function derivative(e) {
+  if (!e) return C(NaN);
+  switch (e.op) {
+    case "x": return C(1);
+    case "const": return C(0);
+    case "add": return add(derivative(e.a), derivative(e.b));
+    case "sub": return sub(derivative(e.a), derivative(e.b));
+    case "mul":
+      return add(mul(derivative(e.a), clone(e.b)), mul(clone(e.a), derivative(e.b)));
+    case "div":
+      return div(
+        sub(mul(derivative(e.a), clone(e.b)), mul(clone(e.a), derivative(e.b))),
+        pow(clone(e.b), C(2))
+      );
+    case "pow": {
+      if (e.b && e.b.op === "const") {
+        const n = Number(e.b.value);
+        return mul(mul(C(n), pow(clone(e.a), C(n - 1))), derivative(e.a));
+      }
+      /* General power rule fallback using numerical derivative is intentionally omitted
+         from symbolic display; validation still evaluates student circuits numerically. */
+      return C(NaN);
+    }
+    case "sin": return mul(cos(clone(e.a)), derivative(e.a));
+    case "cos": return mul(neg(sin(clone(e.a))), derivative(e.a));
+    case "exp": return mul(exp(clone(e.a)), derivative(e.a));
+    case "neg": return neg(derivative(e.a));
+    case "chip": return C(NaN);
+  }
+  return C(NaN);
+}
+
+function simplifyForChips(e) {
+  return clone(e);
+}
+
+function countNodes(e) {
+  if (!e) return 0;
+  if (["x", "const", "chip"].includes(e.op)) return 1;
+  if (["sin", "cos", "exp", "neg"].includes(e.op)) return 1 + countNodes(e.a);
+  return 1 + countNodes(e.a) + countNodes(e.b);
+}
+
+function isComplete(e) {
+  if (!e) return false;
+  if (["x", "const", "chip"].includes(e.op)) return true;
+  if (["sin", "cos", "exp", "neg"].includes(e.op)) return isComplete(e.a);
+  return isComplete(e.a) && isComplete(e.b);
+}
+
+/* =========================================================
+   Levels
+   ========================================================= */
+const levels = [
+  {
+    name: "1. Sums and constant multiples",
+    short: "Sum",
+    expr: sub(add(mul(C(4), X()), C(7)), X()),
+    range: [-5, 5],
+    minNodes: 1,
+    chips: {
+      a: { label: "4x", desc: "constant multiple branch", expr: mul(C(4), X()) },
+      b: { label: "7", desc: "constant branch", expr: C(7) },
+      c: { label: "x", desc: "changing branch", expr: X() }
+    },
+    structure: [
+      "The root module is a subtraction.",
+      "The top add module combines a changing branch and a constant branch.",
+      "A constant branch contributes zero slope."
+    ],
+    hints: [
+      "Trace each wire separately: slopes add and subtract just like the outputs.",
+      "A constant multiplier rides along with the slope of its input.",
+      "Ask: which branches actually change when x changes?"
+    ]
+  },
+  {
+    name: "2. Powers and simple polynomials",
+    short: "Powers",
+    expr: add(sub(pow(X(), C(3)), mul(C(2), pow(X(), C(2)))), X()),
+    range: [-3, 3],
+    minNodes: 9,
+    chips: {
+      p: { label: "x³", desc: "power branch", expr: pow(X(), C(3)) },
+      q: { label: "2x²", desc: "constant multiple of a power", expr: mul(C(2), pow(X(), C(2))) },
+      r: { label: "x", desc: "linear branch", expr: X() }
+    },
+    structure: [
+      "The polynomial is a sum/difference of power branches.",
+      "Each power branch changes at its own rate.",
+      "The coefficient stays attached to that branch’s derivative."
+    ],
+    hints: [
+      "The power module xⁿ lowers its exponent by one and multiplies by n.",
+      "Handle the minus branch as a subtraction of slopes.",
+      "The x branch has slope 1."
+    ]
+  },
+  {
+    name: "3. Product rule",
+    short: "Product",
+    expr: mul(add(pow(X(), C(2)), C(1)), sin(X())),
+    range: [-5, 5],
+    minNodes: 7,
+    chips: {
+      u: { label: "u", desc: "left factor: x² + 1", expr: add(pow(X(), C(2)), C(1)) },
+      v: { label: "v", desc: "right factor: sin(x)", expr: sin(X()) },
+      du: { label: "u′", desc: "slope of left factor", expr: mul(C(2), X()) },
+      dv: { label: "v′", desc: "slope of right factor", expr: cos(X()) }
+    },
+    structure: [
+      "The root module is Multiply.",
+      "The left input is u = x² + 1.",
+      "The right input is v = sin(x)."
+    ],
+    hints: [
+      "In a product, both factors get a turn changing.",
+      "One term should change u while holding v; another term should hold u while changing v.",
+      "Look for two multiplied terms joined by an Add module."
+    ]
+  },
+  {
+    name: "4. Quotient rule",
+    short: "Quotient",
+    expr: div(add(pow(X(), C(2)), C(1)), sub(X(), C(1))),
+    range: [-4, 4],
+    minNodes: 11,
+    chips: {
+      u: { label: "u", desc: "numerator: x² + 1", expr: add(pow(X(), C(2)), C(1)) },
+      v: { label: "v", desc: "denominator: x − 1", expr: sub(X(), C(1)) },
+      du: { label: "u′", desc: "slope of numerator", expr: mul(C(2), X()) },
+      dv: { label: "v′", desc: "slope of denominator", expr: C(1) }
+    },
+    structure: [
+      "The root module is Divide.",
+      "The numerator box is u.",
+      "The denominator box is v, and v = 0 is an unsafe test point."
+    ],
+    hints: [
+      "A quotient’s denominator affects both the top correction and the bottom scaling.",
+      "The numerator has a difference of two products.",
+      "The bottom of the derivative circuit should involve the denominator box squared."
+    ]
+  },
+  {
+    name: "5. Chain rule",
+    short: "Chain",
+    expr: sin(add(pow(X(), C(2)), C(1))),
+    range: [-4, 4],
+    minNodes: 4,
+    chips: {
+      u: { label: "inner u", desc: "inside box: x² + 1", expr: add(pow(X(), C(2)), C(1)) },
+      du: { label: "u′", desc: "slope of inside box", expr: mul(C(2), X()) }
+    },
+    structure: [
+      "Outer function box: sin(□).",
+      "Inner function box: u = x² + 1.",
+      "The outside sees the whole inside box, not just x."
+    ],
+    hints: [
+      "First identify what is inside the sine module.",
+      "The outside derivative is cosine evaluated at the same inside box.",
+      "The outside slope must be multiplied by the inside slope."
+    ]
+  },
+  {
+    name: "6. Final boss: product plus chain",
+    short: "Boss",
+    expr: mul(exp(add(pow(X(), C(2)), C(1))), cos(X())),
+    range: [-3, 3],
+    minNodes: 11,
+    chips: {
+      u: { label: "inner u", desc: "inside exponential: x² + 1", expr: add(pow(X(), C(2)), C(1)) },
+      du: { label: "u′", desc: "slope of inside exponential", expr: mul(C(2), X()) },
+      a: { label: "A", desc: "left factor: exp(u)", expr: exp(add(pow(X(), C(2)), C(1))) },
+      b: { label: "B", desc: "right factor: cos(x)", expr: cos(X()) }
+    },
+    structure: [
+      "The root module is Multiply.",
+      "Left factor A is itself a chain: exp(inner u).",
+      "Right factor B is cos(x)."
+    ],
+    hints: [
+      "Use the product rule at the root: A changes while B waits, plus B changes while A waits.",
+      "The derivative of A needs a chain-rule multiplier from inner u.",
+      "The derivative of cos(x) points negative: −sin(x)."
+    ]
+  }
+];
+
+/* =========================================================
+   App state
+   ========================================================= */
+let state = {
+  levelIndex: 0,
+  student: null,
+  hintIndex: 0,
+  solved: new Set()
+};
+
+function currentLevel() {
+  return levels[state.levelIndex];
+}
+
+/* =========================================================
+   Palette rendering and drag data
+   ========================================================= */
+const opSpecs = [
+  { op: "add", label: "Add", tag: "+" },
+  { op: "sub", label: "Difference", tag: "−" },
+  { op: "mul", label: "Multiply", tag: "×" },
+  { op: "div", label: "Divide", tag: "÷" },
+  { op: "pow", label: "Power", tag: "^" },
+  { op: "sin", label: "Sine", tag: "sin" },
+  { op: "cos", label: "Cosine", tag: "cos" },
+  { op: "exp", label: "Exponential", tag: "exp" },
+  { op: "neg", label: "Negative", tag: "−" },
+  { op: "x", label: "Input x", tag: "x" }
+];
+
+const constSpecs = [0, 1, 2, 3, 4, 5, -1].map(n => ({
+  op: "const",
+  value: n,
+  label: String(n),
+  tag: "#"
+}));
+
+function createNodeFromSpec(spec) {
+  switch (spec.op) {
+    case "const": return C(spec.value ?? 1);
+    case "x": return X();
+    case "chip": return Chip(spec.id);
+    case "sin":
+    case "cos":
+    case "exp":
+    case "neg":
+      return { op: spec.op, a: null };
+    case "add":
+    case "sub":
+    case "mul":
+    case "div":
+    case "pow":
+      return { op: spec.op, a: null, b: null };
+  }
+  return null;
+}
+
+function renderPalette() {
+  const opPalette = document.getElementById("opPalette");
+  opPalette.innerHTML = "";
+  opSpecs.forEach(spec => {
+    opPalette.appendChild(makeDrag(spec));
+  });
+
+  const constPalette = document.getElementById("constPalette");
+  constPalette.innerHTML = "";
+  constSpecs.forEach(spec => constPalette.appendChild(makeDrag(spec)));
+
+  const chipPalette = document.getElementById("chipPalette");
+  chipPalette.innerHTML = "";
+  const level = currentLevel();
+  Object.entries(level.chips).forEach(([id, chip]) => {
+    chipPalette.appendChild(makeDrag({
+      op: "chip",
+      id,
+      label: chip.label,
+      tag: "box",
+      title: chip.desc,
+      chip: true
+    }));
+  });
+}
+
+function makeDrag(spec) {
+  const el = document.createElement("div");
+  el.className = "drag" + (spec.chip ? " chip-drag" : "");
+  el.draggable = true;
+  el.title = spec.title || "";
+  el.innerHTML = `<strong>${spec.label}</strong><span class="tag">${spec.tag}</span>`;
+  el.addEventListener("dragstart", ev => {
+    ev.dataTransfer.setData("application/json", JSON.stringify(spec));
+    ev.dataTransfer.effectAllowed = "copy";
+  });
+  return el;
+}
+
+/* =========================================================
+   Path utilities
+   ========================================================= */
+function pathKey(path) {
+  return path.length ? "root." + path.join(".") : "root";
+}
+function pathFromKey(key) {
+  if (key === "root") return [];
+  return key.replace(/^root\./, "").split(".");
+}
+function getAtPath(root, path) {
+  let n = root;
+  for (const p of path) {
+    if (!n) return null;
+    n = n[p];
+  }
+  return n;
+}
+function setAtPath(rootRef, path, value) {
+  if (path.length === 0) {
+    state.student = value;
+    return;
+  }
+  let n = rootRef;
+  for (let i = 0; i < path.length - 1; i++) n = n[path[i]];
+  n[path[path.length - 1]] = value;
+}
+
+/* =========================================================
+   Circuit rendering
+   ========================================================= */
+function moduleLabel(e, level = currentLevel()) {
+  if (!e) return "□";
+  switch (e.op) {
+    case "x": return "x";
+    case "const": return String(Number(e.value));
+    case "chip": return level.chips[e.id]?.label || e.id;
+    case "add": return "Add";
+    case "sub": return "Difference";
+    case "mul": return "Multiply";
+    case "div": return "Divide";
+    case "pow": return "Power";
+    case "sin": return "Sine";
+    case "cos": return "Cosine";
+    case "exp": return "Exponential";
+    case "neg": return "Negative";
+  }
+}
+
+function kindLabel(e) {
+  if (!e) return "";
+  if (e.op === "const") return "#";
+  if (e.op === "x") return "input";
+  if (e.op === "chip") return "box";
+  if (["add","sub","mul","div","pow"].includes(e.op)) return e.op;
+  return "outer";
+}
+
+function opClass(e) {
+  if (!e) return "";
+  if (e.op === "chip") return "chip";
+  if (e.op === "const") return "const";
+  return "op-" + e.op;
+}
+
+function childInfo(e) {
+  if (!e) return [];
+  if (["sin", "cos", "exp", "neg"].includes(e.op)) return [{ key: "a", label: e.op === "neg" ? "input" : "inside" }];
+  if (["add", "sub", "mul", "div", "pow"].includes(e.op)) {
+    if (e.op === "div") return [{ key: "a", label: "top" }, { key: "b", label: "bottom" }];
+    if (e.op === "pow") return [{ key: "a", label: "base" }, { key: "b", label: "exponent" }];
+    return [{ key: "a", label: "left" }, { key: "b", label: "right" }];
+  }
+  return [];
+}
+
+function renderBuilder() {
+  const root = document.getElementById("builderRoot");
+  root.innerHTML = "";
+  root.appendChild(renderSlot([]));
+  document.getElementById("builderCanvas").classList.remove("powered", "warning-pulse");
+  document.getElementById("engine").classList.remove("powered");
+  setTimeout(() => {
+    drawBuilderWires();
+    drawGraph();
+  }, 0);
+}
+
+function renderSlot(path) {
+  const n = getAtPath(state.student, path);
+  const slot = document.createElement("div");
+  slot.className = "slot " + (n ? "filled" : "empty");
+  slot.dataset.slotPath = pathKey(path);
+
+  if (!n) {
+    slot.addEventListener("dragover", ev => {
+      ev.preventDefault();
+      slot.classList.add("drag-over");
+    });
+    slot.addEventListener("dragleave", () => slot.classList.remove("drag-over"));
+    slot.addEventListener("drop", ev => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      slot.classList.remove("drag-over");
+      const raw = ev.dataTransfer.getData("application/json");
+      if (!raw) return;
+      const spec = JSON.parse(raw);
+      const node = createNodeFromSpec(spec);
+      setAtPath(state.student, path, node);
+      renderBuilder();
+      updateStatus("Module connected. Keep wiring until every slot is filled.", "");
+    });
+  } else {
+    slot.appendChild(renderBuilderNode(n, path));
+  }
+  return slot;
+}
+
+function renderBuilderNode(e, path) {
+  const mod = document.createElement("div");
+  mod.className = "module builder-node " + opClass(e);
+  mod.dataset.bPath = pathKey(path);
+
+  const head = document.createElement("div");
+  head.className = "module-head";
+
+  const title = document.createElement("span");
+  title.className = "module-title";
+  title.textContent = moduleLabel(e);
+
+  const kind = document.createElement("span");
+  kind.className = "module-kind";
+  kind.textContent = kindLabel(e);
+  title.appendChild(kind);
+
+  head.appendChild(title);
+
+  const remove = document.createElement("button");
+  remove.className = "remove";
+  remove.type = "button";
+  remove.textContent = "×";
+  remove.title = "Remove this module";
+  remove.addEventListener("click", ev => {
+    ev.stopPropagation();
+    setAtPath(state.student, path, null);
+    renderBuilder();
+    updateStatus("Module removed. The circuit is open again.", "");
+  });
+  head.appendChild(remove);
+  mod.appendChild(head);
+
+  if (e.op === "const") {
+    const body = document.createElement("div");
+    body.style.padding = "10px";
+    const input = document.createElement("input");
+    input.className = "const-input";
+    input.type = "number";
+    input.step = "any";
+    input.value = e.value;
+    input.setAttribute("aria-label", "Constant value");
+    input.addEventListener("change", () => {
+      e.value = Number(input.value);
+      drawGraph();
+    });
+    body.appendChild(input);
+    mod.appendChild(body);
+  }
+
+  const kids = childInfo(e);
+  if (kids.length) {
+    const childWrap = document.createElement("div");
+    childWrap.className = "children " + (kids.length === 1 ? "unary" : "binary");
+    kids.forEach(k => {
+      const block = document.createElement("div");
+      block.className = "child-block";
+      const lab = document.createElement("div");
+      lab.className = "child-label";
+      lab.textContent = k.label;
+      block.appendChild(lab);
+      block.appendChild(renderSlot(path.concat(k.key)));
+      childWrap.appendChild(block);
+    });
+    mod.appendChild(childWrap);
+  }
+
+  return mod;
+}
+
+function renderOriginal() {
+  const level = currentLevel();
+  document.getElementById("levelName").textContent = level.name;
+  document.getElementById("formulaText").textContent = "y = " + exprToText(level.expr, level);
+
+  const tree = document.getElementById("originalTree");
+  tree.innerHTML = "";
+  tree.appendChild(renderOriginalNode(level.expr, []));
+  setTimeout(drawOriginalWires, 0);
+
+  const list = document.getElementById("decompList");
+  list.innerHTML = "";
+  level.structure.forEach((s, i) => {
+    const card = document.createElement("div");
+    card.className = "chip-card";
+    card.innerHTML = `<strong>Scan ${i + 1}:</strong> ${s}`;
+    list.appendChild(card);
+  });
+
+  const chips = Object.entries(level.chips);
+  chips.forEach(([id, chip]) => {
+    const card = document.createElement("div");
+    card.className = "chip-card";
+    card.innerHTML = `<strong>${chip.label}</strong> = ${chip.desc}`;
+    list.appendChild(card);
+  });
+}
+
+function renderOriginalNode(e, path) {
+  const mod = document.createElement("div");
+  mod.className = "module original-node " + opClass(e);
+  mod.dataset.oPath = pathKey(path);
+
+  const head = document.createElement("div");
+  head.className = "module-head";
+  const title = document.createElement("span");
+  title.className = "module-title";
+  title.textContent = moduleLabel(e);
+  const kind = document.createElement("span");
+  kind.className = "module-kind";
+  kind.textContent = kindLabel(e);
+  title.appendChild(kind);
+  head.appendChild(title);
+  mod.appendChild(head);
+
+  const kids = childInfo(e);
+  if (kids.length) {
+    const childWrap = document.createElement("div");
+    childWrap.className = "children " + (kids.length === 1 ? "unary" : "binary");
+    kids.forEach(k => {
+      const block = document.createElement("div");
+      block.className = "child-block";
+      const lab = document.createElement("div");
+      lab.className = "child-label";
+      lab.textContent = k.label;
+      block.appendChild(lab);
+      block.appendChild(renderOriginalNode(e[k.key], path.concat(k.key)));
+      childWrap.appendChild(block);
+    });
+    mod.appendChild(childWrap);
+  }
+
+  return mod;
+}
+
+/* =========================================================
+   Wire drawing
+   ========================================================= */
+function svgPathBetween(aRect, bRect, containerRect) {
+  const x1 = aRect.left + aRect.width / 2 - containerRect.left;
+  const y1 = aRect.bottom - containerRect.top;
+  const x2 = bRect.left + bRect.width / 2 - containerRect.left;
+  const y2 = bRect.top - containerRect.top;
+  const mid = Math.max(26, Math.abs(y2 - y1) / 2);
+  return `M ${x1} ${y1} C ${x1} ${y1 + mid}, ${x2} ${y2 - mid}, ${x2} ${y2}`;
+}
+
+function makeWire(d) {
+  const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  p.setAttribute("class", "wire");
+  p.setAttribute("d", d);
+  return p;
+}
+
+function drawBuilderWires() {
+  const canvas = document.getElementById("builderCanvas");
+  const svg = document.getElementById("builderWires");
+  svg.innerHTML = "";
+  svg.setAttribute("width", canvas.scrollWidth);
+  svg.setAttribute("height", canvas.scrollHeight);
+
+  const crect = canvas.getBoundingClientRect();
+  const nodes = canvas.querySelectorAll("[data-b-path]");
+  nodes.forEach(parent => {
+    const path = pathFromKey(parent.dataset.bPath);
+    const node = getAtPath(state.student, path);
+    childInfo(node).forEach(k => {
+      const childPath = path.concat(k.key);
+      const childNode = getAtPath(state.student, childPath);
+      const target = childNode
+        ? canvas.querySelector(`[data-b-path="${pathKey(childPath)}"]`)
+        : canvas.querySelector(`[data-slot-path="${pathKey(childPath)}"]`);
+      if (!target) return;
+      svg.appendChild(makeWire(svgPathBetween(parent.getBoundingClientRect(), target.getBoundingClientRect(), crect)));
+    });
+  });
+}
+
+function drawOriginalWires() {
+  const canvas = document.getElementById("originalCanvas");
+  const svg = document.getElementById("originalWires");
+  svg.innerHTML = "";
+  svg.setAttribute("width", canvas.scrollWidth);
+  svg.setAttribute("height", canvas.scrollHeight);
+
+  const crect = canvas.getBoundingClientRect();
+  const nodes = canvas.querySelectorAll("[data-o-path]");
+  nodes.forEach(parent => {
+    const path = pathFromKey(parent.dataset.oPath);
+    const node = getAtPath(currentLevel().expr, path);
+    childInfo(node).forEach(k => {
+      const childPath = path.concat(k.key);
+      const target = canvas.querySelector(`[data-o-path="${pathKey(childPath)}"]`);
+      if (!target) return;
+      svg.appendChild(makeWire(svgPathBetween(parent.getBoundingClientRect(), target.getBoundingClientRect(), crect)));
+    });
+  });
+}
+
+window.addEventListener("resize", () => {
+  drawBuilderWires();
+  drawOriginalWires();
+  drawGraph();
+});
+
+/* =========================================================
+   Graph
+   ========================================================= */
+function drawGraph() {
+  const svg = document.getElementById("graphSvg");
+  const W = 400, H = 310, pad = 32;
+  const level = currentLevel();
+  const [xmin, xmax] = level.range;
+  const trueD = derivative(level.expr);
+  const student = isComplete(state.student) ? state.student : null;
+
+  const xs = [];
+  const fVals = [], dVals = [], sVals = [];
+  for (let i = 0; i <= 180; i++) {
+    const x = xmin + (xmax - xmin) * i / 180;
+    xs.push(x);
+    fVals.push(evalExpr(level.expr, x, level));
+    dVals.push(evalExpr(trueD, x, level));
+    sVals.push(student ? evalExpr(student, x, level) : NaN);
+  }
+
+  const all = [...fVals, ...dVals, ...sVals].filter(v => Number.isFinite(v) && Math.abs(v) < 1e5);
+  let ymin = Math.min(...all), ymax = Math.max(...all);
+  if (!Number.isFinite(ymin) || !Number.isFinite(ymax) || ymin === ymax) {
+    ymin = -5; ymax = 5;
+  }
+  const margin = .12 * (ymax - ymin || 1);
+  ymin -= margin; ymax += margin;
+
+  const sx = x => pad + (x - xmin) / (xmax - xmin) * (W - 2 * pad);
+  const sy = y => H - pad - (y - ymin) / (ymax - ymin) * (H - 2 * pad);
+
+  function pathFor(vals) {
+    let d = "";
+    let drawing = false;
+    vals.forEach((y, i) => {
+      if (!Number.isFinite(y) || Math.abs(y) > 1e5) {
+        drawing = false;
+        return;
+      }
+      const cmd = drawing ? "L" : "M";
+      d += `${cmd} ${sx(xs[i]).toFixed(2)} ${sy(y).toFixed(2)} `;
+      drawing = true;
+    });
+    return d;
+  }
+
+  svg.innerHTML = "";
+
+  function addLine(x1,y1,x2,y2,color,width=1,opacity=.5) {
+    const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    l.setAttribute("x1", x1); l.setAttribute("y1", y1);
+    l.setAttribute("x2", x2); l.setAttribute("y2", y2);
+    l.setAttribute("stroke", color);
+    l.setAttribute("stroke-width", width);
+    l.setAttribute("opacity", opacity);
+    svg.appendChild(l);
+  }
+
+  for (let i = 0; i <= 8; i++) {
+    const x = pad + i * (W - 2 * pad) / 8;
+    addLine(x, pad, x, H - pad, "#334155", 1, .45);
+  }
+  for (let i = 0; i <= 6; i++) {
+    const y = pad + i * (H - 2 * pad) / 6;
+    addLine(pad, y, W - pad, y, "#334155", 1, .45);
+  }
+
+  if (xmin <= 0 && xmax >= 0) addLine(sx(0), pad, sx(0), H - pad, "#94a3b8", 1.5, .75);
+  if (ymin <= 0 && ymax >= 0) addLine(pad, sy(0), W - pad, sy(0), "#94a3b8", 1.5, .75);
+
+  function addPath(d, color, width, opacity=1) {
+    const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    p.setAttribute("d", d);
+    p.setAttribute("fill", "none");
+    p.setAttribute("stroke", color);
+    p.setAttribute("stroke-width", width);
+    p.setAttribute("stroke-linecap", "round");
+    p.setAttribute("stroke-linejoin", "round");
+    p.setAttribute("opacity", opacity);
+    svg.appendChild(p);
+  }
+
+  addPath(pathFor(fVals), "#64748b", 2, .9);
+  addPath(pathFor(dVals), "#fde047", 3, .95);
+  if (student) addPath(pathFor(sVals), "#67e8f9", 3, .95);
+
+  const tx = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  tx.setAttribute("x", 10);
+  tx.setAttribute("y", 18);
+  tx.textContent = `x from ${xmin} to ${xmax}`;
+  svg.appendChild(tx);
+}
+
+/* =========================================================
+   Validation
+   ========================================================= */
+function sampleAndCheck() {
+  const level = currentLevel();
+  const actual = derivative(level.expr);
+  const student = state.student;
+
+  if (!isComplete(student)) {
+    fail("The circuit is still open. Fill every empty slot before testing.");
+    return;
+  }
+
+  let checked = 0;
+  let worst = 0;
+  let example = null;
+  const [xmin, xmax] = level.range;
+
+  for (let i = 0; i < 61; i++) {
+    const x = xmin + (xmax - xmin) * i / 60;
+    const yTrue = evalExpr(actual, x, level);
+    const yStud = evalExpr(student, x, level);
+
+    if (!Number.isFinite(yTrue) || Math.abs(yTrue) > 1e6) continue;
+    if (!Number.isFinite(yStud) || Math.abs(yStud) > 1e6) {
+      example = { x, yTrue, yStud };
+      worst = Infinity;
+      checked++;
+      break;
+    }
+
+    const err = Math.abs(yTrue - yStud);
+    const tol = 1e-4 * (1 + Math.abs(yTrue));
+    if (err > worst) {
+      worst = err;
+      example = { x, yTrue, yStud };
+    }
+    checked++;
+    if (err > tol) break;
+  }
+
+  if (checked < 12) {
+    fail("Too many sampled points were undefined. Try a circuit that behaves on more of the graph window.");
+    return;
+  }
+
+  const tolerance = example ? 1e-4 * (1 + Math.abs(example.yTrue)) : 1e-4;
+  if (worst <= tolerance) {
+    pass();
+  } else {
+    fail(`Mismatch near x = ${example.x.toFixed(3)}. Actual slope ≈ ${fmt(example.yTrue)}, your circuit ≈ ${fmt(example.yStud)}.`);
+  }
+}
+
+function fmt(v) {
+  if (!Number.isFinite(v)) return String(v);
+  return Math.abs(v) > 999 ? v.toExponential(3) : v.toFixed(4);
+}
+
+function pass() {
+  const level = currentLevel();
+  const nodes = countNodes(state.student);
+  const efficiency = Math.max(20, Math.min(100, Math.round(100 * level.minNodes / Math.max(nodes, level.minNodes))));
+  state.solved.add(state.levelIndex);
+
+  document.getElementById("builderCanvas").classList.add("powered");
+  document.getElementById("builderCanvas").classList.remove("warning-pulse");
+  document.getElementById("engine").classList.add("powered");
+  document.getElementById("scoreBadge").textContent = `Efficiency: ${efficiency} pts`;
+  updateSolvedBadge();
+  updateStatus(
+    `Circuit powered! Your derivative matches the slope samples. Nodes used: ${nodes}. Efficiency score: ${efficiency}.`,
+    "success"
+  );
+  drawGraph();
+}
+
+function fail(msg) {
+  const canvas = document.getElementById("builderCanvas");
+  canvas.classList.remove("powered");
+  canvas.classList.add("warning-pulse");
+  setTimeout(() => canvas.classList.remove("warning-pulse"), 1800);
+  document.getElementById("engine").classList.remove("powered");
+  document.getElementById("scoreBadge").textContent = "Efficiency: —";
+  updateStatus("Sparks! " + msg, "failure");
+  makeSparks();
+  drawGraph();
+}
+
+function makeSparks() {
+  const engine = document.getElementById("engine");
+  for (let i = 0; i < 12; i++) {
+    const s = document.createElement("span");
+    s.className = "spark";
+    s.style.left = "50%";
+    s.style.top = "50%";
+    s.style.setProperty("--dx", (Math.random() * 160 - 80) + "px");
+    s.style.setProperty("--dy", (Math.random() * 100 - 50) + "px");
+    engine.appendChild(s);
+    setTimeout(() => s.remove(), 850);
+  }
+}
+
+function updateStatus(text, mode) {
+  const box = document.getElementById("statusBox");
+  box.textContent = text;
+  box.className = "status-box" + (mode ? " " + mode : "");
+}
+
+function updateSolvedBadge() {
+  document.getElementById("solvedBadge").textContent = `${state.solved.size} / ${levels.length} powered`;
+}
+
+/* =========================================================
+   Level management
+   ========================================================= */
+function renderLevelButtons() {
+  const wrap = document.getElementById("levelButtons");
+  wrap.innerHTML = "";
+  levels.forEach((level, i) => {
+    const btn = document.createElement("button");
+    btn.textContent = level.short;
+    btn.className = i === state.levelIndex ? "active" : "";
+    btn.addEventListener("click", () => loadLevel(i));
+    wrap.appendChild(btn);
+  });
+}
+
+function loadLevel(i) {
+  state.levelIndex = i;
+  state.student = null;
+  state.hintIndex = 0;
+  renderLevelButtons();
+  renderPalette();
+  renderOriginal();
+  renderBuilder();
+  document.getElementById("scoreBadge").textContent = "Efficiency: —";
+  document.getElementById("hintBox").textContent =
+    "Hint scanner ready. Try first, then reveal one structure hint at a time.";
+  updateStatus("New function loaded. Build a derivative circuit that matches its slope behavior.", "");
+  updateSolvedBadge();
+  drawGraph();
+}
+
+function revealHint() {
+  const level = currentLevel();
+  const hint = level.hints[state.hintIndex % level.hints.length];
+  state.hintIndex++;
+  document.getElementById("hintBox").innerHTML =
+    `<strong>Structure hint ${Math.min(state.hintIndex, level.hints.length)}:</strong> ${hint}`;
+}
+
+/* =========================================================
+   Events and init
+   ========================================================= */
+document.getElementById("hintBtn").addEventListener("click", revealHint);
+document.getElementById("resetBtn").addEventListener("click", () => {
+  state.student = null;
+  renderBuilder();
+  document.getElementById("scoreBadge").textContent = "Efficiency: —";
+  updateStatus("Circuit reset. The calculus engine awaits fresh wiring.", "");
+});
+document.getElementById("checkBtn").addEventListener("click", sampleAndCheck);
+document.getElementById("nextBtn").addEventListener("click", () => {
+  loadLevel((state.levelIndex + 1) % levels.length);
+});
+
+loadLevel(0);
+</script>
+  <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#ececec"
+    }
+  </script>
+</body>
+</html>

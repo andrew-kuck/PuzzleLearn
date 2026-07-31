@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Repair the Function Bridge</title>
+<style>
+  :root{
+    --bg:#f6f8fb;
+    --card:#ffffff;
+    --ink:#172033;
+    --muted:#667085;
+    --grid:#e7edf5;
+    --axis:#8792a2;
+    --blue:#2f80ed;
+    --cyan:#18a0fb;
+    --green:#18a058;
+    --orange:#f59e0b;
+    --red:#e5484d;
+    --purple:#7c3aed;
+    --dark:#111827;
+    --shadow: 0 14px 35px rgba(20,30,50,.12);
+    --radius: 18px;
+  }
+
+  *{box-sizing:border-box}
+
+  body{
+    margin:0;
+    min-height:100vh;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background:
+      radial-gradient(circle at top left, rgba(47,128,237,.14), transparent 32rem),
+      radial-gradient(circle at bottom right, rgba(124,58,237,.12), transparent 30rem),
+      var(--bg);
+    color:var(--ink);
+  }
+
+  header{
+    max-width:1180px;
+    margin:0 auto;
+    padding:22px 18px 10px;
+    display:flex;
+    justify-content:space-between;
+    gap:16px;
+    align-items:center;
+  }
+
+  .title-wrap h1{
+    margin:0;
+    font-size:clamp(1.5rem, 2.6vw, 2.4rem);
+    letter-spacing:-.04em;
+    display:flex;
+    align-items:center;
+    gap:.55rem;
+  }
+
+  .title-wrap p{
+    margin:.35rem 0 0;
+    color:var(--muted);
+    font-size:.98rem;
+  }
+
+  .badge{
+    background:#111827;
+    color:white;
+    border-radius:999px;
+    padding:8px 12px;
+    font-weight:750;
+    font-size:.85rem;
+    white-space:nowrap;
+    box-shadow:var(--shadow);
+  }
+
+  main{
+    max-width:1180px;
+    margin:0 auto;
+    padding:10px 18px 26px;
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) 360px;
+    gap:18px;
+  }
+
+  .card{
+    background:rgba(255,255,255,.9);
+    border:1px solid rgba(148,163,184,.26);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+
+  .graph-card{
+    position:relative;
+  }
+
+  .graph-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    padding:13px 16px;
+    border-bottom:1px solid #e8eef6;
+    background:linear-gradient(180deg,#fff,#fbfdff);
+  }
+
+  .level-title{
+    font-weight:850;
+    letter-spacing:-.02em;
+  }
+
+  .level-subtitle{
+    color:var(--muted);
+    font-size:.9rem;
+    margin-top:2px;
+  }
+
+  .meter{
+    height:10px;
+    width:160px;
+    background:#e8eef6;
+    border-radius:999px;
+    overflow:hidden;
+  }
+
+  .meter > div{
+    height:100%;
+    width:20%;
+    background:linear-gradient(90deg,var(--blue),var(--purple));
+    border-radius:999px;
+    transition:width .25s ease;
+  }
+
+  svg{
+    width:100%;
+    height:auto;
+    display:block;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,.8));
+    touch-action:none;
+    user-select:none;
+  }
+
+  .side{
+    padding:16px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+
+  .section-title{
+    font-weight:850;
+    font-size:.95rem;
+    display:flex;
+    align-items:center;
+    gap:.45rem;
+    margin-bottom:8px;
+  }
+
+  .constraints{
+    display:grid;
+    gap:8px;
+  }
+
+  .constraint{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    padding:10px 11px;
+    background:#f7faff;
+    border:1px solid #e4ecf7;
+    border-radius:14px;
+    color:#263246;
+    font-size:.93rem;
+  }
+
+  .constraint .icon{
+    width:28px;
+    height:28px;
+    display:grid;
+    place-items:center;
+    border-radius:10px;
+    background:white;
+    box-shadow:inset 0 0 0 1px #e5edf7;
+    flex:0 0 auto;
+  }
+
+  .readouts{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:8px;
+  }
+
+  .readout{
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    align-items:center;
+    gap:9px;
+    padding:10px 11px;
+    border-radius:14px;
+    background:#fbfcff;
+    border:1px solid #e8eef6;
+    font-variant-numeric:tabular-nums;
+  }
+
+  .dot{
+    width:10px;
+    height:10px;
+    border-radius:50%;
+  }
+
+  .readout small{
+    color:var(--muted);
+    font-size:.78rem;
+  }
+
+  .readout strong{
+    font-size:1rem;
+  }
+
+  .btn-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:9px;
+  }
+
+  button{
+    appearance:none;
+    border:none;
+    border-radius:14px;
+    padding:11px 12px;
+    font-weight:800;
+    cursor:pointer;
+    transition:transform .12s ease, box-shadow .12s ease, background .12s ease;
+    font-family:inherit;
+  }
+
+  button:focus-visible,
+  [tabindex]:focus-visible{
+    outline:3px solid rgba(47,128,237,.35);
+    outline-offset:3px;
+  }
+
+  button:hover{transform:translateY(-1px)}
+  button:active{transform:translateY(0)}
+
+  .primary{
+    background:linear-gradient(135deg,var(--blue),var(--purple));
+    color:white;
+    box-shadow:0 10px 22px rgba(47,128,237,.24);
+  }
+
+  .secondary{
+    background:#eef4ff;
+    color:#21549c;
+  }
+
+  .plain{
+    background:#f3f5f8;
+    color:#344054;
+  }
+
+  .success{
+    background:#ecfdf3;
+    color:#087443;
+  }
+
+  .danger{
+    background:#fff1f2;
+    color:#be123c;
+  }
+
+  .status{
+    min-height:62px;
+    padding:12px;
+    border-radius:16px;
+    background:#111827;
+    color:white;
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+  }
+
+  .status .face{
+    font-size:1.35rem;
+    line-height:1;
+  }
+
+  .status p{
+    margin:0;
+    color:#e5e7eb;
+    font-size:.92rem;
+  }
+
+  .toolnote{
+    color:var(--muted);
+    font-size:.86rem;
+    line-height:1.35;
+    background:#fafafa;
+    border:1px dashed #d7dee8;
+    border-radius:14px;
+    padding:10px 11px;
+  }
+
+  .pill-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:7px;
+  }
+
+  .pill{
+    border-radius:999px;
+    padding:6px 9px;
+    background:#f2f5fa;
+    color:#526071;
+    font-size:.8rem;
+    font-weight:750;
+  }
+
+  .svg-label{
+    font-size:13px;
+    fill:#475467;
+    font-weight:700;
+    pointer-events:none;
+  }
+
+  .target-label{
+    font-size:14px;
+    fill:#111827;
+    font-weight:850;
+    pointer-events:none;
+  }
+
+  .handle{
+    cursor:grab;
+    filter: drop-shadow(0 4px 8px rgba(17,24,39,.22));
+  }
+
+  .handle:active{cursor:grabbing}
+
+  .bridge-line{
+    stroke-linecap:round;
+    stroke-linejoin:round;
+    filter: drop-shadow(0 5px 5px rgba(47,128,237,.12));
+  }
+
+  .shake{
+    animation:shake .28s linear 2;
+  }
+
+  @keyframes shake{
+    0%,100%{transform:translateX(0)}
+    25%{transform:translateX(-4px)}
+    75%{transform:translateX(4px)}
+  }
+
+  @media (max-width: 930px){
+    main{
+      grid-template-columns:1fr;
+    }
+    .side{
+      order:-1;
+    }
+    .meter{width:120px}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="title-wrap">
+    <h1>🌉 Repair the Function Bridge</h1>
+    <p>Drag graph pieces until the probes, points, and bridge behavior match the limit clues.</p>
+  </div>
+  <div class="badge" id="levelBadge">Level 1 / 5</div>
+</header>
+
+<main>
+  <section class="card graph-card" id="graphCard">
+    <div class="graph-top">
+      <div>
+        <div class="level-title" id="levelTitle">Level title</div>
+        <div class="level-subtitle" id="levelSubtitle">Subtitle</div>
+      </div>
+      <div class="meter" aria-label="Level progress"><div id="progressFill"></div></div>
+    </div>
+    <svg id="board" viewBox="0 0 760 480" role="img" aria-label="Interactive coordinate graph for limits and continuity"></svg>
+  </section>
+
+  <aside class="card side">
+    <div>
+      <div class="section-title">🎯 Visual repair clues</div>
+      <div class="constraints" id="constraints"></div>
+    </div>
+
+    <div>
+      <div class="section-title">📡 Live bridge scanner</div>
+      <div class="readouts" id="readouts"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="primary" id="testBtn">Test bridge</button>
+      <button class="plain" id="resetBtn">Reset</button>
+      <button class="secondary" id="hintBtn">Hint</button>
+      <button class="success" id="nextBtn">Next level</button>
+    </div>
+
+    <div class="btn-row">
+      <button class="secondary" id="toggleDotBtn">Toggle filled dot</button>
+      <button class="secondary" id="toggleOpenBtn">Toggle open circles</button>
+    </div>
+
+    <div class="status" id="status">
+      <div class="face">🛠️</div>
+      <p>Drag the glowing handles. Use the test button to send in the limit probes.</p>
+    </div>
+
+    <div class="toolnote">
+      Keyboard access: focus a glowing handle and use arrow keys. Hold <b>Shift</b> for larger steps.
+      The bridge accepts small rounding error, just like a friendly grader.
+    </div>
+
+    <div class="pill-row">
+      <span class="pill">one-sided limits</span>
+      <span class="pill">continuity</span>
+      <span class="pill">holes</span>
+      <span class="pill">jumps</span>
+      <span class="pill">asymptotes</span>
+    </div>
+  </aside>
+</main>
+
+<script>
+(() => {
+  "use strict";
+
+  const svg = document.getElementById("board");
+  const graphCard = document.getElementById("graphCard");
+  const levelBadge = document.getElementById("levelBadge");
+  const levelTitle = document.getElementById("levelTitle");
+  const levelSubtitle = document.getElementById("levelSubtitle");
+  const progressFill = document.getElementById("progressFill");
+  const constraintsEl = document.getElementById("constraints");
+  const readoutsEl = document.getElementById("readouts");
+  const statusEl = document.getElementById("status");
+  const testBtn = document.getElementById("testBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const hintBtn = document.getElementById("hintBtn");
+  const nextBtn = document.getElementById("nextBtn");
+  const toggleDotBtn = document.getElementById("toggleDotBtn");
+  const toggleOpenBtn = document.getElementById("toggleOpenBtn");
+
+  const W = 760, H = 480;
+  const M = {l:52, r:24, t:24, b:46};
+  const XMIN = -5, XMAX = 5, YMIN = -1, YMAX = 6.5;
+  const TOL = 0.22;
+  const XTOL = 0.18;
+
+  let current = 0;
+  let hintOn = false;
+  let probe = null;
+  let traveler = null;
+  let failureMarks = [];
+  let drag = null;
+
+  const levels = [
+    {
+      title: "Patch the removable hole",
+      subtitle: "Make the approach height and actual value line up.",
+      a: 2,
+      reset: () => ({ dotY: 1.1, dotPresent:true, open:true }),
+      constraints: [
+        ["⬅️", "As x approaches 2 from the left, height approaches 3."],
+        ["➡️", "As x approaches 2 from the right, height approaches 3."],
+        ["●", "The traveler steps on f(2), so f(2) should be 3."]
+      ],
+      hint: "The open circle shows where the bridge wants to be. Move the filled landing dot to that same height.",
+    },
+    {
+      title: "Same limit, different value",
+      subtitle: "The left and right paths meet, but f(a) lives elsewhere.",
+      a: 1,
+      reset: () => ({ leftY: 4.3, rightY: 0.8, dotY: 3.4, dotPresent:true, open:true }),
+      constraints: [
+        ["⬅️", "As x approaches 1 from the left, height approaches 2."],
+        ["➡️", "As x approaches 1 from the right, height approaches 2."],
+        ["●", "But f(1) should be −1."]
+      ],
+      hint: "The probes care about the open endpoints. The filled dot controls only f(1).",
+    },
+    {
+      title: "Build a jump discontinuity",
+      subtitle: "Create two different one-sided landing heights.",
+      a: 0,
+      reset: () => ({ leftY: 3.7, rightY: 1.4, dotY: 2.5, dotPresent:false, open:true }),
+      constraints: [
+        ["⬅️", "Left-hand limit at 0 should be 1."],
+        ["➡️", "Right-hand limit at 0 should be 4."],
+        ["↕️", "The two approach paths should not meet."]
+      ],
+      hint: "A jump has two separate shelves. Move the left shelf and right shelf independently.",
+    },
+    {
+      title: "Raise an infinite bridge",
+      subtitle: "Use a vertical asymptote so both sides climb without bound.",
+      a: -1,
+      reset: () => ({ asymX: 0.55, leftDir:-1, rightDir:1, open:true, dotPresent:false }),
+      constraints: [
+        ["║", "Place the vertical asymptote at x = −1."],
+        ["⬆️", "As x approaches −1 from both sides, height should shoot upward."],
+        ["○", "There is no ordinary f(−1) bridge plank."]
+      ],
+      hint: "Drag the dashed asymptote sideways. Drag each purple arrow above the x-axis to make that side rise to +∞.",
+    },
+    {
+      title: "Master piecewise repair",
+      subtitle: "Satisfy two targets at once: one jump and one removable mismatch.",
+      a: null,
+      reset: () => ({
+        l2LeftY: 3.8,
+        l2RightY: 1.2,
+        r1LeftY: 4.4,
+        r1RightY: 0.7,
+        dot1Y: 3.5,
+        dotPresent:true,
+        open:true
+      }),
+      constraints: [
+        ["−2", "At x = −2: left limit 1, right limit 3."],
+        ["1", "At x = 1: left and right limits both 2."],
+        ["●", "At x = 1: f(1) should be 0."]
+      ],
+      hint: "At −2, make a jump. At 1, make the two path endpoints meet, then put the filled dot somewhere else.",
+    }
+  ];
+
+  let state = levels.map(l => l.reset());
+
+  function sx(x){ return M.l + (x - XMIN) / (XMAX - XMIN) * (W - M.l - M.r); }
+  function sy(y){ return H - M.b - (y - YMIN) / (YMAX - YMIN) * (H - M.t - M.b); }
+  function mx(px){ return XMIN + (px - M.l) / (W - M.l - M.r) * (XMAX - XMIN); }
+  function my(py){ return YMIN + (H - M.b - py) / (H - M.t - M.b) * (YMAX - YMIN); }
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+  function fmt(v){
+    if(v === undefined || Number.isNaN(v)) return "undefined";
+    if(v === Infinity) return "+∞";
+    if(v === -Infinity) return "−∞";
+    return Math.abs(v) < .005 ? "0.00" : v.toFixed(2);
+  }
+  function near(a,b,t=TOL){ return Math.abs(a-b) <= t; }
+
+  function el(name, attrs={}, children=[]){
+    const n = document.createElementNS("http://www.w3.org/2000/svg", name);
+    Object.entries(attrs).forEach(([k,v]) => n.setAttribute(k, v));
+    children.forEach(c => n.appendChild(c));
+    return n;
+  }
+
+  function line(x1,y1,x2,y2, attrs={}){
+    return el("line", {
+      x1:sx(x1), y1:sy(y1), x2:sx(x2), y2:sy(y2),
+      ...attrs
+    });
+  }
+
+  function circle(x,y,r, attrs={}){
+    return el("circle", {cx:sx(x), cy:sy(y), r, ...attrs});
+  }
+
+  function text(x,y,content,attrs={}){
+    const t = el("text", {x:sx(x), y:sy(y), ...attrs});
+    t.textContent = content;
+    return t;
+  }
+
+  function pathFromPoints(points, attrs={}){
+    const d = points.map((p,i) => `${i ? "L":"M"} ${sx(p[0])} ${sy(p[1])}`).join(" ");
+    return el("path", {d, fill:"none", ...attrs});
+  }
+
+  function drawGrid(g){
+    for(let x=Math.ceil(XMIN); x<=Math.floor(XMAX); x++){
+      g.appendChild(line(x,YMIN,x,YMAX,{stroke: x===0 ? "#8792a2":"#e7edf5", "stroke-width": x===0 ? 2:1}));
+      if(x!==0) g.appendChild(text(x,-.18,String(x),{"class":"svg-label","text-anchor":"middle"}));
+    }
+    for(let y=Math.ceil(YMIN); y<=Math.floor(YMAX); y++){
+      g.appendChild(line(XMIN,y,XMAX,y,{stroke: y===0 ? "#8792a2":"#e7edf5", "stroke-width": y===0 ? 2:1}));
+      if(y!==0) {
+        const tt = el("text", {x:sx(-.14), y:sy(y)+4, "class":"svg-label", "text-anchor":"end"});
+        tt.textContent = String(y);
+        g.appendChild(tt);
+      }
+    }
+    g.appendChild(text(4.75,-.42,"x",{"class":"target-label"}));
+    g.appendChild(text(.18,6.18,"y",{"class":"target-label"}));
+  }
+
+  function bridgeAttrs(color="#2f80ed", width=8){
+    return {"class":"bridge-line", stroke:color, "stroke-width":width};
+  }
+
+  function drawOpen(x,y,label){
+    const g = el("g");
+    g.appendChild(circle(x,y,10,{fill:"#fff", stroke:"#111827", "stroke-width":3}));
+    if(label) g.appendChild(text(x+.18,y+.18,label,{"class":"svg-label"}));
+    return g;
+  }
+
+  function drawFilled(x,y,color="#111827"){
+    return circle(x,y,9,{fill:color, stroke:"#fff", "stroke-width":3});
+  }
+
+  function makeHandle(x,y,label,onDrag, options={}){
+    const h = circle(x,y,12,{
+      fill: options.color || "#f59e0b",
+      stroke:"#fff",
+      "stroke-width":3,
+      "class":"handle",
+      tabindex:"0",
+      role:"slider",
+      "aria-label":label
+    });
+
+    h.addEventListener("pointerdown", e => {
+      e.preventDefault();
+      drag = {onDrag, options};
+      h.setPointerCapture?.(e.pointerId);
+    });
+
+    h.addEventListener("keydown", e => {
+      const big = e.shiftKey ? .5 : .15;
+      let used = true;
+      if(e.key === "ArrowUp") onDrag(x, y + big, "key");
+      else if(e.key === "ArrowDown") onDrag(x, y - big, "key");
+      else if(e.key === "ArrowLeft") onDrag(x - big, y, "key");
+      else if(e.key === "ArrowRight") onDrag(x + big, y, "key");
+      else used = false;
+      if(used){
+        e.preventDefault();
+        render();
+      }
+    });
+    return h;
+  }
+
+  window.addEventListener("pointermove", e => {
+    if(!drag) return;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const inv = svg.getScreenCTM().inverse();
+    const p = pt.matrixTransform(inv);
+    drag.onDrag(mx(p.x), my(p.y), "pointer");
+    render();
+  });
+
+  window.addEventListener("pointerup", () => drag = null);
+
+  function sampleLine(x,x1,y1,x2,y2){
+    if(Math.abs(x2-x1)<1e-6) return y1;
+    const t = (x-x1)/(x2-x1);
+    return y1 + t*(y2-y1);
+  }
+
+  function evalY(levelIndex, x){
+    const s = state[levelIndex];
+    const L = levels[levelIndex];
+
+    if(levelIndex === 0){
+      return x <= L.a
+        ? sampleLine(x,-4,1,L.a,3)
+        : sampleLine(x,L.a,3,4,5);
+    }
+    if(levelIndex === 1){
+      return x < L.a
+        ? sampleLine(x,-4,0,L.a,s.leftY)
+        : sampleLine(x,L.a,s.rightY,4,4);
+    }
+    if(levelIndex === 2){
+      return x < L.a ? s.leftY : s.rightY;
+    }
+    if(levelIndex === 3){
+      const dir = x < s.asymX ? s.leftDir : s.rightDir;
+      const y = .2 + dir * .9 / Math.max(.045, Math.pow(x - s.asymX,2));
+      return clamp(y, YMIN+.05, YMAX-.1);
+    }
+    if(levelIndex === 4){
+      if(x < -2) return sampleLine(x,-4,0,-2,s.l2LeftY);
+      if(x < 1) return sampleLine(x,-2,s.l2RightY,1,s.r1LeftY);
+      return sampleLine(x,1,s.r1RightY,4,3.2);
+    }
+    return 0;
+  }
+
+  function estimates(levelIndex){
+    const s = state[levelIndex];
+    if(levelIndex === 0) return [{a:2,left:3,right:3,f:s.dotPresent?s.dotY:undefined}];
+    if(levelIndex === 1) return [{a:1,left:s.leftY,right:s.rightY,f:s.dotPresent?s.dotY:undefined}];
+    if(levelIndex === 2) return [{a:0,left:s.leftY,right:s.rightY,f:s.dotPresent?s.dotY:undefined}];
+    if(levelIndex === 3) {
+      return [{
+        a:s.asymX,
+        left:s.leftDir>0?Infinity:-Infinity,
+        right:s.rightDir>0?Infinity:-Infinity,
+        f:undefined
+      }];
+    }
+    return [
+      {a:-2,left:s.l2LeftY,right:s.l2RightY,f:undefined},
+      {a:1,left:s.r1LeftY,right:s.r1RightY,f:s.dotPresent?s.dot1Y:undefined}
+    ];
+  }
+
+  function validate(levelIndex){
+    const s = state[levelIndex];
+    const marks = [];
+    let ok = true;
+
+    const bad = m => { ok=false; marks.push(m); };
+
+    if(levelIndex === 0){
+      if(!s.dotPresent || !near(s.dotY,3)) bad({x:2,y:s.dotPresent?s.dotY:3,type:"dot"});
+    }
+
+    if(levelIndex === 1){
+      if(!near(s.leftY,2)) bad({x:1,y:s.leftY,type:"left"});
+      if(!near(s.rightY,2)) bad({x:1,y:s.rightY,type:"right"});
+      if(!s.dotPresent || !near(s.dotY,-1)) bad({x:1,y:s.dotPresent?s.dotY:-1,type:"dot"});
+      if(s.dotPresent && near(s.dotY,2)) bad({x:1,y:s.dotY,type:"dot"});
+    }
+
+    if(levelIndex === 2){
+      if(!near(s.leftY,1)) bad({x:0,y:s.leftY,type:"left"});
+      if(!near(s.rightY,4)) bad({x:0,y:s.rightY,type:"right"});
+      if(Math.abs(s.leftY-s.rightY)<1.2) bad({x:0,y:(s.leftY+s.rightY)/2,type:"jump"});
+    }
+
+    if(levelIndex === 3){
+      if(!near(s.asymX,-1,XTOL)) bad({x:s.asymX,y:3,type:"asym"});
+      if(s.leftDir !== 1) bad({x:s.asymX-.65,y:.5,type:"leftInf"});
+      if(s.rightDir !== 1) bad({x:s.asymX+.65,y:.5,type:"rightInf"});
+    }
+
+    if(levelIndex === 4){
+      if(!near(s.l2LeftY,1)) bad({x:-2,y:s.l2LeftY,type:"left"});
+      if(!near(s.l2RightY,3)) bad({x:-2,y:s.l2RightY,type:"right"});
+      if(!near(s.r1LeftY,2)) bad({x:1,y:s.r1LeftY,type:"left"});
+      if(!near(s.r1RightY,2)) bad({x:1,y:s.r1RightY,type:"right"});
+      if(!s.dotPresent || !near(s.dot1Y,0)) bad({x:1,y:s.dotPresent?s.dot1Y:0,type:"dot"});
+    }
+
+    return {ok, marks};
+  }
+
+  function renderPanel(){
+    const L = levels[current];
+    levelBadge.textContent = `Level ${current+1} / 5`;
+    levelTitle.textContent = L.title;
+    levelSubtitle.textContent = L.subtitle;
+    progressFill.style.width = `${((current+1)/5)*100}%`;
+
+    constraintsEl.innerHTML = "";
+    L.constraints.forEach(([ic,txt]) => {
+      const div = document.createElement("div");
+      div.className = "constraint";
+      div.innerHTML = `<div class="icon">${ic}</div><div>${txt}</div>`;
+      constraintsEl.appendChild(div);
+    });
+
+    readoutsEl.innerHTML = "";
+    estimates(current).forEach((r,idx) => {
+      const tag = estimates(current).length > 1 ? ` at x=${r.a}` : "";
+      [
+        ["#2f80ed", `lim x→${r.a}⁻ f(x)${tag}`, fmt(r.left)],
+        ["#7c3aed", `lim x→${r.a}⁺ f(x)${tag}`, fmt(r.right)],
+        ["#111827", `f(${r.a})${tag}`, fmt(r.f)]
+      ].forEach(([color,label,val]) => {
+        const div = document.createElement("div");
+        div.className = "readout";
+        div.innerHTML = `<span class="dot" style="background:${color}"></span><small>${label}</small><strong>${val}</strong>`;
+        readoutsEl.appendChild(div);
+      });
+      if(idx === 0 && estimates(current).length > 1){
+        const spacer = document.createElement("div");
+        spacer.style.height = "2px";
+        readoutsEl.appendChild(spacer);
+      }
+    });
+
+    nextBtn.disabled = current === levels.length-1;
+    nextBtn.style.opacity = current === levels.length-1 ? .55 : 1;
+
+    const dotRelevant = [0,1,2,4].includes(current);
+    toggleDotBtn.disabled = !dotRelevant;
+    toggleDotBtn.style.opacity = dotRelevant ? 1 : .45;
+  }
+
+  function render(){
+    renderPanel();
+    svg.innerHTML = "";
+
+    const defs = el("defs");
+    defs.innerHTML = `
+      <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="#2f80ed"></path>
+      </marker>
+      <marker id="arrowPurple" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"></path>
+      </marker>
+    `;
+    svg.appendChild(defs);
+
+    const grid = el("g");
+    drawGrid(grid);
+    svg.appendChild(grid);
+
+    const under = el("g");
+    const graph = el("g");
+    const handles = el("g");
+    const effects = el("g");
+    svg.appendChild(under);
+    svg.appendChild(graph);
+    svg.appendChild(handles);
+    svg.appendChild(effects);
+
+    drawLevel(current, under, graph, handles);
+
+    if(hintOn) drawHint(current, effects);
+    drawProbe(effects);
+    drawFailureMarks(effects);
+
+    if(traveler){
+      effects.appendChild(circle(traveler.x, traveler.y, 12, {
+        fill:"#10b981",
+        stroke:"#fff",
+        "stroke-width":4,
+        filter:"drop-shadow(0 8px 10px rgba(16,185,129,.35))"
+      }));
+      effects.appendChild(text(traveler.x+.18, traveler.y+.23, "🚶", {"font-size":20}));
+    }
+  }
+
+  function drawTargetLine(g,x,label){
+    g.appendChild(line(x,YMIN,x,YMAX,{
+      stroke:"#111827",
+      "stroke-width":2,
+      "stroke-dasharray":"6 7",
+      opacity:.5
+    }));
+    g.appendChild(text(x+.08,6.15,label,{"class":"target-label"}));
+  }
+
+  function drawLevel(i, under, graph, handles){
+    const s = state[i];
+    const L = levels[i];
+
+    if(i <= 2) drawTargetLine(under,L.a,`x = ${L.a}`);
+    if(i === 3) {
+      under.appendChild(line(-1,YMIN,-1,YMAX,{
+        stroke:"#18a058",
+        "stroke-width":3,
+        "stroke-dasharray":"4 8",
+        opacity:.45
+      }));
+      under.appendChild(text(-.9,6.15,"target x = −1",{"class":"target-label", fill:"#087443"}));
+    }
+    if(i === 4){
+      drawTargetLine(under,-2,"x = −2");
+      drawTargetLine(under,1,"x = 1");
+    }
+
+    if(i === 0){
+      graph.appendChild(line(-4,1,2,3,bridgeAttrs()));
+      graph.appendChild(line(2,3,4,5,bridgeAttrs()));
+      if(s.open) graph.appendChild(drawOpen(2,3));
+      if(s.dotPresent){
+        graph.appendChild(drawFilled(2,s.dotY));
+        handles.appendChild(makeHandle(2,s.dotY,"Move filled point f(2)", (x,y)=> {
+          s.dotY = clamp(y,YMIN,YMAX);
+        }));
+      }
+    }
+
+    if(i === 1){
+      graph.appendChild(line(-4,0,1,s.leftY,bridgeAttrs("#2f80ed")));
+      graph.appendChild(line(1,s.rightY,4,4,bridgeAttrs("#7c3aed")));
+      if(s.open){
+        graph.appendChild(drawOpen(1,s.leftY));
+        graph.appendChild(drawOpen(1,s.rightY));
+      }
+      handles.appendChild(makeHandle(1,s.leftY,"Move left approach endpoint", (x,y)=> {
+        s.leftY = clamp(y,YMIN,YMAX);
+      }, {color:"#2f80ed"}));
+      handles.appendChild(makeHandle(1,s.rightY,"Move right approach endpoint", (x,y)=> {
+        s.rightY = clamp(y,YMIN,YMAX);
+      }, {color:"#7c3aed"}));
+      if(s.dotPresent){
+        graph.appendChild(drawFilled(1,s.dotY));
+        handles.appendChild(makeHandle(1,s.dotY,"Move filled point f(1)", (x,y)=> {
+          s.dotY = clamp(y,YMIN,YMAX);
+        }, {color:"#111827"}));
+      }
+    }
+
+    if(i === 2){
+      graph.appendChild(line(-4,s.leftY,0,s.leftY,bridgeAttrs("#2f80ed")));
+      graph.appendChild(line(0,s.rightY,4,s.rightY,bridgeAttrs("#7c3aed")));
+      if(s.open){
+        graph.appendChild(drawOpen(0,s.leftY));
+        graph.appendChild(drawOpen(0,s.rightY));
+      }
+      handles.appendChild(makeHandle(0,s.leftY,"Move left-hand shelf", (x,y)=> {
+        s.leftY = clamp(y,YMIN,YMAX);
+      }, {color:"#2f80ed"}));
+      handles.appendChild(makeHandle(0,s.rightY,"Move right-hand shelf", (x,y)=> {
+        s.rightY = clamp(y,YMIN,YMAX);
+      }, {color:"#7c3aed"}));
+      if(s.dotPresent){
+        graph.appendChild(drawFilled(0,s.dotY));
+        handles.appendChild(makeHandle(0,s.dotY,"Move optional f(0) dot", (x,y)=> {
+          s.dotY = clamp(y,YMIN,YMAX);
+        }, {color:"#111827"}));
+      }
+    }
+
+    if(i === 3){
+      graph.appendChild(line(s.asymX,YMIN,s.asymX,YMAX,{
+        stroke:"#7c3aed",
+        "stroke-width":4,
+        "stroke-dasharray":"9 8",
+        opacity:.9
+      }));
+
+      const leftPts = [];
+      for(let x=XMIN; x<s.asymX-.08; x+=.06) leftPts.push([x,evalY(i,x)]);
+      const rightPts = [];
+      for(let x=s.asymX+.08; x<=XMAX; x+=.06) rightPts.push([x,evalY(i,x)]);
+      graph.appendChild(pathFromPoints(leftPts, bridgeAttrs("#2f80ed",7)));
+      graph.appendChild(pathFromPoints(rightPts, bridgeAttrs("#7c3aed",7)));
+
+      const lx = s.asymX-.75, rx = s.asymX+.75;
+      const ly = s.leftDir>0 ? 5.5 : -.35;
+      const ry = s.rightDir>0 ? 5.5 : -.35;
+      graph.appendChild(line(lx, s.leftDir>0?4.7:.45, lx, ly, {
+        stroke:"#2f80ed",
+        "stroke-width":5,
+        "marker-end":"url(#arrowBlue)"
+      }));
+      graph.appendChild(line(rx, s.rightDir>0?4.7:.45, rx, ry, {
+        stroke:"#7c3aed",
+        "stroke-width":5,
+        "marker-end":"url(#arrowPurple)"
+      }));
+
+      handles.appendChild(makeHandle(s.asymX,3.1,"Drag vertical asymptote", (x,y)=> {
+        s.asymX = clamp(x,-4.3,4.3);
+      }, {color:"#7c3aed"}));
+      handles.appendChild(makeHandle(lx,ly,"Drag left infinity direction", (x,y)=> {
+        s.leftDir = y >= 2 ? 1 : -1;
+      }, {color:"#2f80ed"}));
+      handles.appendChild(makeHandle(rx,ry,"Drag right infinity direction", (x,y)=> {
+        s.rightDir = y >= 2 ? 1 : -1;
+      }, {color:"#7c3aed"}));
+    }
+
+    if(i === 4){
+      graph.appendChild(line(-4,0,-2,s.l2LeftY,bridgeAttrs("#2f80ed")));
+      graph.appendChild(line(-2,s.l2RightY,1,s.r1LeftY,bridgeAttrs("#7c3aed")));
+      graph.appendChild(line(1,s.r1RightY,4,3.2,bridgeAttrs("#18a058")));
+
+      if(s.open){
+        graph.appendChild(drawOpen(-2,s.l2LeftY));
+        graph.appendChild(drawOpen(-2,s.l2RightY));
+        graph.appendChild(drawOpen(1,s.r1LeftY));
+        graph.appendChild(drawOpen(1,s.r1RightY));
+      }
+
+      handles.appendChild(makeHandle(-2,s.l2LeftY,"Move x=-2 left limit endpoint", (x,y)=> {
+        s.l2LeftY = clamp(y,YMIN,YMAX);
+      }, {color:"#2f80ed"}));
+      handles.appendChild(makeHandle(-2,s.l2RightY,"Move x=-2 right limit endpoint", (x,y)=> {
+        s.l2RightY = clamp(y,YMIN,YMAX);
+      }, {color:"#7c3aed"}));
+      handles.appendChild(makeHandle(1,s.r1LeftY,"Move x=1 left endpoint", (x,y)=> {
+        s.r1LeftY = clamp(y,YMIN,YMAX);
+      }, {color:"#7c3aed"}));
+      handles.appendChild(makeHandle(1,s.r1RightY,"Move x=1 right endpoint", (x,y)=> {
+        s.r1RightY = clamp(y,YMIN,YMAX);
+      }, {color:"#18a058"}));
+
+      if(s.dotPresent){
+        graph.appendChild(drawFilled(1,s.dot1Y));
+        handles.appendChild(makeHandle(1,s.dot1Y,"Move filled point f(1)", (x,y)=> {
+          s.dot1Y = clamp(y,YMIN,YMAX);
+        }, {color:"#111827"}));
+      }
+    }
+  }
+
+  function drawHint(i,g){
+    g.setAttribute("opacity",".9");
+
+    if(i===0){
+      g.appendChild(line(1.72,3,2.28,3,{stroke:"#18a058","stroke-width":4,"stroke-dasharray":"4 5"}));
+      g.appendChild(line(2,state[i].dotY,2,3,{stroke:"#f59e0b","stroke-width":3,"stroke-dasharray":"3 5"}));
+    }
+    if(i===1){
+      g.appendChild(line(.55,state[i].leftY,1.45,state[i].rightY,{stroke:"#f59e0b","stroke-width":4,"stroke-dasharray":"4 5"}));
+      g.appendChild(text(1.1,2.7,"probes meet here",{"class":"svg-label", fill:"#92400e"}));
+    }
+    if(i===2){
+      g.appendChild(line(-.45,state[i].leftY,.45,state[i].rightY,{stroke:"#ef4444","stroke-width":4,"stroke-dasharray":"3 7"}));
+      g.appendChild(text(.25,2.55,"jump gap",{"class":"svg-label", fill:"#be123c"}));
+    }
+    if(i===3){
+      g.appendChild(line(-1,YMIN,-1,YMAX,{stroke:"#18a058","stroke-width":5,"stroke-dasharray":"5 8",opacity:.55}));
+      g.appendChild(text(-.75,5.75,"aim dashed line here",{"class":"svg-label", fill:"#087443"}));
+    }
+    if(i===4){
+      g.appendChild(line(-2,state[i].l2LeftY,-2,state[i].l2RightY,{stroke:"#ef4444","stroke-width":4,"stroke-dasharray":"4 5"}));
+      g.appendChild(line(1,state[i].r1LeftY,1,state[i].r1RightY,{stroke:"#18a058","stroke-width":4,"stroke-dasharray":"4 5"}));
+      g.appendChild(text(1.15,.5,"filled dot is f(1)",{"class":"svg-label", fill:"#111827"}));
+    }
+  }
+
+  function drawProbe(g){
+    if(!probe) return;
+
+    const targets = probe.targets;
+    const target = targets[probe.index];
+    const a = target.a;
+    const t = probe.t;
+    const dist = 1.8*(1-t) + .07;
+    const xl = a - dist;
+    const xr = a + dist;
+    const yl = evalY(current,xl);
+    const yr = evalY(current,xr);
+
+    g.appendChild(line(xl,YMIN,xl,yl,{stroke:"#2f80ed","stroke-width":2,"stroke-dasharray":"3 4",opacity:.6}));
+    g.appendChild(line(xr,YMIN,xr,yr,{stroke:"#7c3aed","stroke-width":2,"stroke-dasharray":"3 4",opacity:.6}));
+    g.appendChild(circle(xl,yl,9,{fill:"#2f80ed",stroke:"#fff","stroke-width":3}));
+    g.appendChild(circle(xr,yr,9,{fill:"#7c3aed",stroke:"#fff","stroke-width":3}));
+    g.appendChild(text(xl-.45,yl+.38,"L",{"class":"target-label", fill:"#2f80ed"}));
+    g.appendChild(text(xr+.22,yr+.38,"R",{"class":"target-label", fill:"#7c3aed"}));
+  }
+
+  function drawFailureMarks(g){
+    failureMarks.forEach(m => {
+      if(m.type === "asym"){
+        g.appendChild(line(m.x,YMIN,m.x,YMAX,{stroke:"#e5484d","stroke-width":5,"stroke-dasharray":"5 6",opacity:.75}));
+      } else {
+        g.appendChild(circle(m.x,m.y,20,{
+          fill:"none",
+          stroke:"#e5484d",
+          "stroke-width":5,
+          opacity:.85
+        }));
+      }
+      g.appendChild(text(m.x+.22,m.y+.38,"!",{"class":"target-label", fill:"#e5484d"}));
+    });
+  }
+
+  function setStatus(face,msg,bg="#111827"){
+    statusEl.style.background = bg;
+    statusEl.innerHTML = `<div class="face">${face}</div><p>${msg}</p>`;
+  }
+
+  function testBridge(){
+    failureMarks = [];
+    traveler = null;
+    const targets = current === 4 ? [{a:-2},{a:1}] :
+                    current === 3 ? [{a:state[current].asymX}] :
+                    [{a:levels[current].a}];
+
+    setStatus("📡","Limit probes are sliding toward the target x-value. Watch whether they meet, split, or shoot upward.");
+    probe = {targets,index:0,t:0};
+    animateProbeSequence(() => {
+      const result = validate(current);
+      if(!result.ok){
+        failureMarks = result.marks;
+        graphCard.classList.remove("shake");
+        void graphCard.offsetWidth;
+        graphCard.classList.add("shake");
+        setStatus("🧯","Bridge failure found. Red markers show which behavior does not match the clue yet.", "#7f1d1d");
+        probe = null;
+        render();
+      } else {
+        setStatus("✅","Bridge repaired! The traveler is crossing using the limit behavior you built.", "#064e3b");
+        probe = null;
+        animateTraveler();
+      }
+    });
+  }
+
+  function animateProbeSequence(done){
+    const start = performance.now();
+    const duration = 850;
+
+    function step(now){
+      if(!probe) return;
+      probe.t = clamp((now-start)/duration,0,1);
+      render();
+
+      if(probe.t < 1){
+        requestAnimationFrame(step);
+      } else if(probe.index < probe.targets.length-1){
+        setTimeout(() => {
+          if(!probe) return;
+          probe.index++;
+          probe.t = 0;
+          animateProbeSequence(done);
+        }, 260);
+      } else {
+        setTimeout(done, 250);
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  function travelerPosition(i,p){
+    p = clamp(p,0,1);
+
+    if(i===0 || i===1){
+      const x = -4.2 + 8.4*p;
+      return {x,y:evalY(i,x)+.12};
+    }
+
+    if(i===2){
+      const a = 0, s = state[i];
+      if(p < .48){
+        const x = -4.2 + (a+3.95)*(p/.48);
+        return {x,y:s.leftY+.12};
+      }
+      if(p < .58){
+        const q = (p-.48)/.10;
+        return {x:a + .15*Math.sin(q*Math.PI), y:s.leftY + (s.rightY-s.leftY)*q + .65*Math.sin(q*Math.PI)};
+      }
+      const q = (p-.58)/.42;
+      const x = a + .12 + (4.1-a)*q;
+      return {x,y:s.rightY+.12};
+    }
+
+    if(i===3){
+      const s = state[i];
+      if(p < .40){
+        const q = p/.40;
+        const x = -4.3 + (s.asymX-.28 + 4.3)*q;
+        return {x,y:evalY(i,x)+.08};
+      }
+      if(p < .60){
+        const q = (p-.40)/.20;
+        return {x:s.asymX, y:5.8 + .35*Math.sin(q*Math.PI*2)};
+      }
+      const q = (p-.60)/.40;
+      const x = s.asymX+.28 + (4.25-s.asymX-.28)*q;
+      return {x,y:evalY(i,x)+.08};
+    }
+
+    if(i===4){
+      const s = state[i];
+      if(p < .30){
+        const q = p/.30;
+        const x = -4.2 + 2.2*q;
+        return {x,y:evalY(i,x)+.12};
+      }
+      if(p < .40){
+        const q = (p-.30)/.10;
+        return {x:-2 + .12*Math.sin(q*Math.PI), y:s.l2LeftY + (s.l2RightY-s.l2LeftY)*q + .55*Math.sin(q*Math.PI)};
+      }
+      const q = (p-.40)/.60;
+      const x = -1.98 + 6.18*q;
+      return {x,y:evalY(i,x)+.12};
+    }
+
+    return {x:0,y:0};
+  }
+
+  function animateTraveler(){
+    const start = performance.now();
+    const duration = current === 3 ? 2600 : 2200;
+
+    function step(now){
+      const p = clamp((now-start)/duration,0,1);
+      traveler = travelerPosition(current,p);
+      render();
+
+      if(p < 1){
+        requestAnimationFrame(step);
+      } else {
+        setStatus("🎉", current === 4
+          ? "Final bridge crossed! You built one-sided limits, a jump, a removable mismatch, and f(a) all at once."
+          : "Crossing complete. Nice repair work — the function behavior matches the clues.",
+          "#064e3b");
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  function resetLevel(){
+    state[current] = levels[current].reset();
+    hintOn = false;
+    probe = null;
+    traveler = null;
+    failureMarks = [];
+    setStatus("🛠️","Level reset. Drag the glowing handles to repair the bridge.");
+    render();
+  }
+
+  function toggleDot(){
+    const s = state[current];
+    if(current === 3) return;
+    if(!("dotPresent" in s)) return;
+
+    s.dotPresent = !s.dotPresent;
+    if(s.dotPresent){
+      if(current === 0 && s.dotY === undefined) s.dotY = 1;
+      if(current === 1 && s.dotY === undefined) s.dotY = 0;
+      if(current === 2 && s.dotY === undefined) s.dotY = 2.5;
+      if(current === 4 && s.dot1Y === undefined) s.dot1Y = 0;
+    }
+    failureMarks = [];
+    setStatus(s.dotPresent ? "●" : "○", s.dotPresent ? "Filled dot placed. Remember: a filled dot controls f(a)." : "Filled dot removed. Now f(a) is undefined at that spot.");
+    render();
+  }
+
+  function toggleOpen(){
+    const s = state[current];
+    s.open = !s.open;
+    failureMarks = [];
+    setStatus(s.open ? "○" : "👻", s.open ? "Open circles shown. They mark approach endpoints and holes." : "Open circles hidden. The approach paths still determine the one-sided limits.");
+    render();
+  }
+
+  testBtn.addEventListener("click", testBridge);
+  resetBtn.addEventListener("click", resetLevel);
+  hintBtn.addEventListener("click", () => {
+    hintOn = !hintOn;
+    setStatus("💡", hintOn ? levels[current].hint : "Hint hidden. Back to bridge engineering.");
+    render();
+  });
+  nextBtn.addEventListener("click", () => {
+    if(current < levels.length-1){
+      current++;
+      hintOn = false;
+      probe = null;
+      traveler = null;
+      failureMarks = [];
+      setStatus("🧭","New repair zone loaded. Read the visual clues, then move the graph pieces.");
+      render();
+    }
+  });
+  toggleDotBtn.addEventListener("click", toggleDot);
+  toggleOpenBtn.addEventListener("click", toggleOpen);
+
+  render();
+})();
+</script>
+  <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#ececec"
+    }
+  </script>
+</body>
+</html>

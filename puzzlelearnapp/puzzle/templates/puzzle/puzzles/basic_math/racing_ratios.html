@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ puzzle_name }}</title>
+
+  <style>
+    :root {
+      --track-width: 640px;
+      --track-height: 360px;
+      --outer-wall-width: 16px;
+      --inner-track-inset: 58px;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f5f7fb;
+      color: #222;
+      display: flex;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .activity {
+      width: 760px;
+      max-width: 100%;
+      background: white;
+      border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    h1 {
+      margin-top: 0;
+      text-align: center;
+      color: #1f3c88;
+    }
+
+    .instructions {
+      background: #eef4ff;
+      border-left: 5px solid #2f6fed;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 18px;
+      line-height: 1.4;
+    }
+
+    .progress-area {
+      margin-bottom: 20px;
+    }
+
+    .progress-label {
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 22px;
+      background: #ddd;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #2ecc71, #27ae60);
+      transition: width 0.4s ease;
+    }
+
+    .track-wrapper {
+      display: flex;
+      justify-content: center;
+      margin: 24px 0;
+    }
+
+    .track {
+      width: var(--track-width);
+      height: var(--track-height);
+      max-width: 100%;
+      background: #79c96b;
+      border-radius: 50%;
+      position: relative;
+      border: var(--outer-wall-width) solid #333;
+      box-sizing: border-box;
+    }
+
+    .track::before {
+      content: "";
+      position: absolute;
+      inset: var(--inner-track-inset);
+      background: white;
+      border-radius: 50%;
+      border: 10px solid #333;
+      box-sizing: border-box;
+    }
+
+    .lane-line {
+      position: absolute;
+      inset: 28px;
+      border: 3px dashed white;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .car {
+      width: 44px;
+      height: 24px;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      border-radius: 6px 10px 10px 6px;
+      transform-origin: center center;
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.35);
+      z-index: 3;
+    }
+
+    .car::before {
+      content: "";
+      position: absolute;
+      width: 18px;
+      height: 12px;
+      background: rgba(255, 255, 255, 0.65);
+      top: 6px;
+      left: 12px;
+      border-radius: 3px;
+    }
+
+    .car::after {
+      content: "";
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: #111;
+      border-radius: 50%;
+      bottom: -4px;
+      left: 7px;
+      box-shadow: 24px 0 #111;
+    }
+
+    .blue-car {
+      background: #1877f2;
+    }
+
+    .orange-car {
+      background: #ff8c1a;
+    }
+
+    .start-line {
+      position: absolute;
+
+      /*
+        Because absolutely positioned children sit inside the track border,
+        top: 0 is the inner edge of the outer wall.
+
+        The inner island begins at --inner-track-inset,
+        so this height spans the full road width.
+      */
+      top: 0;
+      height: var(--inner-track-inset);
+
+      /*
+        Narrow along the direction of travel.
+      */
+      width: 14px;
+
+      left: 50%;
+      transform: translateX(-50%);
+
+      background-color: white;
+      background-image:
+        linear-gradient(45deg, #111 25%, transparent 25%),
+        linear-gradient(-45deg, #111 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #111 75%),
+        linear-gradient(-45deg, transparent 75%, #111 75%);
+      background-size: 10px 10px;
+      background-position: 0 0, 0 5px, 5px -5px, -5px 0px;
+
+      border-left: 1px solid #111;
+      border-right: 1px solid #111;
+
+      z-index: 2;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 14px;
+      align-items: end;
+      margin-top: 16px;
+    }
+
+    label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    select {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #aaa;
+      font-size: 1rem;
+      background: white;
+    }
+
+    button {
+      padding: 11px 18px;
+      border: none;
+      border-radius: 8px;
+      background: #1f6feb;
+      color: white;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.1s ease;
+    }
+
+    button:hover {
+      background: #185abc;
+    }
+
+    button:active {
+      transform: scale(0.97);
+    }
+
+    .status {
+      min-height: 32px;
+      margin-top: 16px;
+      font-weight: bold;
+      text-align: center;
+      font-size: 1.05rem;
+    }
+
+    .status.warning {
+      color: #b36b00;
+    }
+
+    .status.error {
+      color: #c0392b;
+    }
+
+    .status.success {
+      color: #1f9d55;
+    }
+
+    .speed-display {
+      text-align: center;
+      margin-top: 8px;
+      font-size: 1rem;
+    }
+
+    .overlay-symbol {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 9rem;
+      font-weight: bold;
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.55);
+      pointer-events: none;
+    }
+
+    .overlay-symbol.show {
+      display: flex;
+      animation: pop 0.65s ease;
+    }
+
+    .overlay-symbol.check {
+      color: #1fbd55;
+    }
+
+    .overlay-symbol.xmark {
+      color: #d93025;
+    }
+
+    @keyframes pop {
+      0% {
+        transform: scale(0.4);
+        opacity: 0;
+      }
+      40% {
+        transform: scale(1.15);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    @media (max-width: 700px) {
+      .controls {
+        grid-template-columns: 1fr;
+      }
+
+      .track {
+        height: 260px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="activity">
+    <h1>Match the Racing Rate</h1>
+
+    <!-- <div class="instructions">
+      The blue car is racing at a hidden rate of
+      <strong>laps per minute</strong>. Choose values for the orange car.
+      Submit when you think the orange car’s rate exactly matches the blue car’s
+      rate in reduced form.
+    </div> -->
+
+    <div class="progress-area">
+      <div class="progress-label" style="display: none;">
+        Progress: <span id="progressText">0</span> / 5
+      </div>
+      <div class="progress-bar" aria-label="Progress bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </div>
+
+    <div class="track-wrapper">
+      <div class="track" id="track">
+        <div class="lane-line"></div>
+        <div class="start-line"></div>
+        <div class="car blue-car" id="blueCar" aria-label="Blue car"></div>
+        <div class="car orange-car" id="orangeCar" aria-label="Orange car"></div>
+      </div>
+    </div>
+
+    <div class="speed-display">
+      Blue car speed:
+      <strong id="blueSpeedDisplay">? laps / ? minutes</strong>
+      <br />
+      Orange car speed:
+      <strong id="orangeSpeedDisplay">5 laps / 1 minute</strong>
+    </div>
+
+    <section class="controls">
+      <div>
+        <label for="lapsInput">Orange car laps</label>
+        <select id="lapsInput"></select>
+      </div>
+
+      <div>
+        <label for="minutesInput">Orange car minutes</label>
+        <select id="minutesInput"></select>
+      </div>
+
+      <button id="submitBtn">Submit</button>
+    </section>
+
+    <div class="status" id="status"></div>
+
+    <div class="overlay-symbol check" id="checkOverlay">✓</div>
+    <div class="overlay-symbol xmark" id="xOverlay">✕</div>
+  </main>
+
+  <script>
+    /*************************************************************
+     * Activity settings
+     *************************************************************/
+    const QUESTIONS_TO_COMPLETE = 1;
+
+    /*
+      Animation scale:
+      The math rate is laps per minute.
+
+      To keep the animation watchable, this activity uses a simulated minute.
+      Here, 1 math minute equals 18 real seconds.
+    */
+    const REAL_SECONDS_PER_MATH_MINUTE = 60;
+
+    const MAX_RATE = 20;
+
+    /*************************************************************
+     * DOM references
+     *************************************************************/
+    const blueCar = document.getElementById("blueCar");
+    const orangeCar = document.getElementById("orangeCar");
+    const lapsInput = document.getElementById("lapsInput");
+    const minutesInput = document.getElementById("minutesInput");
+    const submitBtn = document.getElementById("submitBtn");
+    const statusEl = document.getElementById("status");
+    const blueSpeedDisplay = document.getElementById("blueSpeedDisplay");
+    const orangeSpeedDisplay = document.getElementById("orangeSpeedDisplay");
+    const progressText = document.getElementById("progressText");
+    const progressFill = document.getElementById("progressFill");
+    const checkOverlay = document.getElementById("checkOverlay");
+    const xOverlay = document.getElementById("xOverlay");
+
+    /*************************************************************
+     * State
+     *************************************************************/
+    let blueLaps = 5;
+    let blueMinutes = 1;
+    let correctCount = 0;
+
+    let startTime = performance.now();
+
+    /*************************************************************
+     * Utility functions
+     *************************************************************/
+    function gcd(a, b) {
+      a = Math.abs(a);
+      b = Math.abs(b);
+
+      while (b !== 0) {
+        const temp = b;
+        b = a % b;
+        a = temp;
+      }
+
+      return a;
+    }
+
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function randomChoice(array) {
+      return array[Math.floor(Math.random() * array.length)];
+    }
+
+    function isValidLaps(laps) {
+      return laps >= 5 && laps <= 100 && laps % 5 === 0;
+    }
+
+    function isValidMinutes(minutes) {
+      return minutes >= 1 && minutes <= 4 && Number.isInteger(minutes);
+    }
+
+    function isValidRate(laps, minutes) {
+      return laps / minutes <= MAX_RATE;
+    }
+
+    function isReduced(laps, minutes) {
+      return gcd(laps, minutes) === 1;
+    }
+
+    function sameRate(l1, m1, l2, m2) {
+      return l1 * m2 === l2 * m1;
+    }
+
+    function showOverlay(type) {
+      const overlay = type === "check" ? checkOverlay : xOverlay;
+      overlay.classList.add("show");
+
+      setTimeout(() => {
+        overlay.classList.remove("show");
+      }, 650);
+    }
+
+    function setStatus(message, type = "") {
+      statusEl.textContent = message;
+      statusEl.className = "status";
+
+      if (type) {
+        statusEl.classList.add(type);
+      }
+    }
+
+    /*************************************************************
+     * Generate answer choices
+     *************************************************************/
+    function populateInputs() {
+      for (let laps = 5; laps <= 100; laps += 5) {
+        const option = document.createElement("option");
+        option.value = laps;
+        option.textContent = laps;
+        lapsInput.appendChild(option);
+      }
+
+      for (let minutes = 1; minutes <= 4; minutes++) {
+        const option = document.createElement("option");
+        option.value = minutes;
+        option.textContent = minutes;
+        minutesInput.appendChild(option);
+      }
+
+      lapsInput.value = "5";
+      minutesInput.value = "1";
+    }
+
+    /*************************************************************
+     * Problem generation
+     *************************************************************/
+    function generateNewProblem() {
+      const possiblePairs = [];
+
+      for (let laps = 5; laps <= 100; laps += 5) {
+        for (let minutes = 1; minutes <= 4; minutes++) {
+          if (
+            gcd(laps, minutes) === 1 &&
+            laps / minutes <= MAX_RATE
+          ) {
+            possiblePairs.push({ laps, minutes });
+          }
+        }
+      }
+
+      const pair = randomChoice(possiblePairs);
+
+      blueLaps = pair.laps;
+      blueMinutes = pair.minutes;
+
+      blueSpeedDisplay.textContent = "? laps / ? minutes";
+
+      setStatus("New race! Match the blue car’s speed.", "");
+
+      startTime = performance.now();
+    }
+
+    /*************************************************************
+     * Progress
+     *************************************************************/
+    function updateProgress() {
+      progressText.textContent = correctCount;
+      const percent = (correctCount / QUESTIONS_TO_COMPLETE) * 100;
+      progressFill.style.width = `${percent}%`;
+    }
+
+    function activityComplete() {
+      setStatus("Activity complete! Great racing-rate work.", "success");
+
+      /*
+        If your platform already defines activityComplete(),
+        replace this function or connect this call to that system.
+      */
+      console.log("activityComplete() called");
+    }
+
+    /*************************************************************
+     * Orange car display
+     *************************************************************/
+    function updateOrangeDisplay() {
+      const laps = Number(lapsInput.value);
+      const minutes = Number(minutesInput.value);
+      orangeSpeedDisplay.textContent = `${laps} laps / ${minutes} minute${
+        minutes === 1 ? "" : "s"
+      }`;
+    }
+
+    lapsInput.addEventListener("change", updateOrangeDisplay);
+    minutesInput.addEventListener("change", updateOrangeDisplay);
+
+    /*************************************************************
+     * Submit logic
+     *************************************************************/
+    submitBtn.addEventListener("click", () => {
+      const userLaps = Number(lapsInput.value);
+      const userMinutes = Number(minutesInput.value);
+
+      if (!isValidLaps(userLaps) || !isValidMinutes(userMinutes)) {
+        setStatus(
+          "Please choose laps from 5 to 100 in multiples of 5, and minutes from 1 to 4.",
+          "error"
+        );
+        showOverlay("x");
+        return;
+      }
+
+      const exactMatch =
+        userLaps === blueLaps && userMinutes === blueMinutes;
+
+      const equivalentRate = sameRate(
+        userLaps,
+        userMinutes,
+        blueLaps,
+        blueMinutes
+      );
+
+      const userReduced = isReduced(userLaps, userMinutes);
+
+      if (exactMatch) {
+        showOverlay("check");
+        setStatus(
+          `Correct! ${blueLaps} laps / ${blueMinutes} minute${
+            blueMinutes === 1 ? "" : "s"
+          } is the exact reduced rate.`,
+          "success"
+        );
+
+        correctCount++;
+        updateProgress();
+
+        if (correctCount >= QUESTIONS_TO_COMPLETE) {
+          setTimeout(() => {
+            activityComplete();
+          }, 700);
+        } else {
+          setTimeout(() => {
+            generateNewProblem();
+          }, 900);
+        }
+      } else if (equivalentRate && !userReduced) {
+        setStatus(
+          "That rate is equivalent, but it is not in reduced form. Reduce your answer and try again.",
+          "warning"
+        );
+      } else {
+        showOverlay("x");
+        setStatus("Not quite. Try to match the blue car’s rate.", "error");
+      }
+    });
+
+    /*************************************************************
+     * Animation
+     *************************************************************/
+    function positionCar(car, lapsPerMinute, elapsedSeconds) {
+      /*
+        lapsPerMinute is the mathematical speed.
+        Convert real elapsed seconds into simulated math minutes.
+      */
+      const elapsedMathMinutes =
+        elapsedSeconds / REAL_SECONDS_PER_MATH_MINUTE;
+
+      const lapsCompleted = lapsPerMinute * elapsedMathMinutes;
+
+      /*
+        Start at the top of the track.
+        Angle increases clockwise.
+      */
+      const angle = lapsCompleted * 2 * Math.PI - Math.PI / 2;
+
+      /*
+        These match the CSS values:
+          --outer-wall-width: 16px;
+          --inner-track-inset: 58px;
+
+        The path is the exact centerline of the track lane.
+      */
+      const outerWallWidth = 16;
+      const innerTrackInset = 58;
+      const laneCenterOffset = (outerWallWidth + innerTrackInset) / 2;
+
+      const track = document.getElementById("track");
+      const trackWidth = track.clientWidth;
+      const trackHeight = track.clientHeight;
+
+      const centerX = trackWidth / 2;
+      const centerY = trackHeight / 2;
+
+      const radiusX = centerX - laneCenterOffset;
+      const radiusY = centerY - laneCenterOffset;
+
+      const x = centerX + radiusX * Math.cos(angle);
+      const y = centerY + radiusY * Math.sin(angle);
+
+      /*
+        Rotate the car to face along the direction of motion.
+      */
+      const rotationDegrees = (angle * 180) / Math.PI + 90;
+
+      car.style.transform = `
+        translate(-50%, -50%)
+        translate(${x - centerX}px, ${y - centerY}px)
+        rotate(${rotationDegrees}deg)
+      `;
+    }
+
+    function animate(now) {
+      const elapsedSeconds = (now - startTime) / 1000;
+
+      const blueRate = blueLaps / blueMinutes;
+
+      const orangeLaps = Number(lapsInput.value);
+      const orangeMinutes = Number(minutesInput.value);
+      const orangeRate = orangeLaps / orangeMinutes;
+
+      positionCar(blueCar, blueRate, elapsedSeconds);
+
+      /*
+        The orange car starts based on the user's selected speed.
+        With the default choice, it is not literally "off"; it moves once
+        the page starts. If you want it completely at rest until the user
+        changes a value, set orangeRate to 0 initially and flip a flag on change.
+      */
+      positionCar(orangeCar, orangeRate, elapsedSeconds);
+
+      requestAnimationFrame(animate);
+    }
+
+    /*************************************************************
+     * Initialize
+     *************************************************************/
+    populateInputs();
+    updateOrangeDisplay();
+    updateProgress();
+    generateNewProblem();
+    requestAnimationFrame(animate);
+
+  </script>
+<script src="/static/puzzle/js/activity.js"></script>
+<script>autoZoom();</script>
+</body>
+</html>

@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ puzzle_name }}</title>
+
+  <style>
+    :root {
+      --blue: #1f6feb;
+      --green: #1f9d55;
+      --red: #e63946;
+      --dark: #202124;
+      --light: #f7f8fa;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      overflow: hidden;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #ffffff;
+      color: var(--dark);
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 12px 18px 8px;
+      border-bottom: 1px solid #ddd;
+      background: #fff;
+      z-index: 2;
+    }
+
+    .top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .error-box,
+    .question-box {
+      font-weight: 700;
+      font-size: clamp(0.95rem, 2vw, 1.15rem);
+    }
+
+    .equation {
+      text-align: center;
+      font-size: clamp(1.6rem, 4vw, 2.6rem);
+      font-weight: 800;
+      line-height: 1.1;
+      margin: 2px 0 6px;
+    }
+
+    .instructions {
+      text-align: center;
+      font-size: clamp(0.9rem, 2vw, 1.05rem);
+      min-height: 1.4em;
+    }
+
+    .progress-wrap {
+      width: 100%;
+      height: 12px;
+      border-radius: 999px;
+      background: #e8eaed;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #1f6feb, #2ea043);
+      transition: width 300ms ease;
+    }
+
+    main {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      /* background: var(--light); */
+    }
+
+    .plane-shell {
+      width: min(94vw, calc(100vh - 170px));
+      max-width: 900px;
+      min-width: 290px;
+      aspect-ratio: 1 / 1;
+      background: #fff;
+      border: 3px solid #222;
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      overflow: hidden;
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+      user-select: none;
+      cursor: grab;
+      background: white;
+    }
+
+    svg.dragging {
+      cursor: grabbing;
+    }
+
+    .axis {
+      stroke: #333;
+      stroke-width: 3;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .blue-line {
+      stroke: var(--blue);
+      stroke-width: 6;
+      stroke-linecap: round;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .green-line {
+      stroke: var(--green);
+      stroke-width: 6;
+      stroke-linecap: round;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .red-sector {
+      fill: rgba(230, 57, 70, 0.38);
+      stroke: rgba(230, 57, 70, 0.65);
+      stroke-width: 1;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .angle-label {
+      font-size: 34px;
+      font-weight: 800;
+      fill: #9b111e;
+      paint-order: stroke;
+      stroke: white;
+      stroke-width: 6px;
+      stroke-linejoin: round;
+      pointer-events: none;
+    }
+
+    .dot-green {
+      fill: var(--green);
+      stroke: white;
+      stroke-width: 4;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .dot-blue {
+      fill: var(--blue);
+      stroke: white;
+      stroke-width: 4;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .dot-label {
+      font-size: 28px;
+      font-weight: 800;
+      fill: #111;
+      paint-order: stroke;
+      stroke: white;
+      stroke-width: 6px;
+      stroke-linejoin: round;
+      pointer-events: none;
+    }
+
+    .red-error-line {
+      stroke: var(--red);
+      stroke-width: 7;
+      stroke-linecap: round;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .axis-label {
+      font-size: 24px;
+      font-weight: 700;
+      fill: #555;
+      pointer-events: none;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="top-row">
+      <div class="error-box">Accumulated Error: <span id="errorTotal">0.0</span></div>
+      <div class="question-box">Question <span id="questionNumber">1</span> / 8</div>
+    </div>
+
+    <div id="equation" class="equation">y = x</div>
+    <div id="instructions" class="instructions" aria-live="polite">
+      Drag the blue line to match the equation’s slope.
+    </div>
+
+    <div class="progress-wrap" aria-label="Progress">
+      <div id="progressFill" class="progress-fill"></div>
+    </div>
+  </header>
+
+  <main>
+    <div class="plane-shell">
+      <svg id="plane" viewBox="0 0 1000 1000" role="img" aria-label="Coordinate plane">
+        <!-- Static axes only: no tick marks, no grid lines -->
+        <line class="axis" x1="0" y1="500" x2="1000" y2="500"></line>
+        <line class="axis" x1="500" y1="0" x2="500" y2="1000"></line>
+
+        <text class="axis-label" x="970" y="485" text-anchor="end">x</text>
+        <text class="axis-label" x="515" y="30">y</text>
+
+        <!-- Dynamic drawing layers -->
+        <g id="redLayer"></g>
+        <line id="greenLine" class="green-line" style="display:none"></line>
+        <line id="blueLine" class="blue-line"></line>
+        <g id="dotLayer"></g>
+      </svg>
+    </div>
+  </main>
+
+  <script>
+    /************************************************************
+     * If the hosting environment already defines activityComplete,
+     * this fallback will not replace it.
+     ************************************************************/
+    if (typeof window.activityComplete !== "function") {
+      window.activityComplete = function () {
+        console.log("activityComplete() called");
+        alert("Activity complete!");
+      };
+    }
+
+    const TOTAL_QUESTIONS = 8;
+    const SVG_SIZE = 1000;
+    const COORD_MIN = -10;
+    const COORD_MAX = 10;
+    const COORD_SPAN = 20;
+
+    const AXIS_CLICK_TOLERANCE = 0.45;
+
+    const plane = document.getElementById("plane");
+    const blueLine = document.getElementById("blueLine");
+    const greenLine = document.getElementById("greenLine");
+    const redLayer = document.getElementById("redLayer");
+    const dotLayer = document.getElementById("dotLayer");
+
+    const equationEl = document.getElementById("equation");
+    const instructionsEl = document.getElementById("instructions");
+    const errorTotalEl = document.getElementById("errorTotal");
+    const progressFill = document.getElementById("progressFill");
+    const questionNumberEl = document.getElementById("questionNumber");
+
+    const slopeChoices = [];
+
+    // Integers from -10 to 10, excluding 0.
+    for (let i = -10; i <= 10; i++) {
+      if (i !== 0) {
+        slopeChoices.push({ value: i, label: String(i) });
+      }
+    }
+
+    slopeChoices.push(
+      { value: 1 / 2, label: "1/2" },
+      { value: 1 / 3, label: "1/3" },
+      { value: 1 / 4, label: "1/4" },
+      { value: -1 / 2, label: "-1/2" },
+      { value: -1 / 3, label: "-1/3" },
+      { value: -1 / 4, label: "-1/4" }
+    );
+
+    let state = "idle";
+    let completedQuestions = 0;
+    let totalError = 0;
+    let completeCalled = false;
+
+    let currentSlope = null;
+    let targetAngle = 0;
+    let userAngle = Math.PI / 4;
+    let isDragging = false;
+    let currentDotTask = null;
+
+    const NS = "http://www.w3.org/2000/svg";
+
+    function randInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function formatNumber(value) {
+      const rounded = Math.round(value * 10) / 10;
+      return rounded.toFixed(1);
+    }
+
+    function chooseRandomSlope() {
+      return slopeChoices[randInt(0, slopeChoices.length - 1)];
+    }
+
+    function equationText(slope) {
+      return `y = ${slope.label}x`;
+    }
+
+    function updateTopDisplay() {
+      errorTotalEl.textContent = totalError.toFixed(1);
+      questionNumberEl.textContent = Math.min(completedQuestions + 1, TOTAL_QUESTIONS);
+      progressFill.style.width = `${(completedQuestions / TOTAL_QUESTIONS) * 100}%`;
+    }
+
+    function toSvgPoint(x, y) {
+      return {
+        x: ((x - COORD_MIN) / COORD_SPAN) * SVG_SIZE,
+        y: ((COORD_MAX - y) / COORD_SPAN) * SVG_SIZE
+      };
+    }
+
+    function fromSvgPoint(svgX, svgY) {
+      return {
+        x: (svgX / SVG_SIZE) * COORD_SPAN + COORD_MIN,
+        y: COORD_MAX - (svgY / SVG_SIZE) * COORD_SPAN
+      };
+    }
+
+    function eventToSvgPoint(evt) {
+      const pt = plane.createSVGPoint();
+      pt.x = evt.clientX;
+      pt.y = evt.clientY;
+      return pt.matrixTransform(plane.getScreenCTM().inverse());
+    }
+
+    function normalizeLineAngle(angle) {
+      while (angle > Math.PI / 2) angle -= Math.PI;
+      while (angle <= -Math.PI / 2) angle += Math.PI;
+      return angle;
+    }
+
+    function shortestAngleDelta(from, to) {
+      let delta = to - from;
+      while (delta > Math.PI / 2) delta -= Math.PI;
+      while (delta < -Math.PI / 2) delta += Math.PI;
+      return delta;
+    }
+
+    function acuteAngleDifference(a, b) {
+      return Math.abs(shortestAngleDelta(a, b));
+    }
+
+    function angleFromPointer(evt) {
+      const svgPt = eventToSvgPoint(evt);
+      const mathPt = fromSvgPoint(svgPt.x, svgPt.y);
+
+      // Avoid unstable angle right at the origin.
+      if (Math.hypot(mathPt.x, mathPt.y) < 0.15) {
+        return userAngle;
+      }
+
+      return normalizeLineAngle(Math.atan2(mathPt.y, mathPt.x));
+    }
+
+    function lineEndpointsForAngle(angle) {
+      const dx = Math.cos(angle);
+      const dy = Math.sin(angle);
+
+      const tx = Math.abs(dx) < 1e-9 ? Infinity : 10 / Math.abs(dx);
+      const ty = Math.abs(dy) < 1e-9 ? Infinity : 10 / Math.abs(dy);
+      const t = Math.min(tx, ty);
+
+      return {
+        x1: -t * dx,
+        y1: -t * dy,
+        x2: t * dx,
+        y2: t * dy
+      };
+    }
+
+    function setLineToAngle(lineEl, angle) {
+      const e = lineEndpointsForAngle(angle);
+      const p1 = toSvgPoint(e.x1, e.y1);
+      const p2 = toSvgPoint(e.x2, e.y2);
+
+      lineEl.setAttribute("x1", p1.x);
+      lineEl.setAttribute("y1", p1.y);
+      lineEl.setAttribute("x2", p2.x);
+      lineEl.setAttribute("y2", p2.y);
+    }
+
+    function clearDynamicLayers() {
+      redLayer.innerHTML = "";
+      dotLayer.innerHTML = "";
+      greenLine.style.display = "none";
+    }
+
+    function addError(amount) {
+      totalError += amount;
+      updateTopDisplay();
+    }
+
+    function drawAngleRegion(fromAngle, toAngle, degreeAmount) {
+      redLayer.innerHTML = "";
+
+      const delta = shortestAngleDelta(fromAngle, toAngle);
+
+      if (Math.abs(delta) < 0.0001) {
+        const label = document.createElementNS(NS, "text");
+        const p = toSvgPoint(2.8, 1.2);
+        label.setAttribute("class", "angle-label");
+        label.setAttribute("x", p.x);
+        label.setAttribute("y", p.y);
+        label.setAttribute("text-anchor", "middle");
+        label.setAttribute("dominant-baseline", "middle");
+        label.textContent = `${degreeAmount.toFixed(1)}°`;
+        redLayer.appendChild(label);
+        return;
+      }
+
+      const endAngle = fromAngle + delta;
+      const radiusCoord = 16;
+      const radiusSvg = (radiusCoord / COORD_SPAN) * SVG_SIZE;
+      const origin = toSvgPoint(0, 0);
+
+      function pointOnAngle(angle) {
+        return toSvgPoint(
+          radiusCoord * Math.cos(angle),
+          radiusCoord * Math.sin(angle)
+        );
+      }
+
+      function sectorPath(a1, a2) {
+        const p1 = pointOnAngle(a1);
+        const p2 = pointOnAngle(a2);
+        const sweepFlag = a2 - a1 > 0 ? 0 : 1;
+
+        return [
+          `M ${origin.x} ${origin.y}`,
+          `L ${p1.x} ${p1.y}`,
+          `A ${radiusSvg} ${radiusSvg} 0 0 ${sweepFlag} ${p2.x} ${p2.y}`,
+          "Z"
+        ].join(" ");
+      }
+
+      // Draw the swept region on both opposite sides of the two full lines.
+      const pathData =
+        sectorPath(fromAngle, endAngle) + " " +
+        sectorPath(fromAngle + Math.PI, endAngle + Math.PI);
+
+      const path = document.createElementNS(NS, "path");
+      path.setAttribute("class", "red-sector");
+      path.setAttribute("d", pathData);
+      redLayer.appendChild(path);
+
+      const mid = fromAngle + delta / 2;
+      const labelPoint = toSvgPoint(
+        4.2 * Math.cos(mid),
+        4.2 * Math.sin(mid)
+      );
+
+      const label = document.createElementNS(NS, "text");
+      label.setAttribute("class", "angle-label");
+      label.setAttribute("x", labelPoint.x);
+      label.setAttribute("y", labelPoint.y);
+      label.setAttribute("text-anchor", "middle");
+      label.setAttribute("dominant-baseline", "middle");
+      label.textContent = `${degreeAmount.toFixed(1)}°`;
+      redLayer.appendChild(label);
+    }
+
+    function animateLineToAngle(fromAngle, toAngle, duration = 650) {
+      return new Promise(resolve => {
+        const start = performance.now();
+        const delta = shortestAngleDelta(fromAngle, toAngle);
+
+        function ease(t) {
+          return 1 - Math.pow(1 - t, 3);
+        }
+
+        function frame(now) {
+          const rawT = clamp((now - start) / duration, 0, 1);
+          const eased = ease(rawT);
+          const angle = normalizeLineAngle(fromAngle + delta * eased);
+          setLineToAngle(blueLine, angle);
+
+          if (rawT < 1) {
+            requestAnimationFrame(frame);
+          } else {
+            setLineToAngle(blueLine, toAngle);
+            resolve();
+          }
+        }
+
+        requestAnimationFrame(frame);
+      });
+    }
+
+    function randomOneDecimalAwayFromZero(min, max) {
+      const validValues = [];
+
+      const lo = Math.ceil(min * 10);
+      const hi = Math.floor(max * 10);
+
+      for (let n = lo; n <= hi; n++) {
+        const value = n / 10;
+
+        if (value >= 1 || value <= -1) {
+          validValues.push(value);
+        }
+      }
+
+      if (validValues.length === 0) {
+        // Fallback should rarely/never be needed with the current slope choices,
+        // but it prevents crashes if settings are changed later.
+        return min < 0 ? -1 : 1;
+      }
+
+      return validValues[randInt(0, validValues.length - 1)];
+    }
+
+    function randomOneDecimalInRange(min, max) {
+      const lo = Math.ceil(min * 10);
+      const hi = Math.floor(max * 10);
+      return randInt(lo, hi) / 10;
+    }
+
+    function createDotTask() {
+      const m = currentSlope.value;
+
+      // Since m is never 0, either axis can be used.
+      const giveX = Math.random() < 0.5;
+
+      if (giveX) {
+        // Choose x so that:
+        // 1. x is on the visible axis,
+        // 2. |x| >= 1,
+        // 3. y = mx is also visible.
+        const maxAbsX = Math.min(10, 10 / Math.abs(m));
+
+        const x = randomOneDecimalAwayFromZero(-maxAbsX, maxAbsX);
+        const y = m * x;
+
+        return {
+          sourceAxis: "x",
+          targetAxis: "y",
+          sourceValue: x,
+          correctValue: y
+        };
+      } else {
+        // Choose y so that:
+        // 1. y is on the visible axis,
+        // 2. |y| >= 1,
+        // 3. x = y / m is also visible.
+        const maxAbsY = Math.min(10, 10 * Math.abs(m));
+
+        const y = randomOneDecimalAwayFromZero(-maxAbsY, maxAbsY);
+        const x = y / m;
+
+        return {
+          sourceAxis: "y",
+          targetAxis: "x",
+          sourceValue: y,
+          correctValue: x
+        };
+      }
+    }
+
+    function makeSvgEl(tag, attrs = {}) {
+      const el = document.createElementNS(NS, tag);
+      for (const [key, value] of Object.entries(attrs)) {
+        el.setAttribute(key, value);
+      }
+      return el;
+    }
+
+    function drawDot(group, className, x, y, radius = 12) {
+      const p = toSvgPoint(x, y);
+      const circle = makeSvgEl("circle", {
+        class: className,
+        cx: p.x,
+        cy: p.y,
+        r: radius
+      });
+      group.appendChild(circle);
+      return circle;
+    }
+
+    function drawDotLabel(group, text, x, y, axisType = "x") {
+      const p = toSvgPoint(x, y);
+      const label = makeSvgEl("text", {
+        class: "dot-label",
+        x: p.x,
+        y: p.y,
+        "text-anchor": "middle"
+      });
+
+      if (axisType === "x") {
+        label.setAttribute("dy", y >= 8.7 ? "34" : "-24");
+      } else {
+        label.setAttribute("dx", x >= 0 ? "56" : "-56");
+        label.setAttribute("dy", "10");
+      }
+
+      label.textContent = text;
+      group.appendChild(label);
+      return label;
+    }
+
+    function drawSourceDotTask(task) {
+      dotLayer.innerHTML = "";
+
+      if (task.sourceAxis === "x") {
+        drawDot(dotLayer, "dot-green", task.sourceValue, 0);
+        drawDotLabel(
+          dotLayer,
+          `x = ${formatNumber(task.sourceValue)}`,
+          task.sourceValue,
+          0,
+          "x"
+        );
+
+        instructionsEl.textContent =
+          `Given x = ${formatNumber(task.sourceValue)}, click the matching point on the y-axis.`;
+      } else {
+        drawDot(dotLayer, "dot-green", 0, task.sourceValue);
+        drawDotLabel(
+          dotLayer,
+          `y = ${formatNumber(task.sourceValue)}`,
+          0,
+          task.sourceValue,
+          "y"
+        );
+
+        instructionsEl.textContent =
+          `Given y = ${formatNumber(task.sourceValue)}, click the matching point on the x-axis.`;
+      }
+    }
+
+    function drawRedErrorLine(x1, y1, x2, y2) {
+      const p1 = toSvgPoint(x1, y1);
+      const p2 = toSvgPoint(x2, y2);
+
+      const line = makeSvgEl("line", {
+        class: "red-error-line",
+        x1: p1.x,
+        y1: p1.y,
+        x2: p2.x,
+        y2: p2.y
+      });
+
+      dotLayer.appendChild(line);
+      return line;
+    }
+
+    function animateDotToCorrect(blueDot, redLine, task, userValue, correctValue, duration = 700) {
+      return new Promise(resolve => {
+        const start = performance.now();
+
+        function ease(t) {
+          return 1 - Math.pow(1 - t, 3);
+        }
+
+        function frame(now) {
+          const rawT = clamp((now - start) / duration, 0, 1);
+          const eased = ease(rawT);
+          const currentValue = userValue + (correctValue - userValue) * eased;
+
+          let blueX, blueY, correctX, correctY;
+
+          if (task.targetAxis === "y") {
+            blueX = 0;
+            blueY = currentValue;
+            correctX = 0;
+            correctY = correctValue;
+          } else {
+            blueX = currentValue;
+            blueY = 0;
+            correctX = correctValue;
+            correctY = 0;
+          }
+
+          const bp = toSvgPoint(blueX, blueY);
+          const cp = toSvgPoint(correctX, correctY);
+
+          blueDot.setAttribute("cx", bp.x);
+          blueDot.setAttribute("cy", bp.y);
+
+          redLine.setAttribute("x1", bp.x);
+          redLine.setAttribute("y1", bp.y);
+          redLine.setAttribute("x2", cp.x);
+          redLine.setAttribute("y2", cp.y);
+
+          if (rawT < 1) {
+            requestAnimationFrame(frame);
+          } else {
+            resolve();
+          }
+        }
+
+        requestAnimationFrame(frame);
+      });
+    }
+
+    function startDotPhase() {
+      state = "dot";
+      redLayer.innerHTML = "";
+      greenLine.style.display = "none";
+      setLineToAngle(blueLine, targetAngle);
+
+      currentDotTask = createDotTask();
+      drawSourceDotTask(currentDotTask);
+    }
+
+    function completeQuestionAndContinue() {
+      completedQuestions++;
+      updateTopDisplay();
+
+      if (completedQuestions >= TOTAL_QUESTIONS) {
+        finishActivity();
+      } else {
+        setTimeout(beginQuestion, 450);
+      }
+    }
+
+    function finishActivity() {
+      if (completeCalled) return;
+      completeCalled = true;
+
+      state = "complete";
+      progressFill.style.width = "100%";
+      instructionsEl.textContent = "Activity complete. Nice work!";
+      activityComplete(`Total Error: ${totalError.toFixed(1)}`);
+    }
+
+    function beginQuestion() {
+      state = "drag";
+      clearDynamicLayers();
+
+      currentSlope = chooseRandomSlope();
+      targetAngle = Math.atan(currentSlope.value);
+
+      // The blue line always begins with slope 1, regardless of the equation.
+      userAngle = Math.PI / 4;
+
+      equationEl.textContent = equationText(currentSlope);
+      instructionsEl.textContent = "Drag the blue line to match the equation’s slope.";
+
+      setLineToAngle(blueLine, userAngle);
+      updateTopDisplay();
+    }
+
+    async function finalizeLineGuess() {
+      state = "lineFeedback";
+      plane.classList.remove("dragging");
+
+      const angleErrorRad = acuteAngleDifference(userAngle, targetAngle);
+      const angleErrorDeg = angleErrorRad * 180 / Math.PI;
+
+      setLineToAngle(greenLine, targetAngle);
+      greenLine.style.display = "block";
+
+      drawAngleRegion(userAngle, targetAngle, angleErrorDeg);
+      addError(angleErrorDeg);
+
+      instructionsEl.textContent =
+        `Angle error: ${angleErrorDeg.toFixed(1)}°. Watch the blue line rotate to the correct line.`;
+
+      await new Promise(resolve => setTimeout(resolve, 900));
+      await animateLineToAngle(userAngle, targetAngle, 650);
+
+      redLayer.innerHTML = "";
+      greenLine.style.display = "none";
+
+      await new Promise(resolve => setTimeout(resolve, 250));
+      startDotPhase();
+    }
+
+    function handleDotClick(evt) {
+      if (state !== "dot") return;
+
+      const svgPt = eventToSvgPoint(evt);
+      const mathPt = fromSvgPoint(svgPt.x, svgPt.y);
+
+      const task = currentDotTask;
+
+      // Require the user to click on or very near the required axis.
+      // If the target is the y-axis, x must be near 0.
+      // If the target is the x-axis, y must be near 0.
+      if (task.targetAxis === "y" && Math.abs(mathPt.x) > AXIS_CLICK_TOLERANCE) {
+        return;
+      }
+
+      if (task.targetAxis === "x" && Math.abs(mathPt.y) > AXIS_CLICK_TOLERANCE) {
+        return;
+      }
+
+      state = "dotFeedback";
+
+      let userValue;
+      let blueX, blueY;
+      let correctX, correctY;
+
+      if (task.targetAxis === "y") {
+        userValue = clamp(mathPt.y, -10, 10);
+
+        blueX = 0;
+        blueY = userValue;
+
+        correctX = 0;
+        correctY = task.correctValue;
+      } else {
+        userValue = clamp(mathPt.x, -10, 10);
+
+        blueX = userValue;
+        blueY = 0;
+
+        correctX = task.correctValue;
+        correctY = 0;
+      }
+
+      const distanceError = Math.abs(userValue - task.correctValue);
+      addError(distanceError);
+
+      const redLine = drawRedErrorLine(blueX, blueY, correctX, correctY);
+      const blueDot = drawDot(dotLayer, "dot-blue", blueX, blueY);
+      drawDot(dotLayer, "dot-green", correctX, correctY);
+
+      if (task.targetAxis === "y") {
+        drawDotLabel(
+          dotLayer,
+          `correct y = ${formatNumber(task.correctValue)}`,
+          correctX,
+          correctY,
+          "y"
+        );
+      } else {
+        drawDotLabel(
+          dotLayer,
+          `correct x = ${formatNumber(task.correctValue)}`,
+          correctX,
+          correctY,
+          "x"
+        );
+      }
+
+      instructionsEl.textContent =
+        `Distance error: ${distanceError.toFixed(1)}. The blue dot will slide to the correct point.`;
+
+      animateDotToCorrect(
+        blueDot,
+        redLine,
+        task,
+        userValue,
+        task.correctValue,
+        700
+      ).then(() => {
+        setTimeout(completeQuestionAndContinue, 550);
+      });
+    }
+
+    plane.addEventListener("pointerdown", evt => {
+      if (state === "drag") {
+        isDragging = true;
+        plane.classList.add("dragging");
+        plane.setPointerCapture(evt.pointerId);
+
+        userAngle = angleFromPointer(evt);
+        setLineToAngle(blueLine, userAngle);
+      } else if (state === "dot") {
+        handleDotClick(evt);
+      }
+    });
+
+    plane.addEventListener("pointermove", evt => {
+      if (!isDragging || state !== "drag") return;
+
+      userAngle = angleFromPointer(evt);
+      setLineToAngle(blueLine, userAngle);
+    });
+
+    plane.addEventListener("pointerup", evt => {
+      if (!isDragging || state !== "drag") return;
+
+      isDragging = false;
+      plane.releasePointerCapture(evt.pointerId);
+      finalizeLineGuess();
+    });
+
+    plane.addEventListener("pointercancel", () => {
+      isDragging = false;
+      plane.classList.remove("dragging");
+    });
+
+    beginQuestion();
+
+  </script>
+<script src="/static/puzzle/js/activity.js"></script>
+<script>autoZoom();</script>
+</body>
+</html>

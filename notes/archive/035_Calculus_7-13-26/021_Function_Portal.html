@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Function Portal</title>
+<style>
+  :root {
+    --bg: #07111f;
+    --panel: #0d1d33;
+    --panel2: #102844;
+    --cyan: #6ff6ff;
+    --cyan2: #1fd0ff;
+    --gold: #ffd166;
+    --pink: #ff5c9a;
+    --green: #75ff9b;
+    --red: #ff5f6d;
+    --white: #f3fbff;
+    --muted: #9fb7c8;
+    --shadow: rgba(111, 246, 255, 0.35);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background:
+      radial-gradient(circle at 20% 10%, rgba(31,208,255,0.18), transparent 28%),
+      radial-gradient(circle at 80% 20%, rgba(255,92,154,0.12), transparent 25%),
+      linear-gradient(135deg, #050b14, var(--bg));
+    color: var(--white);
+    overflow-x: hidden;
+  }
+
+  header {
+    padding: 20px 18px 8px;
+    text-align: center;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(2rem, 5vw, 4rem);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    text-shadow: 0 0 18px var(--shadow);
+  }
+
+  .subtitle {
+    color: var(--muted);
+    margin-top: 6px;
+    font-size: 0.98rem;
+  }
+
+  main {
+    width: min(1180px, 96vw);
+    margin: 0 auto 34px;
+    display: grid;
+    grid-template-columns: 1.35fr 0.85fr;
+    gap: 18px;
+  }
+
+  @media (max-width: 850px) {
+    main {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .card {
+    background: linear-gradient(180deg, rgba(16,40,68,0.95), rgba(8,18,32,0.95));
+    border: 1px solid rgba(111,246,255,0.2);
+    border-radius: 22px;
+    box-shadow: 0 0 30px rgba(0,0,0,0.35), inset 0 0 18px rgba(111,246,255,0.05);
+    padding: 18px;
+  }
+
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+
+  .badge {
+    border: 1px solid rgba(111,246,255,0.35);
+    background: rgba(111,246,255,0.08);
+    color: var(--cyan);
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-weight: 700;
+  }
+
+  .score {
+    color: var(--gold);
+    font-weight: 800;
+  }
+
+  .machine-wrap {
+    min-height: 355px;
+    display: grid;
+    place-items: center;
+    position: relative;
+    border-radius: 18px;
+    background:
+      linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px),
+      linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 30px 30px;
+    overflow: hidden;
+  }
+
+  .machine-wrap::before {
+    content: "";
+    position: absolute;
+    inset: 10%;
+    background: radial-gradient(circle, rgba(111,246,255,0.08), transparent 60%);
+    animation: pulse 4s infinite ease-in-out;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(0.95); opacity: 0.55; }
+    50% { transform: scale(1.1); opacity: 1; }
+  }
+
+  .machine {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: clamp(1.5rem, 4vw, 2.55rem);
+    padding: 22px;
+    transition: transform 0.5s ease, filter 0.5s ease;
+  }
+
+  .integral {
+    font-size: 1.8em;
+    color: var(--gold);
+    line-height: 0.7;
+  }
+
+  .factor, .core, .ghost-core {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 8px 12px;
+    border-radius: 13px;
+    cursor: pointer;
+    user-select: none;
+    transition: 0.2s ease;
+    position: relative;
+  }
+
+  .factor {
+    border: 2px solid rgba(255,209,102,0.55);
+    background: rgba(255,209,102,0.12);
+    color: #ffe6a3;
+  }
+
+  .factor:hover, .core:hover, .ghost-core:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 0 18px rgba(111,246,255,0.25);
+  }
+
+  .factor.selected {
+    border-color: var(--green);
+    box-shadow: 0 0 22px rgba(117,255,155,0.45);
+  }
+
+  .shell {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 16px;
+    border: 3px solid rgba(111,246,255,0.65);
+    border-radius: 22px;
+    background: rgba(111,246,255,0.08);
+    color: var(--white);
+    box-shadow: inset 0 0 25px rgba(111,246,255,0.07);
+    position: relative;
+  }
+
+  .shell::before {
+    content: "outer shell";
+    position: absolute;
+    top: -28px;
+    left: 14px;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--cyan);
+  }
+
+  .core {
+    border: 2px solid rgba(255,92,154,0.72);
+    background: rgba(255,92,154,0.12);
+    color: #ffd4e4;
+  }
+
+  .core::after {
+    content: "core";
+    position: absolute;
+    bottom: -19px;
+    font-size: 0.65rem;
+    color: var(--pink);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .core.selected, .ghost-core.selected {
+    border-color: var(--green);
+    background: rgba(117,255,155,0.12);
+    box-shadow: 0 0 22px rgba(117,255,155,0.45);
+    color: #dfffdf;
+  }
+
+  .ghosts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .ghost-core {
+    border: 1px dashed rgba(255,92,154,0.55);
+    background: rgba(255,92,154,0.06);
+    color: #ffd4e4;
+    min-height: 38px;
+    font-size: 1rem;
+  }
+
+  .ghost-label {
+    color: var(--muted);
+    margin: 10px 0 8px;
+    font-size: 0.9rem;
+  }
+
+  .tools {
+    display: grid;
+    gap: 14px;
+  }
+
+  .tool-title {
+    color: var(--cyan);
+    text-transform: uppercase;
+    font-size: 0.76rem;
+    letter-spacing: 0.12em;
+    margin-bottom: 8px;
+  }
+
+  .scanner {
+    width: 100%;
+    min-height: 72px;
+    border: 2px solid rgba(111,246,255,0.65);
+    border-radius: 18px;
+    background:
+      linear-gradient(135deg, rgba(111,246,255,0.16), rgba(31,208,255,0.04)),
+      repeating-linear-gradient(90deg, transparent 0 10px, rgba(111,246,255,0.08) 10px 12px);
+    display: grid;
+    place-items: center;
+    color: var(--cyan);
+    font-weight: 900;
+    cursor: grab;
+    box-shadow: 0 0 22px rgba(111,246,255,0.16);
+  }
+
+  .scanner:active {
+    cursor: grabbing;
+  }
+
+  .trace-bank {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .trace-bank .factor {
+    font-size: 1rem;
+    min-height: 38px;
+  }
+
+  .drop-ready {
+    outline: 3px solid var(--cyan);
+    outline-offset: 4px;
+  }
+
+  .constant-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: rgba(255,255,255,0.035);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  select, button {
+    font: inherit;
+  }
+
+  select {
+    background: #07111f;
+    color: var(--white);
+    border: 1px solid rgba(111,246,255,0.45);
+    border-radius: 12px;
+    padding: 8px 10px;
+  }
+
+  button {
+    border: 0;
+    border-radius: 13px;
+    padding: 10px 13px;
+    color: #06101b;
+    background: var(--cyan);
+    font-weight: 850;
+    cursor: pointer;
+    transition: 0.18s ease;
+  }
+
+  button:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+  }
+
+  button.secondary {
+    background: rgba(255,255,255,0.08);
+    color: var(--white);
+    border: 1px solid rgba(255,255,255,0.14);
+  }
+
+  button.gold {
+    background: var(--gold);
+  }
+
+  button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .portal-view {
+    min-height: 130px;
+    border-radius: 18px;
+    border: 1px solid rgba(111,246,255,0.22);
+    background: radial-gradient(circle at center, rgba(111,246,255,0.11), rgba(0,0,0,0.12));
+    display: grid;
+    place-items: center;
+    text-align: center;
+    padding: 15px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .portal-ring {
+    width: 78px;
+    height: 78px;
+    border-radius: 50%;
+    border: 5px solid rgba(111,246,255,0.28);
+    box-shadow: 0 0 20px rgba(111,246,255,0.22);
+    transition: 0.5s ease;
+  }
+
+  .portal-view.open .portal-ring {
+    width: 118px;
+    height: 118px;
+    border-color: var(--green);
+    box-shadow:
+      0 0 12px var(--green),
+      0 0 45px rgba(117,255,155,0.55),
+      inset 0 0 24px rgba(117,255,155,0.28);
+    animation: spin 2.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .uworld {
+    margin-top: 10px;
+    color: var(--green);
+    font-weight: 850;
+    font-size: 1.18rem;
+    min-height: 32px;
+  }
+
+  .message {
+    min-height: 86px;
+    border-radius: 16px;
+    background: rgba(0,0,0,0.18);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 13px;
+    color: var(--muted);
+    line-height: 1.35;
+  }
+
+  .message strong {
+    color: var(--white);
+  }
+
+  .message.good {
+    color: #d9ffe2;
+    border-color: rgba(117,255,155,0.36);
+    background: rgba(117,255,155,0.08);
+  }
+
+  .message.bad {
+    color: #ffe0e5;
+    border-color: rgba(255,95,109,0.42);
+    background: rgba(255,95,109,0.08);
+  }
+
+  .mini-map {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    justify-content: center;
+    margin-top: 10px;
+  }
+
+  .dot {
+    width: 38px;
+    height: 12px;
+    border-radius: 99px;
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .dot.done {
+    background: var(--green);
+    box-shadow: 0 0 12px rgba(117,255,155,0.65);
+  }
+
+  .dot.current {
+    background: var(--cyan);
+    box-shadow: 0 0 12px rgba(111,246,255,0.65);
+  }
+
+  .collapse {
+    animation: collapse 0.85s ease forwards;
+  }
+
+  @keyframes collapse {
+    0% { transform: scale(1); filter: brightness(1); }
+    45% { transform: scale(0.92); filter: brightness(1.8); }
+    100% { transform: scale(0.05); opacity: 0; filter: brightness(3); }
+  }
+
+  .wave {
+    animation: wave 0.75s ease;
+  }
+
+  @keyframes wave {
+    0% { box-shadow: 0 0 0 0 rgba(255,95,109,0.0); transform: translateX(0); }
+    25% { box-shadow: 0 0 0 12px rgba(255,95,109,0.15); transform: translateX(-5px); }
+    50% { box-shadow: 0 0 0 18px rgba(255,95,109,0.05); transform: translateX(5px); }
+    75% { transform: translateX(-3px); }
+    100% { box-shadow: 0 0 0 0 rgba(255,95,109,0); transform: translateX(0); }
+  }
+
+  .small {
+    font-size: 0.88rem;
+    color: var(--muted);
+  }
+
+  sup {
+    font-size: 0.65em;
+  }
+
+  .frac {
+    display: inline-grid;
+    grid-template-rows: auto auto;
+    line-height: 1;
+    vertical-align: middle;
+    text-align: center;
+  }
+
+  .frac span:first-child {
+    border-bottom: 1px solid currentColor;
+    padding: 0 2px 2px;
+  }
+
+  .frac span:last-child {
+    padding-top: 2px;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Function Portal</h1>
+  <div class="subtitle">Open portals by finding the hidden inner function and its matching differential trace.</div>
+</header>
+
+<main>
+  <section class="card">
+    <div class="topbar">
+      <div class="badge" id="levelBadge">Level 1</div>
+      <div class="score">Precision: <span id="score">0</span></div>
+    </div>
+
+    <div class="machine-wrap">
+      <div class="machine" id="machine"></div>
+    </div>
+
+    <div class="ghost-label">Possible inner cores</div>
+    <div class="ghosts" id="ghosts"></div>
+
+    <div class="mini-map" id="map"></div>
+  </section>
+
+  <aside class="card tools">
+    <div>
+      <div class="tool-title">du scanner</div>
+      <div class="scanner" id="scanner" draggable="true">DRAG SCANNER → differential factor</div>
+      <div class="small" style="margin-top:8px;">Tip: you can also click a factor.</div>
+    </div>
+
+    <div>
+      <div class="tool-title">Differential traces</div>
+      <div class="trace-bank" id="traceBank"></div>
+    </div>
+
+    <div class="constant-panel">
+      <div>
+        <div class="tool-title" style="margin-bottom:3px;">Portal multiplier</div>
+        <div class="small">Use when factor dx = k du.</div>
+      </div>
+      <select id="constantSelect" aria-label="Portal multiplier">
+        <option value="0.2">1/5</option>
+        <option value="0.3333333333">1/3</option>
+        <option value="0.5">1/2</option>
+        <option value="1" selected>1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="5">5</option>
+      </select>
+    </div>
+
+    <div class="actions">
+      <button id="checkBtn">Open Portal</button>
+      <button class="secondary" id="hintBtn">Hint</button>
+      <button class="secondary" id="resetBtn">Reset</button>
+      <button class="gold" id="nextBtn" disabled>Next</button>
+    </div>
+
+    <div class="portal-view" id="portalView">
+      <div>
+        <div class="portal-ring"></div>
+        <div class="uworld" id="uworld"></div>
+      </div>
+    </div>
+
+    <div class="message" id="message">
+      Choose the inner core, scan the companion factor, then set the multiplier.
+    </div>
+  </aside>
+</main>
+
+<script>
+const stages = [
+  {
+    level: "Level 1",
+    name: "Cosine shell",
+    shell: "cos",
+    correctU: "x2",
+    correctFactor: "twoX",
+    uWorld: "∫ cos(u) du",
+    result: "sin(x²)",
+    candidates: [
+      { id: "x2", label: "x<sup>2</sup>", derivText: "du = 2x dx", derivative: {coef: 2, base: "x"}, simplest: true },
+      { id: "x", label: "x", derivText: "du = dx", derivative: {coef: 1, base: "1"} },
+      { id: "cosx2", label: "cos(x<sup>2</sup>)", derivText: "du = -2x sin(x²) dx", derivative: {coef: -2, base: "xsin"} }
+    ],
+    factors: [
+      { id: "twoX", label: "2x dx", trace: {coef: 2, base: "x"} },
+      { id: "xOnly", label: "x dx", trace: {coef: 1, base: "x"} },
+      { id: "dx", label: "dx", trace: {coef: 1, base: "1"} }
+    ],
+    check: {
+      f: x => 2*x*Math.cos(x*x),
+      F: x => Math.sin(x*x),
+      probe: 0.73
+    },
+    hints: [
+      "The outside machine is cos(□). What sits exactly inside the parentheses?",
+      "If u = x², then du = 2x dx. Scan for that whole factor."
+    ]
+  },
+  {
+    level: "Level 2",
+    name: "Power shell",
+    shell: "power2",
+    correctU: "xp1",
+    correctFactor: "threeDx",
+    uWorld: "3∫ u² du",
+    result: "(x + 1)³",
+    candidates: [
+      { id: "xp1", label: "x + 1", derivText: "du = dx", derivative: {coef: 1, base: "1"}, simplest: true },
+      { id: "x", label: "x", derivText: "du = dx", derivative: {coef: 1, base: "1"} },
+      { id: "whole", label: "(x + 1)<sup>2</sup>", derivText: "du = 2(x + 1) dx", derivative: {coef: 2, base: "x+1"} }
+    ],
+    factors: [
+      { id: "threeDx", label: "3 dx", trace: {coef: 3, base: "1"} },
+      { id: "dx", label: "dx", trace: {coef: 1, base: "1"} },
+      { id: "twoXp1", label: "2(x + 1) dx", trace: {coef: 2, base: "x+1"} }
+    ],
+    check: {
+      f: x => 3*Math.pow(x+1, 2),
+      F: x => Math.pow(x+1, 3),
+      probe: 1.2
+    },
+    hints: [
+      "The square is the outer shell. Do not choose the whole squared expression as u.",
+      "For u = x + 1, du = dx. The integral has 3 dx, so factor dx = 3 du."
+    ]
+  },
+  {
+    level: "Level 3",
+    name: "Exponential gate",
+    shell: "exp",
+    correctU: "fiveXm2",
+    correctFactor: "dx",
+    uWorld: "<span class='frac'><span>1</span><span>5</span></span>∫ e<sup>u</sup> du",
+    result: "(1/5)e^(5x - 2)",
+    candidates: [
+      { id: "fiveXm2", label: "5x − 2", derivText: "du = 5 dx", derivative: {coef: 5, base: "1"}, simplest: true },
+      { id: "fiveX", label: "5x", derivText: "du = 5 dx", derivative: {coef: 5, base: "1"} },
+      { id: "x", label: "x", derivText: "du = dx", derivative: {coef: 1, base: "1"} }
+    ],
+    factors: [
+      { id: "dx", label: "dx", trace: {coef: 1, base: "1"} },
+      { id: "fiveDx", label: "5 dx", trace: {coef: 5, base: "1"} },
+      { id: "minusTwo", label: "−2 dx", trace: {coef: -2, base: "1"} }
+    ],
+    check: {
+      f: x => Math.exp(5*x - 2),
+      F: x => Math.exp(5*x - 2)/5,
+      probe: 0.31
+    },
+    hints: [
+      "The exponent is the inner function. Include the −2 because it is inside the exponent.",
+      "du = 5 dx, but only dx is present. So dx = (1/5)du."
+    ]
+  },
+  {
+    level: "Level 4",
+    name: "Radical tunnel",
+    shell: "recipSqrt",
+    correctU: "x2p4",
+    correctFactor: "xDx",
+    uWorld: "<span class='frac'><span>1</span><span>2</span></span>∫ u<sup>−1/2</sup> du",
+    result: "√(x² + 4)",
+    candidates: [
+      { id: "x2p4", label: "x<sup>2</sup> + 4", derivText: "du = 2x dx", derivative: {coef: 2, base: "x"}, simplest: true },
+      { id: "x2", label: "x<sup>2</sup>", derivText: "du = 2x dx", derivative: {coef: 2, base: "x"} },
+      { id: "sqrt", label: "√(x<sup>2</sup> + 4)", derivText: "du = x / √(x² + 4) dx", derivative: {coef: 1, base: "x/sqrt"} }
+    ],
+    factors: [
+      { id: "xDx", label: "x dx", trace: {coef: 1, base: "x"} },
+      { id: "twoXDx", label: "2x dx", trace: {coef: 2, base: "x"} },
+      { id: "dx", label: "dx", trace: {coef: 1, base: "1"} }
+    ],
+    check: {
+      f: x => x / Math.sqrt(x*x + 4),
+      F: x => Math.sqrt(x*x + 4),
+      probe: 1.4
+    },
+    hints: [
+      "Look under the radical. The shell is 1/√(□).",
+      "du = 2x dx, but the companion is x dx. That is half of du."
+    ]
+  },
+  {
+    level: "Level 5A",
+    name: "Final sequence: portal 1 of 3",
+    shell: "sin",
+    correctU: "x2p3",
+    correctFactor: "fourX",
+    uWorld: "2∫ sin(u) du",
+    result: "−2cos(x² + 3)",
+    candidates: [
+      { id: "x2p3", label: "x<sup>2</sup> + 3", derivText: "du = 2x dx", derivative: {coef: 2, base: "x"}, simplest: true },
+      { id: "x2", label: "x<sup>2</sup>", derivText: "du = 2x dx", derivative: {coef: 2, base: "x"} },
+      { id: "whole", label: "sin(x<sup>2</sup> + 3)", derivText: "du = 2x cos(x² + 3) dx", derivative: {coef: 2, base: "xcos"} }
+    ],
+    factors: [
+      { id: "fourX", label: "4x dx", trace: {coef: 4, base: "x"} },
+      { id: "twoX", label: "2x dx", trace: {coef: 2, base: "x"} },
+      { id: "dx", label: "dx", trace: {coef: 1, base: "1"} }
+    ],
+    check: {
+      f: x => 4*x*Math.sin(x*x + 3),
+      F: x => -2*Math.cos(x*x + 3),
+      probe: 0.8
+    },
+    hints: [
+      "A distractor can have the same derivative. Still ask: does the outer shell become exactly sin(u)?",
+      "For u = x² + 3, du = 2x dx. The factor 4x dx is 2 du."
+    ]
+  },
+  {
+    level: "Level 5B",
+    name: "Final sequence: portal 2 of 3",
+    shell: "exp",
+    correctU: "x2p2x",
+    correctFactor: "twoXp2",
+    uWorld: "∫ e<sup>u</sup> du",
+    result: "e^(x² + 2x)",
+    candidates: [
+      { id: "x2p2x", label: "x<sup>2</sup> + 2x", derivText: "du = (2x + 2) dx", derivative: {coef: 1, base: "2x+2"}, simplest: true },
+      { id: "x2", label: "x<sup>2</sup>", derivText: "du = 2x dx", derivative: {coef: 2, base: "x"} },
+      { id: "x2p2", label: "x<sup>2</sup> + 2", derivText: "du = 2x dx", derivative: {coef: 2, base: "x"} }
+    ],
+    factors: [
+      { id: "twoXp2", label: "(2x + 2) dx", trace: {coef: 1, base: "2x+2"} },
+      { id: "twoX", label: "2x dx", trace: {coef: 2, base: "x"} },
+      { id: "dx", label: "dx", trace: {coef: 1, base: "1"} }
+    ],
+    check: {
+      f: x => (2*x+2)*Math.exp(x*x + 2*x),
+      F: x => Math.exp(x*x + 2*x),
+      probe: -0.42
+    },
+    hints: [
+      "The entire exponent must become u.",
+      "Differentiate x² + 2x. Its derivative is exactly the companion factor."
+    ]
+  },
+  {
+    level: "Level 5C",
+    name: "Final sequence: portal 3 of 3",
+    shell: "cos",
+    correctU: "threeXm1",
+    correctFactor: "dx",
+    uWorld: "<span class='frac'><span>1</span><span>3</span></span>∫ cos(u) du",
+    result: "(1/3)sin(3x − 1)",
+    candidates: [
+      { id: "threeXm1", label: "3x − 1", derivText: "du = 3 dx", derivative: {coef: 3, base: "1"}, simplest: true },
+      { id: "threeX", label: "3x", derivText: "du = 3 dx", derivative: {coef: 3, base: "1"} },
+      { id: "x", label: "x", derivText: "du = dx", derivative: {coef: 1, base: "1"} }
+    ],
+    factors: [
+      { id: "dx", label: "dx", trace: {coef: 1, base: "1"} },
+      { id: "threeDx", label: "3 dx", trace: {coef: 3, base: "1"} },
+      { id: "minusDx", label: "−dx", trace: {coef: -1, base: "1"} }
+    ],
+    check: {
+      f: x => Math.cos(3*x - 1),
+      F: x => Math.sin(3*x - 1)/3,
+      probe: 0.67
+    },
+    hints: [
+      "The inner function is the whole angle of cosine.",
+      "du = 3 dx. Since only dx appears, the multiplier is 1/3."
+    ]
+  }
+];
+
+let current = 0;
+let selectedU = null;
+let selectedFactor = null;
+let score = 0;
+let opened = Array(stages.length).fill(false);
+let hintCount = 0;
+
+const machine = document.getElementById("machine");
+const ghosts = document.getElementById("ghosts");
+const traceBank = document.getElementById("traceBank");
+const message = document.getElementById("message");
+const levelBadge = document.getElementById("levelBadge");
+const scoreEl = document.getElementById("score");
+const constantSelect = document.getElementById("constantSelect");
+const portalView = document.getElementById("portalView");
+const uworld = document.getElementById("uworld");
+const nextBtn = document.getElementById("nextBtn");
+const map = document.getElementById("map");
+const scanner = document.getElementById("scanner");
+
+function shellHTML(type, coreHTML) {
+  if (type === "cos") return `<span>cos(</span>${coreHTML}<span>)</span>`;
+  if (type === "sin") return `<span>sin(</span>${coreHTML}<span>)</span>`;
+  if (type === "exp") return `<span>e<sup>${coreHTML}</sup></span>`;
+  if (type === "power2") return `<span>(</span>${coreHTML}<span>)<sup>2</sup></span>`;
+  if (type === "recipSqrt") return `<span class="frac"><span>1</span><span>√(${coreHTML})</span></span>`;
+  return coreHTML;
+}
+
+function render() {
+  const s = stages[current];
+  selectedU = null;
+  selectedFactor = null;
+  hintCount = 0;
+  constantSelect.value = "1";
+  portalView.classList.remove("open");
+  uworld.innerHTML = "";
+  nextBtn.disabled = true;
+  levelBadge.textContent = `${s.level}: ${s.name}`;
+
+  const correctCore = s.candidates.find(c => c.id === s.correctU);
+  const correctFactor = s.factors.find(f => f.id === s.correctFactor);
+
+  const coreBlock = `<span class="core" data-u="${correctCore.id}">${correctCore.label}</span>`;
+  const shellBlock = `<span class="shell">${shellHTML(s.shell, coreBlock)}</span>`;
+
+  machine.classList.remove("collapse");
+  machine.innerHTML = `
+    <span class="integral">∫</span>
+    ${correctFactor.id === "dx" ? shellBlock : `<span class="factor" data-factor="${correctFactor.id}">${correctFactor.label}</span>${shellBlock}`}
+    ${correctFactor.id === "dx" ? `<span class="factor" data-factor="${correctFactor.id}">${correctFactor.label}</span>` : ""}
+  `;
+
+  ghosts.innerHTML = "";
+  s.candidates.forEach(c => {
+    if (c.id !== s.correctU) {
+      const g = document.createElement("span");
+      g.className = "ghost-core";
+      g.dataset.u = c.id;
+      g.innerHTML = c.label;
+      ghosts.appendChild(g);
+    }
+  });
+
+  traceBank.innerHTML = "";
+  s.factors.forEach(f => {
+    if (f.id !== s.correctFactor) {
+      const b = document.createElement("span");
+      b.className = "factor";
+      b.dataset.factor = f.id;
+      b.innerHTML = f.label;
+      traceBank.appendChild(b);
+    }
+  });
+
+  attachEvents();
+  renderMap();
+  setMessage("Choose the inner core, scan the companion factor, then set the multiplier.", "");
+}
+
+function attachEvents() {
+  document.querySelectorAll("[data-u]").forEach(el => {
+    el.addEventListener("click", () => selectU(el.dataset.u));
+  });
+
+  document.querySelectorAll("[data-factor]").forEach(el => {
+    el.addEventListener("click", () => selectFactor(el.dataset.factor));
+    el.addEventListener("dragover", e => {
+      e.preventDefault();
+      el.classList.add("drop-ready");
+    });
+    el.addEventListener("dragleave", () => el.classList.remove("drop-ready"));
+    el.addEventListener("drop", e => {
+      e.preventDefault();
+      el.classList.remove("drop-ready");
+      selectFactor(el.dataset.factor);
+    });
+  });
+}
+
+scanner.addEventListener("dragstart", e => {
+  e.dataTransfer.setData("text/plain", "du-scanner");
+});
+
+function selectU(id) {
+  selectedU = id;
+  document.querySelectorAll("[data-u]").forEach(el => {
+    el.classList.toggle("selected", el.dataset.u === id);
+  });
+  const c = stages[current].candidates.find(x => x.id === id);
+  setMessage(`<strong>Core marked:</strong> u = ${c.label}. ${c.derivText}.`, "");
+}
+
+function selectFactor(id) {
+  selectedFactor = id;
+  document.querySelectorAll("[data-factor]").forEach(el => {
+    el.classList.toggle("selected", el.dataset.factor === id);
+  });
+  const f = stages[current].factors.find(x => x.id === id);
+  setMessage(`<strong>Trace scanned:</strong> ${f.label}. Now match it to du.`, "");
+}
+
+function relationConstant(derivative, trace) {
+  if (!derivative || !trace) return null;
+  if (derivative.base !== trace.base) return null;
+  if (derivative.coef === 0) return null;
+  return trace.coef / derivative.coef;
+}
+
+function approxEqual(a, b) {
+  return Math.abs(a - b) < 1e-6;
+}
+
+function formatK(k) {
+  if (approxEqual(k, 1)) return "1";
+  if (approxEqual(k, 2)) return "2";
+  if (approxEqual(k, 3)) return "3";
+  if (approxEqual(k, 5)) return "5";
+  if (approxEqual(k, 0.5)) return "1/2";
+  if (Math.abs(k - 1/3) < 1e-5) return "1/3";
+  if (Math.abs(k - 0.2) < 1e-5) return "1/5";
+  return k.toFixed(3);
+}
+
+function setMessage(html, type) {
+  message.className = "message";
+  if (type) message.classList.add(type);
+  message.innerHTML = html;
+}
+
+function waveSelected() {
+  const targets = [];
+  if (selectedU) targets.push(...document.querySelectorAll(`[data-u="${selectedU}"]`));
+  if (selectedFactor) targets.push(...document.querySelectorAll(`[data-factor="${selectedFactor}"]`));
+  targets.forEach(el => {
+    el.classList.remove("wave");
+    void el.offsetWidth;
+    el.classList.add("wave");
+  });
+}
+
+function openPortal() {
+  const s = stages[current];
+
+  if (!selectedU || !selectedFactor) {
+    waveSelected();
+    setMessage("The portal sputters. Mark a core and scan a differential factor first.", "bad");
+    return;
+  }
+
+  const u = s.candidates.find(c => c.id === selectedU);
+  const f = s.factors.find(x => x.id === selectedFactor);
+  const k = relationConstant(u.derivative, f.trace);
+  const chosenK = parseFloat(constantSelect.value);
+
+  if (k === null) {
+    waveSelected();
+    setMessage(
+      `<strong>Mismatch wave:</strong> ${u.derivText}, but the scanner found ${f.label}. The companion factor does not have the right structure.`,
+      "bad"
+    );
+    return;
+  }
+
+  if (selectedU !== s.correctU) {
+    waveSelected();
+    setMessage(
+      `<strong>Almost, but no collapse:</strong> the differential can be adjusted, but u = ${u.label} is not the exact inner layer of the outer shell. The machine would not become a clean f(u).`,
+      "bad"
+    );
+    return;
+  }
+
+  if (selectedFactor !== s.correctFactor) {
+    waveSelected();
+    setMessage(
+      `<strong>Wrong trace:</strong> du relates to ${f.label}, but that is not the companion factor actually powering this integral.`,
+      "bad"
+    );
+    return;
+  }
+
+  if (!approxEqual(chosenK, k)) {
+    waveSelected();
+    setMessage(
+      `<strong>Constant adjustment needed:</strong> ${u.derivText}. The scanned factor is ${f.label}, so factor dx = <strong>${formatK(k)} du</strong>, not ${formatK(chosenK)} du.`,
+      "bad"
+    );
+    return;
+  }
+
+  success(u, f, k);
+}
+
+function success(u, f, k) {
+  const s = stages[current];
+
+  portalView.classList.add("open");
+  uworld.innerHTML = `x-world ⟶ u-world<br>${s.uWorld}`;
+  machine.classList.add("collapse");
+
+  const numeric = numericalCheck(s);
+  const points = Math.max(55, 100 - 10 * hintCount) + (u.simplest ? 20 : 0);
+
+  if (!opened[current]) {
+    score += points;
+    opened[current] = true;
+    scoreEl.textContent = score;
+  }
+
+  nextBtn.disabled = current === stages.length - 1 ? true : false;
+
+  setMessage(
+    `<strong>Portal opened.</strong><br>
+     u = ${u.label}, ${u.derivText}. The scanned factor ${f.label} equals <strong>${formatK(k)} du</strong>.<br>
+     Collapsed form: <strong>${s.uWorld}</strong><br>
+     Antiderivative gate: <strong>${s.result}</strong><br>
+     <span class="small">${numeric}</span>`,
+    "good"
+  );
+
+  renderMap();
+
+  if (current === stages.length - 1) {
+    setTimeout(() => {
+      setMessage(
+        `<strong>Final sequence complete.</strong> You opened every portal with structure, not formula memorization. Precision score: ${score}.`,
+        "good"
+      );
+    }, 900);
+  }
+}
+
+function numericalCheck(s) {
+  const h = 1e-5;
+  const x = s.check.probe;
+  const approx = (s.check.F(x + h) - s.check.F(x - h)) / (2*h);
+  const actual = s.check.f(x);
+  const err = Math.abs(approx - actual);
+  return `Numeric derivative check at x = ${x}: error ≈ ${err.toExponential(2)}.`;
+}
+
+function showHint() {
+  const s = stages[current];
+  const index = Math.min(hintCount, s.hints.length - 1);
+  hintCount++;
+  setMessage(`<strong>Hint:</strong> ${s.hints[index]}`, "");
+}
+
+function resetStage() {
+  render();
+}
+
+function nextStage() {
+  if (current < stages.length - 1) {
+    current++;
+    render();
+  }
+}
+
+function renderMap() {
+  map.innerHTML = "";
+  stages.forEach((_, i) => {
+    const d = document.createElement("div");
+    d.className = "dot";
+    if (opened[i]) d.classList.add("done");
+    if (i === current) d.classList.add("current");
+    map.appendChild(d);
+  });
+}
+
+document.getElementById("checkBtn").addEventListener("click", openPortal);
+document.getElementById("hintBtn").addEventListener("click", showHint);
+document.getElementById("resetBtn").addEventListener("click", resetStage);
+document.getElementById("nextBtn").addEventListener("click", nextStage);
+
+render();
+</script>
+  <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#ececec"
+    }
+  </script>
+</body>
+</html>

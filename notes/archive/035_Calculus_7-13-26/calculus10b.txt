@@ -1,0 +1,654 @@
+create detailed LLM prompts for 10 different interactive learning activities that span the important concepts of calculus. the prompts should generation of activities in html, css, and javascript. these are activities a student would complete individually on a computer. the activities should have game-like components, but the activity should be driven by the underlying mathematics. it should not be possible to complete the activity successfully without a complete understanding of the given topic. as much as possible, the activity should be visual and should not rely heavily on text that the user has to read. these activities should be types of puzzles and rely more on critical thinking and problem-solving than on retrieval of rote memorization. as much as possible, the activities should be difficult but rely on a minimum of prior knowledge, while still deeply covering the topic or concept in question. A good activity would take a proficient student between 10 and 20 minutes to complete, but may take some students longer.
+
+Below are **10 copy-paste-ready LLM prompts** for generating interactive calculus learning activities in **HTML, CSS, and JavaScript**. Each prompt is designed to produce a **single-player, visual, puzzle-like activity** that requires genuine mathematical reasoning rather than memorization.
+
+---
+
+## 1. Limits and Continuity Puzzle: “Repair the Function Bridge”
+
+```text
+Create a self-contained interactive learning activity using HTML, CSS, and JavaScript titled “Repair the Function Bridge.”
+
+The topic is limits and continuity, especially:
+- one-sided limits
+- two-sided limits
+- removable discontinuities
+- jump discontinuities
+- infinite limits/asymptotes
+- the difference between lim f(x) as x approaches a and f(a)
+
+The activity should be a visual puzzle game. The student sees a coordinate graph with several broken “function bridge” segments. Their goal is to repair the bridge so that a small animated traveler can cross from left to right.
+
+The student should not simply answer text questions. Instead, they interact visually with the graph:
+- Drag movable graph pieces up/down or left/right.
+- Place or remove open circles and filled dots.
+- Adjust vertical asymptote markers.
+- Use left-hand and right-hand probe points that slide toward a target x-value.
+- The traveler can cross only if the student has configured the graph to satisfy given limit/continuity conditions.
+
+The activity should include 5 levels of increasing difficulty:
+1. Make a removable discontinuity continuous by placing the correct filled point.
+2. Create a function where the left and right limits agree but f(a) is different.
+3. Create a jump discontinuity with specified one-sided limits.
+4. Create an infinite limit using a vertical asymptote.
+5. Given several target statements, build a piecewise function satisfying all of them.
+
+Each level should display mathematical constraints visually, such as:
+- “As x approaches 2 from the left, the height should approach 3.”
+- “The traveler may pass only if the left and right approach paths meet.”
+Use minimal text and emphasize animation, graph feedback, color, and icons.
+
+Implementation requirements:
+- Use SVG or Canvas for the coordinate plane.
+- No external libraries.
+- Include draggable graph elements.
+- Include real-time feedback showing the current left-hand limit estimate, right-hand limit estimate, and f(a), but do not simply give away the answer.
+- Include a “test bridge” button that animates probes approaching the target x-value from both sides.
+- If the conditions are not met, visually show where the bridge fails.
+- If correct, animate the traveler crossing the graph.
+
+Mathematical validation:
+- The game should calculate whether the student’s graph configuration satisfies the required one-sided limits and function values within a reasonable tolerance.
+- The student should not be able to complete a level by guessing randomly; the constraints should require understanding of one-sided behavior and function value.
+
+Design requirements:
+- Clean, modern interface.
+- Responsive layout for desktop and tablet.
+- Keyboard-accessible controls where possible.
+- Include a reset button and optional hint button.
+- Hints should be visual and conceptual, not answer-revealing.
+
+Produce one complete HTML file containing the HTML, CSS, and JavaScript.
+```
+
+---
+
+## 2. Derivatives as Slopes: “Tangent Line Expedition”
+
+```text
+Create a self-contained HTML, CSS, and JavaScript interactive activity titled “Tangent Line Expedition.”
+
+The topic is derivatives as instantaneous rates of change and slopes of tangent lines.
+
+The student pilots a small rover along a curved track. At several checkpoints, the rover can move forward only if the student correctly constructs the tangent line at the point.
+
+Core concepts:
+- Secant slope approaching tangent slope
+- Derivative as local linear approximation
+- Positive, negative, and zero derivative
+- Steeper slope means larger derivative magnitude
+- Derivative can be estimated visually from a graph
+
+Activity structure:
+The student sees a graph of a smooth function, such as a cubic, sinusoidal, or rational curve. A checkpoint appears on the curve. The student must:
+1. Move two secant points closer together to observe slope stabilization.
+2. Rotate a tangent line tool until it matches the local direction of the curve.
+3. Enter or select an approximate numerical slope using a slider.
+4. Launch the rover. If the tangent estimate is accurate, the rover continues smoothly. If not, it veers off the track.
+
+Use at least 6 checkpoints:
+- Increasing slowly
+- Increasing steeply
+- Local maximum
+- Decreasing
+- Local minimum
+- Inflection-like region where slope changes quickly
+
+The activity should be game-like but mathematically serious:
+- The rover has limited “energy,” and bad tangent estimates cost energy.
+- The student earns stars for accurate tangent construction.
+- A final challenge asks the student to sketch or assemble the derivative graph from draggable slope cards.
+
+Visual features:
+- Graph plane with grid.
+- Function curve.
+- Movable secant points.
+- Tangent line that rotates around the checkpoint.
+- Slope meter showing rise/run visually.
+- Rover animation.
+
+Validation:
+- Compute the actual derivative numerically or symbolically in JavaScript.
+- Accept tangent angles/slopes within a tolerance.
+- For the derivative graph challenge, validate that the student correctly orders slope values across x-values.
+
+Important:
+- Do not make this a multiple-choice quiz.
+- The student should need to reason from the visual behavior of the function.
+- Include minimal explanatory text and rely mostly on visual feedback.
+
+Implementation requirements:
+- One complete HTML file.
+- No external libraries.
+- Use Canvas or SVG.
+- Include reset, hint, and level navigation.
+- Hints should encourage using nearby secant slopes.
+- Make the activity take about 10–20 minutes for a proficient student.
+```
+
+---
+
+## 3. Derivative Rules Puzzle: “Derivative Circuit Lab”
+
+```text
+Create a self-contained interactive activity in HTML, CSS, and JavaScript titled “Derivative Circuit Lab.”
+
+The topic is derivative rules, especially:
+- constant multiple rule
+- sum/difference rule
+- product rule
+- quotient rule
+- chain rule
+- recognizing function composition
+
+The activity should represent functions as visual circuits rather than ordinary symbolic exercises.
+
+The student is given a “function machine” made from connected modules:
+- Add
+- Multiply
+- Divide
+- Power
+- Sine/cosine
+- Exponential
+- Inner function box
+- Outer function box
+
+The goal is to build a matching “derivative circuit” by dragging derivative modules into place. The derivative circuit should output the correct derivative behavior when tested numerically and visually.
+
+Example:
+If the original function circuit represents y = sin(x^2 + 1), the student must construct a derivative circuit showing:
+outer derivative cos(x^2 + 1) multiplied by inner derivative 2x.
+
+Activity mechanics:
+- Display the original function circuit visually.
+- Provide draggable derivative rule components.
+- The student connects components with wires.
+- A graph panel compares the slope of the original function to the student’s derivative circuit.
+- A test button samples several x-values and checks whether the student derivative matches the actual derivative.
+
+Levels:
+1. Sums and constant multiples.
+2. Powers and simple polynomials.
+3. Product rule.
+4. Quotient rule.
+5. Chain rule.
+6. Mixed final boss: product plus chain rule or quotient plus chain rule.
+
+Game-like components:
+- Correct connections light up.
+- Incorrect derivative circuits cause sparks or warning pulses.
+- The final circuit powers a “calculus engine.”
+- The student earns efficiency points for using the simplest correct circuit.
+
+Mathematical depth:
+- The student should not be able to succeed by matching memorized formulas alone.
+- The interface should force them to identify structure: what is inside, what is outside, what is multiplied, and what changes.
+- Include visual decomposition of the original function into components.
+
+Validation:
+- Internally represent functions as expression trees.
+- Compare student derivative output against the true derivative using numerical sampling over several x-values.
+- Avoid points where the derivative is undefined.
+- Accept algebraically equivalent structures if numerically correct.
+
+Design:
+- Use SVG or HTML drag-and-drop.
+- No external libraries.
+- Include short visual hints that reveal function structure without giving the full answer.
+- Include reset and check buttons.
+- Produce one complete HTML file with embedded CSS and JavaScript.
+```
+
+---
+
+## 4. Optimization Puzzle: “Design the Maximum Garden”
+
+```text
+Create a self-contained HTML, CSS, and JavaScript interactive calculus activity titled “Design the Maximum Garden.”
+
+The topic is optimization using derivatives.
+
+Scenario:
+The student is designing gardens, enclosures, boxes, or containers under constraints. Their job is to maximize or minimize a quantity by understanding how changing one variable affects another.
+
+Core concepts:
+- Modeling a quantity to optimize
+- Constraint equations
+- Reducing a problem to one variable
+- Critical points
+- Increasing/decreasing behavior
+- Maximum/minimum interpretation
+
+Activity design:
+The main visual puzzle is a garden enclosure with a fixed amount of fencing. The student drags the width and height of a rectangular garden. The perimeter constraint must remain fixed. The area updates dynamically. The goal is to find the maximum possible area.
+
+But the activity should go beyond slider guessing:
+- The student must use visual derivative information to justify the optimum.
+- Show a live graph of Area vs. Width.
+- Show a moving point on the graph as the garden dimensions change.
+- Show a derivative sign meter indicating whether area is increasing or decreasing as width changes.
+- The student must place a “maximum marker” on the Area vs. Width graph.
+- They must also identify why endpoints are not optimal.
+
+Levels:
+1. Rectangle with fixed perimeter.
+2. Rectangle against a river requiring only three sides of fencing.
+3. Open-top box made by cutting squares from corners of a sheet.
+4. Minimize surface material for a fixed-volume container.
+5. Final mixed challenge with randomized dimensions.
+
+Game-like components:
+- The student is trying to satisfy a client request.
+- A design score increases as they approach the optimal solution.
+- The client accepts only if the dimensions, graph marker, and derivative sign reasoning all agree.
+- Include visual badges for “modeled,” “critical point found,” and “verified maximum.”
+
+Mathematical validation:
+- Compute the objective function and its derivative.
+- Check whether the chosen dimension is within tolerance of the true optimum.
+- Require the student to correctly classify the optimum using derivative sign change or endpoint comparison.
+- Do not allow completion from slider guessing alone; require graph-based and derivative-based confirmation.
+
+Implementation:
+- Use one HTML file with embedded CSS and JavaScript.
+- Use Canvas or SVG for diagrams and graphs.
+- No external libraries.
+- Include reset, hint, and new challenge buttons.
+- Hints should guide modeling, such as “Can you express height in terms of width?” but should not reveal the optimum immediately.
+```
+
+---
+
+## 5. Related Rates Puzzle: “Rescue the Rising Balloon”
+
+```text
+Create a self-contained interactive activity using HTML, CSS, and JavaScript titled “Rescue the Rising Balloon.”
+
+The topic is related rates.
+
+Scenario:
+A balloon rises vertically while a ground observer tracks it. A rescue drone must intercept the balloon, but the drone needs the correct rate at which the distance from the observer to the balloon is changing.
+
+Core concepts:
+- Variables that change with time
+- Geometric relationships among variables
+- Differentiating an equation with respect to time
+- Chain rule in context
+- Interpreting dx/dt, dy/dt, dz/dt
+- Rates depend on the current moment, not just the formula
+
+Visual setup:
+- Show a right triangle where:
+  - horizontal distance x is fixed or changing depending on level
+  - balloon height y changes
+  - line-of-sight distance z changes
+- Animate the balloon rising.
+- Display live values of x, y, z, dy/dt, and dz/dt.
+- The student manipulates or solves for the missing rate to launch the rescue drone.
+
+Activity mechanics:
+The student must:
+1. Identify which quantities are changing.
+2. Connect the variables visually to the correct geometric equation.
+3. Adjust a rate slider or fill a missing rate box.
+4. Test the drone launch.
+5. If the rate is correct, the drone intercepts the balloon. If not, it misses.
+
+Levels:
+1. Fixed horizontal distance, rising balloon: find dz/dt.
+2. Moving observer and rising balloon: both dx/dt and dy/dt affect dz/dt.
+3. Expanding circular ripple: relate dA/dt and dr/dt.
+4. Sliding ladder: relate dx/dt and dy/dt.
+5. Cone filling with water: relate dV/dt and dh/dt using similar triangles.
+
+The activity should rely heavily on visuals:
+- Use animated diagrams.
+- Show changing lengths with colored segments.
+- Show rate arrows.
+- Use minimal text.
+- Let the student drag labels dx/dt, dy/dt, dz/dt onto the correct moving parts.
+
+Validation:
+- Compute correct rates internally.
+- Check numerical answers within tolerance.
+- Require the correct relationship equation before allowing final rate entry.
+- Include a conceptual check where the student predicts whether a rate should be positive, negative, increasing, or decreasing.
+
+Game-like components:
+- Drone rescue attempts.
+- Accuracy score.
+- Replay animation at slow speed.
+- Unlockable challenge levels.
+
+Implementation:
+- Produce one complete HTML file.
+- Use SVG or Canvas.
+- No external dependencies.
+- Include reset, hint, and replay controls.
+```
+
+---
+
+## 6. Definite Integrals and Accumulation: “Area Harvester”
+
+```text
+Create a self-contained HTML, CSS, and JavaScript interactive activity titled “Area Harvester.”
+
+The topic is definite integrals as signed area and accumulation.
+
+Core concepts:
+- Definite integral as accumulated signed area
+- Positive and negative area
+- Riemann sums
+- Left, right, midpoint, and trapezoidal approximations
+- Refinement improves approximation
+- Integral units and total change
+
+Scenario:
+The student controls an “area harvester” that collects energy from regions under a curve. Energy above the x-axis is positive; energy below the x-axis is negative. The goal is to reach a target net energy amount.
+
+Activity mechanics:
+- Display a graph of a function over an interval.
+- The student chooses a partition and approximation method: left, right, midpoint, or trapezoid.
+- Rectangles or trapezoids appear visually.
+- The student can drag partition points.
+- The net accumulated value is shown as a balance meter.
+- To pass each level, the student must approximate the true integral within a tolerance using a limited number of subintervals.
+
+Levels:
+1. Positive constant/linear function.
+2. Curved positive function where midpoint improves accuracy.
+3. Function crossing the x-axis, requiring signed area.
+4. Oscillating function with cancellation.
+5. Challenge: limited rectangles, student chooses partition placement strategically.
+
+Important:
+The student should not be able to win by blindly increasing the number of rectangles. Some levels should restrict the number of rectangles and require intelligent partitioning.
+
+Visual feedback:
+- Positive areas colored blue or green.
+- Negative areas colored red or purple.
+- Net accumulation shown on a vertical meter.
+- Approximation error shown visually but not always numerically.
+- True area can be revealed only after the student submits.
+
+Mathematical validation:
+- Compute exact or high-resolution numerical integral internally.
+- Compute student approximation based on their chosen partition and method.
+- Check within tolerance.
+- Include conceptual checks where the student must predict overestimate/underestimate for increasing or concave regions.
+
+Design requirements:
+- One complete HTML file.
+- Embedded CSS and JavaScript.
+- No external libraries.
+- Use Canvas or SVG.
+- Include reset, hint, and next-level controls.
+- Minimal text; mostly visual and interactive.
+```
+
+---
+
+## 7. Fundamental Theorem of Calculus: “Build the Accumulation Graph”
+
+```text
+Create a self-contained HTML, CSS, and JavaScript activity titled “Build the Accumulation Graph.”
+
+The topic is the Fundamental Theorem of Calculus, especially the relationship between a rate function f(x) and an accumulation function F(x) = ∫ from a to x f(t) dt.
+
+Core concepts:
+- F'(x) = f(x)
+- If f is positive, F increases.
+- If f is negative, F decreases.
+- If f = 0, F has a local extremum or flat tangent.
+- Area under f determines total change in F.
+- The initial value matters.
+
+Activity concept:
+The student is shown a graph of f(x), the rate function. They must construct the graph of F(x), the accumulation function, by placing and adjusting control points.
+
+Visual interface:
+- Top graph: f(x), fixed.
+- Bottom graph: F(x), editable.
+- A shaded area sweeps under f from the starting point to the current x.
+- A moving vertical scanner links the accumulated area on the top graph to the height of F on the bottom graph.
+- The student drags points on F until the graph correctly represents accumulated area.
+
+Activity levels:
+1. f(x) is positive constant: F is linear increasing.
+2. f(x) is positive then negative: F increases then decreases.
+3. f(x) crosses zero several times: student must place extrema correctly.
+4. f(x) has positive/negative lobes with equal area: student must recognize cancellation.
+5. Final challenge: f is piecewise linear and student must build a piecewise quadratic-like F.
+
+Game-like goal:
+The student is restoring a “terrain map.” The rate graph tells how steep the path should be, and the accumulation graph is the actual elevation profile. A hiker can cross the terrain only if the slope of the constructed path matches f(x).
+
+Validation:
+- Internally compute F(x) numerically from f(x).
+- Compare the student’s constructed F graph against the true accumulation graph at sample points.
+- Also check qualitative features:
+  - increasing/decreasing intervals
+  - local extrema
+  - relative height changes based on signed area
+- Require both shape and key points to be reasonably accurate.
+
+Interactions:
+- Drag control points on F.
+- Add or remove points.
+- Snap important x-values where f crosses zero.
+- Show a slope hint at the current x-value.
+- Include an optional “area sweep” animation.
+
+Implementation:
+- Use SVG or Canvas.
+- No external libraries.
+- Produce a single HTML file.
+- Include reset, hint, check, and next buttons.
+- Hints should be visual, such as shading accumulated signed area.
+```
+
+---
+
+## 8. Integration by Substitution: “Function Portal”
+
+```text
+Create a self-contained interactive activity in HTML, CSS, and JavaScript titled “Function Portal.”
+
+The topic is integration by substitution, emphasizing structure rather than memorized formulas.
+
+Core concepts:
+- Recognizing an inner function u = g(x)
+- Recognizing that du is related to g'(x) dx
+- Transforming an integral into a simpler one
+- Matching differential factors
+- Understanding substitution as a change of variable
+
+Activity metaphor:
+The student must open portals that simplify complicated integrals. Each portal works only when the student identifies the correct inner function and matching differential factor.
+
+Visual design:
+Show an integral as a “machine” made of nested layers:
+- Outer shell: something like sin( ), e^( ), sqrt( ), or power of ( )
+- Inner core: g(x)
+- Companion factor: g'(x) or a constant multiple of it
+
+The student interacts by:
+- Clicking or dragging to mark the inner function.
+- Dragging a “du scanner” over the expression to find the derivative of the inner function.
+- Adjusting a constant multiplier when du differs by a constant factor.
+- Watching the integral visually transform from x-world into u-world.
+
+Levels:
+1. ∫ 2x cos(x^2) dx
+2. ∫ 3(x + 1)^2 dx using u = x + 1
+3. ∫ e^(5x - 2) dx requiring constant adjustment
+4. ∫ x / sqrt(x^2 + 4) dx
+5. Mixed challenge with distractor inner functions
+
+The activity should not be a standard symbolic worksheet. It should be a structural puzzle:
+- Nested expression blocks should physically collapse when the correct substitution is chosen.
+- Incorrect choices should fail because the derivative companion does not match.
+- The student must identify why a substitution works, not just pick from a list.
+
+Game-like features:
+- Each correct substitution opens a portal.
+- Incorrect substitutions create a “mismatch wave” showing which factor is missing.
+- Students earn precision points for choosing the simplest valid u.
+- A final challenge requires completing three portals in sequence.
+
+Validation:
+- Represent integrals as structured expression objects.
+- Check whether selected u has a derivative matching the remaining factor up to a constant.
+- Check constant adjustments.
+- Optionally verify antiderivative numerically by differentiating the student’s result approximately.
+
+Implementation requirements:
+- One complete HTML file.
+- No external libraries.
+- Use draggable/clickable expression blocks.
+- Use Math-like visual formatting with HTML/CSS, not external MathJax.
+- Include minimal text, strong visuals, reset and hint controls.
+```
+
+---
+
+## 9. Differential Equations and Slope Fields: “Slope Field Navigator”
+
+```text
+Create a self-contained HTML, CSS, and JavaScript interactive activity titled “Slope Field Navigator.”
+
+The topic is first-order differential equations and slope fields.
+
+Core concepts:
+- A differential equation dy/dx = f(x, y) assigns a slope at each point.
+- Solution curves follow local slope directions.
+- Initial conditions select one solution curve.
+- Equilibrium solutions
+- Qualitative behavior without solving explicitly
+
+Scenario:
+The student pilots a glider through a wind field. The wind arrows represent the slope field of a differential equation. The glider can only move along valid solution curves. The student must choose starting points and trace paths that hit targets while avoiding obstacles.
+
+Activity mechanics:
+- Display a slope field for a differential equation.
+- The student clicks an initial point.
+- A solution curve is traced numerically from that point.
+- The student’s goal is to reach target zones.
+- Some obstacles can be avoided only by understanding how solution curves bend.
+- The student may drag the initial condition along a start line before launching.
+
+Differential equations to include across levels:
+1. dy/dx = x
+2. dy/dx = y
+3. dy/dx = x - y
+4. dy/dx = y(1 - y), showing equilibria
+5. dy/dx = sin(x) - 0.3y, mixed behavior
+
+Game-like elements:
+- Target zones.
+- Obstacles.
+- Launch attempts.
+- Path prediction mode where the student sketches the route before launching.
+- Scoring based on accuracy and number of attempts.
+
+Mathematical depth:
+The student should need to reason about the slope field:
+- Where are slopes positive?
+- Where are slopes negative?
+- Where are slopes zero?
+- Which initial conditions lead to growth, decay, or equilibrium?
+- Why do nearby solutions separate or converge?
+
+Validation:
+- Use numerical integration, such as Euler or Runge-Kutta, to trace solution curves.
+- Check if the solution path intersects target zones.
+- Require a short visual prediction before launch: the student places 3–5 guide points along the expected curve.
+- Compare predicted guide points to the actual solution curve.
+
+Design:
+- Use Canvas for slope field rendering and path tracing.
+- No external libraries.
+- One complete HTML file.
+- Include equation display, but keep text minimal.
+- Include reset, hint, and next-level controls.
+- Hints should highlight local slope arrows or equilibrium lines rather than giving the path.
+```
+
+---
+
+## 10. Taylor Series and Approximation: “Polynomial Lens”
+
+```text
+Create a self-contained interactive activity in HTML, CSS, and JavaScript titled “Polynomial Lens.”
+
+The topic is Taylor polynomials and local approximation.
+
+Core concepts:
+- A Taylor polynomial matches a function and its derivatives at a center point.
+- Higher-degree polynomials approximate better near the center.
+- Approximation usually worsens farther from the center.
+- Choice of center matters.
+- Error can be visualized as vertical distance between curves.
+
+Scenario:
+The student has a “polynomial lens” that approximates a hidden function. They must tune the lens by choosing a center and degree so the approximation passes through challenge gates.
+
+Visual setup:
+- Display the true function graph and the Taylor polynomial approximation.
+- The center point is draggable.
+- The degree can be increased or decreased.
+- Show error as a shaded band between the function and polynomial.
+- Gates appear at selected x-values. The approximation must pass through each gate within tolerance.
+
+Functions:
+Use several familiar functions:
+1. e^x near x = 0
+2. sin(x) near x = 0
+3. cos(x) near x = 0
+4. ln(1 + x) near x = 0, with domain awareness
+5. Final challenge where the student chooses the best center for a target interval
+
+Activity mechanics:
+- The student chooses the Taylor center.
+- They choose the polynomial degree, with a limited “term budget.”
+- The graph updates dynamically.
+- Gates light up green when the approximation is accurate enough there.
+- The student must decide whether to spend terms increasing degree or move the center.
+
+Game-like features:
+- Limited term budget.
+- Accuracy gates.
+- Error meter.
+- “Lens stability” decreases when approximating too far from the center.
+- Bonus for using the lowest possible degree.
+
+Mathematical requirements:
+- The activity should make clear that Taylor polynomials are local approximations.
+- The student should discover why adding terms helps near the center but may not fix everything far away.
+- Include at least one level where moving the center is better than increasing degree.
+- Include at least one level involving alternating behavior, such as sine or cosine.
+
+Validation:
+- Compute Taylor coefficients for the listed functions.
+- Compare polynomial values to true function values at gate locations.
+- Check whether the student satisfies all gates within tolerance and within the term budget.
+- Include domain checks for ln(1 + x).
+
+Implementation:
+- Produce one complete HTML file with embedded CSS and JavaScript.
+- Use Canvas or SVG.
+- No external libraries.
+- Include reset, hint, and next-level controls.
+- Keep explanatory text minimal and rely on graph behavior, gates, and error visualization.
+```
+
+---
+
+### Optional cross-activity instruction you can add to any prompt
+
+If you want a consistent style across all generated activities, append this to each prompt:
+
+```text
+Use a consistent visual style: dark blue background, maize/gold highlights, rounded panels, clear graph axes, smooth animations, and large interactive controls. Prioritize accessibility: high contrast, keyboard alternatives for dragging where possible, ARIA labels for buttons, and no color-only feedback. The activity should be usable by an individual student without instructor intervention and should take approximately 10–20 minutes to complete.
+```

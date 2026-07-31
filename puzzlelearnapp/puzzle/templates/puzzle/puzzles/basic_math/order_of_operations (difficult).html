@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ puzzle_name }}</title>
+
+  <style>
+    :root {
+      --blue: #2f65ff;
+      --green: #17a34a;
+      --red: #dc2626;
+      --light-gray: #f3f4f6;
+      --dark: #111827;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      font-family: Arial, Helvetica, sans-serif;
+      /* background: linear-gradient(135deg, #eef2ff, #f8fafc); */
+      color: var(--dark);
+      overflow-x: hidden;
+    }
+
+    .activity-zoom-wrapper {
+      padding: 24px;
+      padding-top: 70px;
+      transform-origin: top center;
+    }
+
+    .activity {
+      /* width: 850px; */
+      background: white;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.12);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 2rem;
+    }
+
+    .instructions {
+      font-size: 1rem;
+      line-height: 1.5;
+      max-width: 720px;
+      margin: 0 auto 28px;
+      color: #4b5563;
+    }
+
+    .equation {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      margin: 28px 0;
+    }
+
+    .term {
+      cursor: pointer;
+      user-select: none;
+      padding: 8px 10px;
+      border-radius: 10px;
+      transition: background 0.15s, transform 0.15s;
+      position: relative;
+      min-width: 48px;
+    }
+
+    .term:hover,
+    .operator-box:hover {
+      background: #e0e7ff;
+      transform: translateY(-1px);
+    }
+
+    .exponent {
+      font-size: 0.45em;
+      vertical-align: super;
+      margin-left: 1px;
+      color: var(--blue);
+      font-weight: bold;
+    }
+
+    .operator-box {
+      width: 62px;
+      height: 62px;
+      border: 3px solid #c7d2fe;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      font-weight: bold;
+      color: var(--blue);
+      background: #f8fafc;
+      transition: background 0.15s, transform 0.15s;
+      line-height: 1;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .equals {
+      font-weight: bold;
+      margin: 0 4px;
+    }
+
+    .target {
+      font-weight: bold;
+      color: #111827;
+      padding: 8px 12px;
+      border-radius: 10px;
+      background: var(--light-gray);
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 14px 30px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      background: var(--blue);
+      color: white;
+      transition: transform 0.15s, opacity 0.15s;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      opacity: 0.94;
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .message {
+      min-height: 28px;
+      margin-top: 16px;
+      font-weight: bold;
+      color: #4b5563;
+    }
+
+    .progress-wrapper {
+      margin: 28px auto 0;
+      margin-top: 10px;
+      max-width: 560px;
+      text-align: left;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+      color: #4b5563;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 22px;
+      background: #e5e7eb;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #22c55e, #16a34a);
+      border-radius: 999px;
+      transition: width 0.35s ease;
+    }
+
+    .overlay-symbol {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: min(35vw, 260px);
+      font-weight: bold;
+      pointer-events: none;
+      opacity: 0;
+      transform: scale(0.7);
+      transition: opacity 0.2s, transform 0.2s;
+      background: rgba(255, 255, 255, 0.6);
+      z-index: 10;
+    }
+
+    .overlay-symbol.show {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .overlay-symbol.correct {
+      color: var(--green);
+    }
+
+    .overlay-symbol.incorrect {
+      color: var(--red);
+    }
+
+    .complete-message {
+      display: none;
+      margin-top: 24px;
+      padding: 18px;
+      border-radius: 14px;
+      background: #dcfce7;
+      color: #166534;
+      font-weight: bold;
+    }
+
+    .complete-message.show {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="activity-zoom-wrapper" id="activityZoomWrapper">
+
+  <main class="activity">
+    <h1>Build the Equation</h1>
+<!-- 
+    <p class="instructions">
+      Click each blank box to choose an operation.
+      Click a number to toggle its exponent between no exponent and 2.
+      Make the left side equal the target number.
+    </p> -->
+
+    <section class="equation" aria-label="Equation builder">
+      <span class="term" data-index="0"></span>
+      <span class="operator-box" data-index="0" aria-label="First operation"></span>
+
+      <span class="term" data-index="1"></span>
+      <span class="operator-box" data-index="1" aria-label="Second operation"></span>
+
+      <span class="term" data-index="2"></span>
+      <span class="operator-box" data-index="2" aria-label="Third operation"></span>
+
+      <span class="term" data-index="3"></span>
+
+      <span class="equals">=</span>
+      <span class="target" id="targetValue"></span>
+    </section>
+
+    <button id="submitButton">Submit</button>
+
+    <div class="message" id="message"></div>
+
+    <div class="progress-wrapper">
+      <div class="progress-label" style="display: none;">
+        <span>Progress</span>
+        <span id="progressText">0 / 5</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </div>
+
+    <!-- <div class="complete-message" id="completeMessage">
+      Activity complete. Great work!
+    </div> -->
+
+    <div class="overlay-symbol" id="overlaySymbol"></div>
+  </main>
+
+  </div>
+
+  <script>
+    /*
+      Maximum possible target value.
+      Change this constant if you want a larger or smaller target range.
+    */
+    const U = 500;
+    const USE_EXPONENTS = true;
+    const MAX_OPERAND = 10;
+
+    const QUESTIONS_TO_COMPLETE = 3;
+    const OPERATIONS = ["+", "-", "×", "÷"];
+    const EPSILON = 1e-9;
+
+    const activityZoomWrapper = document.getElementById("activityZoomWrapper");
+    const ACTIVITY_NATURAL_WIDTH = 900;
+    const ACTIVITY_SIDE_MARGIN = 16;
+
+    let currentQuestion = null;
+    let userOperations = [null, null, null];
+    let userExponents = [1, 1, 1, 1];
+    let correctCount = 0;
+    let completed = false;
+
+    const termElements = document.querySelectorAll(".term");
+    const operatorElements = document.querySelectorAll(".operator-box");
+    const targetValueElement = document.getElementById("targetValue");
+    const submitButton = document.getElementById("submitButton");
+    const messageElement = document.getElementById("message");
+    const overlaySymbol = document.getElementById("overlaySymbol");
+    const progressFill = document.getElementById("progressFill");
+    const progressText = document.getElementById("progressText");
+    const completeMessage = document.getElementById("completeMessage");
+
+    messageElement.style.display = USE_EXPONENTS ? "block" : "none";
+
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function randomChoice(array) {
+      return array[Math.floor(Math.random() * array.length)];
+    }
+
+    function powerValue(base, exponent) {
+      return exponent === 2 ? base * base : base;
+    }
+
+    function resizeActivityToFit() {
+      const availableWidth = window.innerWidth - ACTIVITY_SIDE_MARGIN;
+
+      const scale = Math.min(1, availableWidth / ACTIVITY_NATURAL_WIDTH);
+
+      activityZoomWrapper.style.zoom = scale;
+    }
+
+    /*
+      Evaluates expressions using normal arithmetic precedence:
+      exponents first, then multiplication/division, then addition/subtraction.
+    */
+    function evaluateExpression(values, operations) {
+      const nums = [values[0]];
+      const ops = [];
+
+      for (let i = 0; i < operations.length; i++) {
+        const op = operations[i];
+        const nextValue = values[i + 1];
+
+        if (op === "×") {
+          nums[nums.length - 1] *= nextValue;
+        } else if (op === "÷") {
+          nums[nums.length - 1] /= nextValue;
+        } else {
+          ops.push(op);
+          nums.push(nextValue);
+        }
+      }
+
+      let result = nums[0];
+
+      for (let i = 0; i < ops.length; i++) {
+        if (ops[i] === "+") {
+          result += nums[i + 1];
+        } else if (ops[i] === "-") {
+          result -= nums[i + 1];
+        }
+      }
+
+      return result;
+    }
+
+    function isInteger(value) {
+      return Math.abs(value - Math.round(value)) < EPSILON;
+    }
+
+    /*
+      Creates a hidden equation:
+      a^w ? b^x ? c^y ? d^z = e
+
+      The generated e is guaranteed to be an integer between 1 and U.
+    */
+    function generateQuestion() {
+      while (true) {
+        const bases = [
+          randomInt(1, MAX_OPERAND),
+          randomInt(1, MAX_OPERAND),
+          randomInt(1, MAX_OPERAND),
+          randomInt(1, MAX_OPERAND)
+        ];
+
+        let exponents = [1, 1, 1, 1];
+        if (USE_EXPONENTS) {
+          exponents = [
+            randomChoice([1, 2]),
+            randomChoice([1, 2]),
+            randomChoice([1, 2]),
+            randomChoice([1, 2])
+          ];
+        }
+
+        const operations = [
+          randomChoice(OPERATIONS),
+          randomChoice(OPERATIONS),
+          randomChoice(OPERATIONS)
+        ];
+
+        const values = bases.map((base, i) => powerValue(base, exponents[i]));
+        const result = evaluateExpression(values, operations);
+
+        if (isInteger(result)) {
+          const e = Math.round(result);
+
+          if (e >= 1 && e <= U) {
+            return {
+              bases,
+              hiddenExponents: exponents,
+              hiddenOperations: operations,
+              target: e
+            };
+          }
+        }
+      }
+    }
+
+    function displayOperation(op) {
+      if (op === "-") return "−"; // true minus sign, U+2212
+      return op;
+    }
+
+    function renderEquation() {
+      termElements.forEach((term, index) => {
+        const base = currentQuestion.bases[index];
+        const exponent = userExponents[index];
+
+        term.innerHTML = exponent === 2
+          ? `${base}<sup class="exponent">2</sup>`
+          : `${base}`;
+      });
+
+      operatorElements.forEach((box, index) => {
+        box.textContent = userOperations[index] ? displayOperation(userOperations[index]) : "";
+      });
+
+      targetValueElement.textContent = currentQuestion.target;
+    }
+
+    function newQuestion() {
+      currentQuestion = generateQuestion();
+
+      userOperations = [null, null, null];
+      userExponents = [1, 1, 1, 1];
+
+      messageElement.style.display = USE_EXPONENTS ? "block" : "none";
+      messageElement.textContent = USE_EXPONENTS ? "Note: Click numbers to toggle exponents." : "";
+      renderEquation();
+    }
+
+    function updateProgress() {
+      const percentage = (correctCount / QUESTIONS_TO_COMPLETE) * 100;
+      progressFill.style.width = `${percentage}%`;
+      progressText.textContent = `${correctCount} / ${QUESTIONS_TO_COMPLETE}`;
+    }
+
+    function showOverlay(type) {
+      overlaySymbol.className = "overlay-symbol";
+
+      if (type === "correct") {
+        overlaySymbol.textContent = "✓";
+        overlaySymbol.classList.add("correct", "show");
+      } else {
+        overlaySymbol.textContent = "×";
+        overlaySymbol.classList.add("incorrect", "show");
+      }
+
+      setTimeout(() => {
+        overlaySymbol.classList.remove("show");
+      }, 700);
+    }
+
+    function submitAnswer() {
+      if (completed) return;
+
+      if (userOperations.some(op => op === null)) {
+        messageElement.textContent = "Choose all three operations before submitting.";
+        return;
+      }
+
+      const userValues = currentQuestion.bases.map((base, index) => {
+        return powerValue(base, userExponents[index]);
+      });
+
+      const userResult = evaluateExpression(userValues, userOperations);
+      const target = currentQuestion.target;
+
+      if (Math.abs(userResult - target) < EPSILON) {
+        correctCount++;
+        updateProgress();
+
+        showOverlay("correct");
+        messageElement.textContent = "Correct! Nice equation wrangling.";
+
+        if (correctCount >= QUESTIONS_TO_COMPLETE) {
+          completed = true;
+          // completeMessage.classList.add("show");
+          submitButton.disabled = true;
+
+          setTimeout(() => {
+            activityComplete();
+          }, 750);
+        } else {
+          setTimeout(() => {
+            newQuestion();
+          }, 800);
+        }
+      } else {
+        showOverlay("incorrect");
+        messageElement.textContent = `Not quite. Your left side equals ${formatNumber(userResult)}. Try again.`;
+      }
+    }
+
+    function formatNumber(value) {
+      if (isInteger(value)) {
+        return String(Math.round(value));
+      }
+
+      return Number(value.toFixed(4)).toString();
+    }
+
+    /*
+      This function is called when the progress bar is full.
+      Replace the body with your LMS, parent-page, or completion logic.
+    */
+    function activityComplete() {
+      console.log("Activity complete!");
+    }
+
+    termElements.forEach(term => {
+      term.addEventListener("click", () => {
+        if (completed || !USE_EXPONENTS) return;
+
+        const index = Number(term.dataset.index);
+        userExponents[index] = userExponents[index] === 1 ? 2 : 1;
+        renderEquation();
+      });
+    });
+
+    operatorElements.forEach(box => {
+      box.addEventListener("click", () => {
+        if (completed) return;
+
+        const index = Number(box.dataset.index);
+        const currentOperation = userOperations[index];
+
+        if (currentOperation === null) {
+          userOperations[index] = OPERATIONS[0];
+        } else {
+          const currentIndex = OPERATIONS.indexOf(currentOperation);
+          const nextIndex = (currentIndex + 1) % OPERATIONS.length;
+          userOperations[index] = OPERATIONS[nextIndex];
+        }
+
+        renderEquation();
+      });
+    });
+
+    submitButton.addEventListener("click", submitAnswer);
+
+    resizeActivityToFit();
+    window.addEventListener("resize", resizeActivityToFit);
+
+    updateProgress();
+    newQuestion();
+
+  </script>
+<script src="/static/puzzle/js/activity.js"></script>
+<script>autoZoom();</script>
+</body>
+</html>

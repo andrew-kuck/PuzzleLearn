@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Limit Landing: Navigating Toward a Function’s Behavior</title>
+  <style>
+    :root {
+      --blue: #2f65d9;
+      --maize: #ffcb05;
+      --ink: #1f2937;
+      --muted: #6b7280;
+      --good: #15803d;
+      --bad: #b91c1c;
+      --panel: #ffffff;
+      --bg: #f3f6fb;
+      --grid: #d9e1ef;
+      --axis: #374151;
+      --left: #0ea5e9;
+      --right: #f97316;
+      --target: #9333ea;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    header {
+      background: linear-gradient(135deg, #00274c, #244d8f);
+      color: white;
+      padding: 1.4rem 1.25rem;
+      border-bottom: 5px solid var(--maize);
+    }
+
+    header h1 {
+      margin: 0 0 0.35rem;
+      font-size: clamp(1.4rem, 3vw, 2.2rem);
+    }
+
+    header p {
+      margin: 0;
+      max-width: 950px;
+      opacity: 0.94;
+      line-height: 1.45;
+    }
+
+    main {
+      width: min(1200px, calc(100% - 2rem));
+      margin: 1rem auto 2rem;
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(300px, 0.95fr);
+      gap: 1rem;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid #dbe3ef;
+      border-radius: 16px;
+      box-shadow: 0 8px 22px rgba(31, 41, 55, 0.08);
+      overflow: hidden;
+    }
+
+    .card-body {
+      padding: 1rem;
+    }
+
+    .graph-card {
+      min-width: 0;
+    }
+
+    .stage-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 0.9rem 1rem;
+      background: #fbfdff;
+    }
+
+    .stage-title {
+      font-weight: 800;
+      font-size: 1.05rem;
+    }
+
+    .formula {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-top: 0.25rem;
+    }
+
+    .stage-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    button {
+      font: inherit;
+      border: none;
+      border-radius: 999px;
+      padding: 0.55rem 0.85rem;
+      cursor: pointer;
+      background: #e8eef9;
+      color: #173153;
+      font-weight: 700;
+      transition: transform 0.08s ease, background 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      background: #dce8fb;
+    }
+
+    button:focus-visible,
+    .label:focus-visible,
+    input:focus-visible {
+      outline: 3px solid #7dd3fc;
+      outline-offset: 2px;
+    }
+
+    button.primary {
+      background: var(--blue);
+      color: white;
+    }
+
+    button.primary:hover {
+      background: #244fc0;
+    }
+
+    button.secondary {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    button.stage-btn.active {
+      background: #00274c;
+      color: white;
+    }
+
+    svg {
+      width: 100%;
+      height: auto;
+      display: block;
+      background: white;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .controls {
+      display: grid;
+      gap: 0.8rem;
+      margin-top: 0.9rem;
+    }
+
+    .control-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.7rem;
+    }
+
+    label.inline {
+      font-weight: 700;
+    }
+
+    input[type="range"] {
+      accent-color: var(--blue);
+      min-width: 220px;
+      flex: 1;
+    }
+
+    .readouts {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.6rem;
+    }
+
+    @media (max-width: 600px) {
+      .readouts {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .readout {
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 0.65rem;
+      background: #fbfdff;
+      min-height: 66px;
+    }
+
+    .readout strong {
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+
+    .left-color {
+      color: var(--left);
+    }
+
+    .right-color {
+      color: var(--right);
+    }
+
+    .marker-color {
+      color: var(--target);
+    }
+
+    .side-panel h2 {
+      font-size: 1.1rem;
+      margin: 0 0 0.5rem;
+    }
+
+    .instructions {
+      color: var(--muted);
+      line-height: 1.45;
+      margin-top: 0;
+    }
+
+    .labels {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 0.8rem 0 1rem;
+    }
+
+    .label {
+      border: 2px solid #d1d5db;
+      background: #fff;
+      border-radius: 999px;
+      padding: 0.5rem 0.75rem;
+      font-weight: 800;
+      cursor: grab;
+      user-select: none;
+    }
+
+    .label:active {
+      cursor: grabbing;
+    }
+
+    .label.selected {
+      border-color: var(--blue);
+      background: #eff6ff;
+    }
+
+    .console {
+      border: 3px dashed #bac7dc;
+      background: #f8fbff;
+      min-height: 96px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 1rem;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .console.drag-over {
+      border-color: var(--blue);
+      background: #eff6ff;
+    }
+
+    .console .placeholder {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .console .chosen {
+      font-size: 1.25rem;
+      font-weight: 900;
+      color: #00274c;
+    }
+
+    .feedback {
+      margin-top: 1rem;
+      padding: 0.9rem;
+      border-radius: 14px;
+      background: #f3f4f6;
+      border-left: 6px solid #9ca3af;
+      line-height: 1.45;
+      min-height: 70px;
+    }
+
+    .feedback.good {
+      background: #ecfdf5;
+      border-left-color: var(--good);
+      color: #064e3b;
+    }
+
+    .feedback.bad {
+      background: #fef2f2;
+      border-left-color: var(--bad);
+      color: #7f1d1d;
+    }
+
+    .feedback.hint {
+      background: #fffbeb;
+      border-left-color: #f59e0b;
+      color: #78350f;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-top: 0.7rem;
+    }
+
+    .legend span::before {
+      content: "";
+      display: inline-block;
+      width: 0.8rem;
+      height: 0.8rem;
+      border-radius: 50%;
+      margin-right: 0.3rem;
+      vertical-align: -0.1rem;
+      background: currentColor;
+    }
+
+    .math-note {
+      margin-top: 1rem;
+      padding: 0.85rem;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      color: #374151;
+      line-height: 1.45;
+      font-size: 0.95rem;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Limit Landing: Navigating Toward a Function’s Behavior</h1>
+    <p>
+      Guide two approach drones toward the target x-value. Watch the nearby y-values,
+      then decide what the function approaches. Remember: a limit is about nearby
+      behavior, not necessarily the value at the target.
+    </p>
+  </header>
+
+  <main>
+    <section class="card graph-card" aria-label="Interactive graph">
+      <div class="stage-bar">
+        <div>
+          <div id="stageTitle" class="stage-title"></div>
+          <div id="stageFormula" class="formula"></div>
+        </div>
+        <div class="stage-buttons" id="stageButtons"></div>
+      </div>
+
+      <div class="card-body">
+        <svg id="graph" viewBox="0 0 760 480" role="img" aria-label="Graph of function with approach drones"></svg>
+
+        <div class="legend" aria-hidden="true">
+          <span style="color: var(--left)">Left drone</span>
+          <span style="color: var(--right)">Right drone</span>
+          <span style="color: var(--target)">Target x-value / marker</span>
+        </div>
+
+        <div class="controls">
+          <div class="control-row">
+            <label class="inline" for="distanceSlider">Drone distance from target:</label>
+            <input id="distanceSlider" type="range" min="0.03" max="1.5" step="0.01" value="1.2" />
+            <button id="glideBtn" class="primary">Glide inward</button>
+            <button id="resetBtn" class="secondary">Reset drones</button>
+          </div>
+
+          <div class="control-row">
+            <button id="checkBtn" class="primary">Check answer</button>
+            <button id="randomBtn">Random challenge</button>
+            <button id="clearBtn" class="secondary">Clear console</button>
+          </div>
+
+          <div class="readouts">
+            <div class="readout">
+              <strong class="left-color">Left drone</strong>
+              <div id="leftReadout">x = —, y = —</div>
+            </div>
+            <div class="readout">
+              <strong class="right-color">Right drone</strong>
+              <div id="rightReadout">x = —, y = —</div>
+            </div>
+            <div class="readout">
+              <strong class="marker-color">Limit marker</strong>
+              <div id="markerReadout">y = —</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="card side-panel">
+      <div class="card-body">
+        <h2>Limit Console</h2>
+        <p class="instructions">
+          Drag or click a label into the console. If the limit is a finite number,
+          choose <strong>finite number</strong> and drag the purple y-axis marker to
+          the height the drones approach.
+        </p>
+
+        <div id="labels" class="labels" aria-label="Draggable answer labels"></div>
+
+        <div id="console" class="console" tabindex="0" aria-label="Limit console drop area">
+          <div class="placeholder">Drop or click an answer label here</div>
+        </div>
+
+        <div id="feedback" class="feedback hint" role="status" aria-live="polite">
+          Start by moving the drones closer to the target x-value. The purple marker
+          can be dragged up or down on the y-axis.
+        </div>
+
+        <div class="math-note">
+          <strong>Big idea:</strong>
+          For <code>lim f(x)</code> as <code>x → a</code>, ask:
+          “What y-value does <code>f(x)</code> approach as x gets close to a from both sides?”
+          The actual value <code>f(a)</code> may agree, differ, be missing, or be infinite.
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    const svg = document.getElementById("graph");
+    const stageTitle = document.getElementById("stageTitle");
+    const stageFormula = document.getElementById("stageFormula");
+    const stageButtons = document.getElementById("stageButtons");
+    const distanceSlider = document.getElementById("distanceSlider");
+    const glideBtn = document.getElementById("glideBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const checkBtn = document.getElementById("checkBtn");
+    const randomBtn = document.getElementById("randomBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const labelsWrap = document.getElementById("labels");
+    const consoleBox = document.getElementById("console");
+    const feedback = document.getElementById("feedback");
+    const leftReadout = document.getElementById("leftReadout");
+    const rightReadout = document.getElementById("rightReadout");
+    const markerReadout = document.getElementById("markerReadout");
+
+    const W = 760;
+    const H = 480;
+    const margin = { left: 70, right: 25, top: 25, bottom: 55 };
+    const plotW = W - margin.left - margin.right;
+    const plotH = H - margin.top - margin.bottom;
+
+    const labels = [
+      { id: "finite", text: "finite number" },
+      { id: "dne", text: "does not exist" },
+      { id: "posinf", text: "+∞" },
+      { id: "neginf", text: "-∞" },
+      { id: "lr-differ", text: "left and right limits differ" },
+      { id: "oscillates", text: "oscillates" }
+    ];
+
+    const stages = [
+      {
+        id: "continuous",
+        name: "Stage 1: Continuous Function",
+        formula: "f(x) = 2x + 1, target x = 2",
+        target: 2,
+        xMin: -1,
+        xMax: 4,
+        yMin: -1,
+        yMax: 8,
+        limitType: "finite",
+        limitValue: 5,
+        filledPoint: { x: 2, y: 5 },
+        segments: [
+          { x0: -1, x1: 4, fn: x => 2 * x + 1 }
+        ],
+        evalLeft: x => 2 * x + 1,
+        evalRight: x => 2 * x + 1,
+        success:
+          "Correct. Both drones approach y = 5, and the function is continuous there, so the limit is 5."
+      },
+      {
+        id: "removable",
+        name: "Stage 2: Removable Discontinuity",
+        formula: "f(x) = (x² − 1)/(x − 1), target x = 1, with a hole and a misleading filled point",
+        target: 1,
+        xMin: -2,
+        xMax: 4,
+        yMin: -1,
+        yMax: 6,
+        limitType: "finite",
+        limitValue: 2,
+        filledPoint: { x: 1, y: 4 },
+        holes: [{ x: 1, y: 2 }],
+        segments: [
+          { x0: -2, x1: 0.98, fn: x => x + 1 },
+          { x0: 1.02, x1: 4, fn: x => x + 1 }
+        ],
+        evalLeft: x => x + 1,
+        evalRight: x => x + 1,
+        fAt: 4,
+        success:
+          "Correct. The hole is at y = 2, and both sides approach that height. The filled point shows f(1), not the limit."
+      },
+      {
+        id: "jump",
+        name: "Stage 3: Jump Discontinuity",
+        formula: "f(x) = 1 for x < 0, and f(x) = 3 for x ≥ 0; target x = 0",
+        target: 0,
+        xMin: -3,
+        xMax: 3,
+        yMin: -0.5,
+        yMax: 4.5,
+        limitType: "dne",
+        reason: "lr-differ",
+        leftLimit: 1,
+        rightLimit: 3,
+        filledPoint: { x: 0, y: 3 },
+        holes: [{ x: 0, y: 1 }],
+        segments: [
+          { x0: -3, x1: -0.02, fn: x => 1 },
+          { x0: 0, x1: 3, fn: x => 3 }
+        ],
+        evalLeft: x => 1,
+        evalRight: x => 3,
+        success:
+          "Correct. The left drone approaches y = 1 while the right drone approaches y = 3, so the two-sided limit does not exist."
+      },
+      {
+        id: "infinite",
+        name: "Stage 4: Infinite Limit",
+        formula: "f(x) = 1/(x − 2)², target x = 2",
+        target: 2,
+        xMin: -1,
+        xMax: 5,
+        yMin: -0.5,
+        yMax: 10,
+        limitType: "posinf",
+        verticalAsymptote: 2,
+        segments: [
+          { x0: -1, x1: 1.92, fn: x => 1 / ((x - 2) * (x - 2)) },
+          { x0: 2.08, x1: 5, fn: x => 1 / ((x - 2) * (x - 2)) }
+        ],
+        evalLeft: x => 1 / ((x - 2) * (x - 2)),
+        evalRight: x => 1 / ((x - 2) * (x - 2)),
+        success:
+          "Correct. As both drones approach x = 2, their y-values grow without bound. The limit is +∞."
+      }
+    ];
+
+    let currentIndex = 0;
+    let selectedLabel = null;
+    let markerY = 0;
+    let draggingMarker = false;
+    let animationId = null;
+
+    function xToPx(x) {
+      const s = currentStage();
+      return margin.left + ((x - s.xMin) / (s.xMax - s.xMin)) * plotW;
+    }
+
+    function yToPx(y) {
+      const s = currentStage();
+      return margin.top + ((s.yMax - y) / (s.yMax - s.yMin)) * plotH;
+    }
+
+    function pxToY(py) {
+      const s = currentStage();
+      const t = (py - margin.top) / plotH;
+      return s.yMax - t * (s.yMax - s.yMin);
+    }
+
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
+    }
+
+    function currentStage() {
+      return stages[currentIndex];
+    }
+
+    function fmt(n) {
+      if (!Number.isFinite(n)) return "—";
+      if (Math.abs(n) >= 1000) return n.toExponential(2);
+      return Math.abs(n - Math.round(n)) < 0.001 ? String(Math.round(n)) : n.toFixed(3);
+    }
+
+    function makeSvg(tag, attrs = {}) {
+      const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+      for (const [k, v] of Object.entries(attrs)) {
+        el.setAttribute(k, v);
+      }
+      return el;
+    }
+
+    function clearSvg() {
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+    }
+
+    function niceTickStep(span) {
+      if (span <= 5) return 1;
+      if (span <= 12) return 1;
+      if (span <= 25) return 2;
+      return 5;
+    }
+
+    function renderGrid() {
+      const s = currentStage();
+
+      svg.appendChild(makeSvg("rect", {
+        x: margin.left,
+        y: margin.top,
+        width: plotW,
+        height: plotH,
+        fill: "#ffffff",
+        stroke: "#cbd5e1",
+        "stroke-width": 1
+      }));
+
+      const xStep = niceTickStep(s.xMax - s.xMin);
+      const yStep = niceTickStep(s.yMax - s.yMin);
+
+      const xStart = Math.ceil(s.xMin / xStep) * xStep;
+      for (let x = xStart; x <= s.xMax + 1e-9; x += xStep) {
+        const px = xToPx(x);
+        svg.appendChild(makeSvg("line", {
+          x1: px, y1: margin.top, x2: px, y2: margin.top + plotH,
+          stroke: "var(--grid)", "stroke-width": 1
+        }));
+        svg.appendChild(makeSvg("text", {
+          x: px, y: margin.top + plotH + 22,
+          "text-anchor": "middle",
+          "font-size": 12,
+          fill: "#4b5563"
+        })).textContent = fmt(x);
+      }
+
+      const yStart = Math.ceil(s.yMin / yStep) * yStep;
+      for (let y = yStart; y <= s.yMax + 1e-9; y += yStep) {
+        const py = yToPx(y);
+        svg.appendChild(makeSvg("line", {
+          x1: margin.left, y1: py, x2: margin.left + plotW, y2: py,
+          stroke: "var(--grid)", "stroke-width": 1
+        }));
+        svg.appendChild(makeSvg("text", {
+          x: margin.left - 12, y: py + 4,
+          "text-anchor": "end",
+          "font-size": 12,
+          fill: "#4b5563"
+        })).textContent = fmt(y);
+      }
+
+      if (s.yMin <= 0 && s.yMax >= 0) {
+        const py = yToPx(0);
+        svg.appendChild(makeSvg("line", {
+          x1: margin.left, y1: py, x2: margin.left + plotW, y2: py,
+          stroke: "var(--axis)", "stroke-width": 2
+        }));
+      }
+
+      if (s.xMin <= 0 && s.xMax >= 0) {
+        const px = xToPx(0);
+        svg.appendChild(makeSvg("line", {
+          x1: px, y1: margin.top, x2: px, y2: margin.top + plotH,
+          stroke: "var(--axis)", "stroke-width": 2
+        }));
+      }
+
+      svg.appendChild(makeSvg("text", {
+        x: margin.left + plotW - 5,
+        y: margin.top + plotH + 42,
+        "text-anchor": "end",
+        fill: "#374151",
+        "font-weight": 700
+      })).textContent = "x";
+
+      svg.appendChild(makeSvg("text", {
+        x: margin.left - 42,
+        y: margin.top + 14,
+        fill: "#374151",
+        "font-weight": 700
+      })).textContent = "y";
+    }
+
+    function renderFunction() {
+      const s = currentStage();
+
+      const defs = makeSvg("defs");
+      const clip = makeSvg("clipPath", { id: "plotClip" });
+      clip.appendChild(makeSvg("rect", {
+        x: margin.left,
+        y: margin.top,
+        width: plotW,
+        height: plotH
+      }));
+      defs.appendChild(clip);
+      svg.appendChild(defs);
+
+      const group = makeSvg("g", { "clip-path": "url(#plotClip)" });
+
+      for (const seg of s.segments) {
+        let d = "";
+        let started = false;
+        const samples = 260;
+        for (let i = 0; i <= samples; i++) {
+          const x = seg.x0 + (i / samples) * (seg.x1 - seg.x0);
+          let y = seg.fn(x);
+          if (!Number.isFinite(y)) {
+            started = false;
+            continue;
+          }
+          y = clamp(y, s.yMin - 2 * (s.yMax - s.yMin), s.yMax + 2 * (s.yMax - s.yMin));
+          const px = xToPx(x);
+          const py = yToPx(clamp(y, s.yMin, s.yMax));
+          d += started ? ` L ${px} ${py}` : ` M ${px} ${py}`;
+          started = true;
+        }
+
+        group.appendChild(makeSvg("path", {
+          d,
+          fill: "none",
+          stroke: "#111827",
+          "stroke-width": 3,
+          "stroke-linecap": "round",
+          "stroke-linejoin": "round"
+        }));
+      }
+
+      svg.appendChild(group);
+
+      if (s.verticalAsymptote !== undefined) {
+        const px = xToPx(s.verticalAsymptote);
+        svg.appendChild(makeSvg("line", {
+          x1: px,
+          y1: margin.top,
+          x2: px,
+          y2: margin.top + plotH,
+          stroke: "var(--target)",
+          "stroke-width": 2,
+          "stroke-dasharray": "8 7"
+        }));
+        svg.appendChild(makeSvg("text", {
+          x: px + 8,
+          y: margin.top + 18,
+          fill: "var(--target)",
+          "font-weight": 800,
+          "font-size": 13
+        })).textContent = "vertical asymptote";
+      }
+
+      const targetPx = xToPx(s.target);
+      svg.appendChild(makeSvg("line", {
+        x1: targetPx,
+        y1: margin.top,
+        x2: targetPx,
+        y2: margin.top + plotH,
+        stroke: "var(--target)",
+        "stroke-width": 2,
+        "stroke-dasharray": "5 7",
+        opacity: 0.85
+      }));
+
+      svg.appendChild(makeSvg("text", {
+        x: targetPx,
+        y: margin.top + plotH + 42,
+        "text-anchor": "middle",
+        fill: "var(--target)",
+        "font-weight": 900
+      })).textContent = `target x = ${fmt(s.target)}`;
+
+      if (s.holes) {
+        for (const p of s.holes) {
+          svg.appendChild(makeSvg("circle", {
+            cx: xToPx(p.x),
+            cy: yToPx(p.y),
+            r: 7,
+            fill: "white",
+            stroke: "#111827",
+            "stroke-width": 3
+          }));
+        }
+      }
+
+      if (s.filledPoint) {
+        svg.appendChild(makeSvg("circle", {
+          cx: xToPx(s.filledPoint.x),
+          cy: yToPx(s.filledPoint.y),
+          r: 7,
+          fill: "#111827",
+          stroke: "white",
+          "stroke-width": 2
+        }));
+      }
+    }
+
+    function droneYToPx(y) {
+      const s = currentStage();
+      if (y > s.yMax) return margin.top + 8;
+      if (y < s.yMin) return margin.top + plotH - 8;
+      return yToPx(y);
+    }
+
+    function renderDrones() {
+      const s = currentStage();
+      const d = parseFloat(distanceSlider.value);
+      const lx = s.target - d;
+      const rx = s.target + d;
+      const ly = s.evalLeft(lx);
+      const ry = s.evalRight(rx);
+
+      const drones = [
+        { x: lx, y: ly, color: "var(--left)", label: "L" },
+        { x: rx, y: ry, color: "var(--right)", label: "R" }
+      ];
+
+      for (const drone of drones) {
+        const px = xToPx(drone.x);
+        const py = droneYToPx(drone.y);
+
+        svg.appendChild(makeSvg("line", {
+          x1: px,
+          y1: py,
+          x2: xToPx(s.target),
+          y2: py,
+          stroke: drone.color,
+          "stroke-width": 1.5,
+          "stroke-dasharray": "4 5",
+          opacity: 0.55
+        }));
+
+        const g = makeSvg("g");
+        g.appendChild(makeSvg("circle", {
+          cx: px,
+          cy: py,
+          r: 10,
+          fill: drone.color,
+          stroke: "white",
+          "stroke-width": 3
+        }));
+        g.appendChild(makeSvg("text", {
+          x: px,
+          y: py + 4,
+          "text-anchor": "middle",
+          "font-size": 11,
+          "font-weight": 900,
+          fill: "white"
+        })).textContent = drone.label;
+
+        if (drone.y > s.yMax) {
+          g.appendChild(makeSvg("text", {
+            x: px,
+            y: margin.top + 22,
+            "text-anchor": "middle",
+            fill: drone.color,
+            "font-size": 22,
+            "font-weight": 900
+          })).textContent = "↑";
+        }
+
+        svg.appendChild(g);
+      }
+
+      leftReadout.textContent = `x = ${fmt(lx)}, y = ${ly > s.yMax ? "above graph" : fmt(ly)}`;
+      rightReadout.textContent = `x = ${fmt(rx)}, y = ${ry > s.yMax ? "above graph" : fmt(ry)}`;
+    }
+
+    function renderMarker() {
+      const s = currentStage();
+
+      if (!(s.xMin <= 0 && s.xMax >= 0)) return;
+
+      const axisX = xToPx(0);
+      const py = yToPx(clamp(markerY, s.yMin, s.yMax));
+
+      const g = makeSvg("g", {
+        id: "limitMarker",
+        role: "slider",
+        "aria-label": "Draggable finite limit marker",
+        "aria-valuemin": s.yMin,
+        "aria-valuemax": s.yMax,
+        "aria-valuenow": markerY
+      });
+
+      g.appendChild(makeSvg("line", {
+        x1: axisX - 28,
+        y1: py,
+        x2: axisX + 28,
+        y2: py,
+        stroke: "var(--target)",
+        "stroke-width": 5,
+        "stroke-linecap": "round"
+      }));
+
+      g.appendChild(makeSvg("circle", {
+        cx: axisX,
+        cy: py,
+        r: 12,
+        fill: "var(--target)",
+        stroke: "white",
+        "stroke-width": 3
+      }));
+
+      g.appendChild(makeSvg("text", {
+        x: axisX + 35,
+        y: py + 5,
+        fill: "var(--target)",
+        "font-weight": 900,
+        "font-size": 13
+      })).textContent = `marker y=${fmt(markerY)}`;
+
+      svg.appendChild(g);
+      markerReadout.textContent = `y = ${fmt(markerY)}`;
+    }
+
+    function render() {
+      clearSvg();
+      renderGrid();
+      renderFunction();
+      renderDrones();
+      renderMarker();
+    }
+
+    function setStage(index) {
+      currentIndex = index;
+      const s = currentStage();
+      markerY = s.limitType === "finite" ? (s.yMin + s.yMax) / 2 : Math.max(s.yMin, 0);
+      selectedLabel = null;
+      distanceSlider.value = "1.2";
+      stageTitle.textContent = s.name;
+      stageFormula.textContent = s.formula;
+      updateConsole();
+      updateStageButtons();
+      setFeedback(
+        "hint",
+        "Move the drones closer to the target. Then choose a console label. For a finite limit, drag the purple y-axis marker to the approached height."
+      );
+      render();
+    }
+
+    function updateStageButtons() {
+      [...stageButtons.children].forEach((btn, i) => {
+        btn.classList.toggle("active", i === currentIndex);
+      });
+    }
+
+    function buildStageButtons() {
+      stages.forEach((s, i) => {
+        const btn = document.createElement("button");
+        btn.className = "stage-btn";
+        btn.textContent = `Stage ${i + 1}`;
+        btn.addEventListener("click", () => setStage(i));
+        stageButtons.appendChild(btn);
+      });
+    }
+
+    function buildLabels() {
+      for (const item of labels) {
+        const el = document.createElement("button");
+        el.className = "label";
+        el.draggable = true;
+        el.type = "button";
+        el.dataset.label = item.id;
+        el.textContent = item.text;
+        el.setAttribute("aria-label", `Answer label ${item.text}`);
+
+        el.addEventListener("dragstart", e => {
+          e.dataTransfer.setData("text/plain", item.id);
+        });
+
+        el.addEventListener("click", () => {
+          selectedLabel = item.id;
+          updateConsole();
+          setFeedback("hint", `Selected "${item.text}". Now check your answer when your drones are close enough.`);
+        });
+
+        labelsWrap.appendChild(el);
+      }
+    }
+
+    function labelText(id) {
+      return labels.find(l => l.id === id)?.text ?? "—";
+    }
+
+    function updateConsole() {
+      [...labelsWrap.children].forEach(el => {
+        el.classList.toggle("selected", el.dataset.label === selectedLabel);
+      });
+
+      if (!selectedLabel) {
+        consoleBox.innerHTML = `<div class="placeholder">Drop or click an answer label here</div>`;
+      } else if (selectedLabel === "finite") {
+        consoleBox.innerHTML = `
+          <div>
+            <div class="chosen">finite number</div>
+            <div style="color:#6b7280;margin-top:.35rem">
+              Marker value: <strong>${fmt(markerY)}</strong>
+            </div>
+          </div>
+        `;
+      } else {
+        consoleBox.innerHTML = `<div class="chosen">${labelText(selectedLabel)}</div>`;
+      }
+    }
+
+    function setFeedback(type, message) {
+      feedback.className = `feedback ${type}`;
+      feedback.innerHTML = message;
+    }
+
+    function graphPointFromEvent(e) {
+      const pt = svg.createSVGPoint();
+      pt.x = e.clientX;
+      pt.y = e.clientY;
+      return pt.matrixTransform(svg.getScreenCTM().inverse());
+    }
+
+    svg.addEventListener("pointerdown", e => {
+      if (e.target.closest("#limitMarker")) {
+        draggingMarker = true;
+        svg.setPointerCapture(e.pointerId);
+      }
+    });
+
+    svg.addEventListener("pointermove", e => {
+      if (!draggingMarker) return;
+      const s = currentStage();
+      const p = graphPointFromEvent(e);
+      markerY = clamp(pxToY(p.y), s.yMin, s.yMax);
+      render();
+      updateConsole();
+    });
+
+    svg.addEventListener("pointerup", e => {
+      draggingMarker = false;
+      try {
+        svg.releasePointerCapture(e.pointerId);
+      } catch {}
+    });
+
+    svg.addEventListener("pointercancel", () => {
+      draggingMarker = false;
+    });
+
+    consoleBox.addEventListener("dragover", e => {
+      e.preventDefault();
+      consoleBox.classList.add("drag-over");
+    });
+
+    consoleBox.addEventListener("dragleave", () => {
+      consoleBox.classList.remove("drag-over");
+    });
+
+    consoleBox.addEventListener("drop", e => {
+      e.preventDefault();
+      consoleBox.classList.remove("drag-over");
+      const id = e.dataTransfer.getData("text/plain");
+      if (labels.some(l => l.id === id)) {
+        selectedLabel = id;
+        updateConsole();
+        setFeedback("hint", `Selected "${labelText(id)}". Check when the drones are close to the target.`);
+      }
+    });
+
+    distanceSlider.addEventListener("input", () => {
+      render();
+    });
+
+    resetBtn.addEventListener("click", () => {
+      distanceSlider.value = "1.2";
+      render();
+      setFeedback("hint", "Drones reset. Slide or use Glide inward to approach the target again.");
+    });
+
+    clearBtn.addEventListener("click", () => {
+      selectedLabel = null;
+      updateConsole();
+      setFeedback("hint", "Console cleared. Choose a label after observing the drone behavior.");
+    });
+
+    randomBtn.addEventListener("click", () => {
+      let next = Math.floor(Math.random() * stages.length);
+      if (stages.length > 1) {
+        while (next === currentIndex) next = Math.floor(Math.random() * stages.length);
+      }
+      setStage(next);
+    });
+
+    glideBtn.addEventListener("click", () => {
+      if (animationId) cancelAnimationFrame(animationId);
+      const start = parseFloat(distanceSlider.value);
+      const end = 0.05;
+      const duration = 1300;
+      const t0 = performance.now();
+
+      function step(t) {
+        const p = clamp((t - t0) / duration, 0, 1);
+        const eased = 1 - Math.pow(1 - p, 3);
+        distanceSlider.value = String(start + (end - start) * eased);
+        render();
+
+        if (p < 1) {
+          animationId = requestAnimationFrame(step);
+        } else {
+          animationId = null;
+          setFeedback("hint", "Nice landing. Now compare the two drone y-values and submit a console label.");
+        }
+      }
+
+      animationId = requestAnimationFrame(step);
+    });
+
+    checkBtn.addEventListener("click", () => {
+      const s = currentStage();
+      const d = parseFloat(distanceSlider.value);
+      const closeEnough = d <= 0.18;
+
+      if (!closeEnough) {
+        setFeedback(
+          "hint",
+          "Bring the drones closer to the target x-value first. Limits are about what happens as x gets very close."
+        );
+        return;
+      }
+
+      if (!selectedLabel) {
+        setFeedback("hint", "Choose a label for the limit console before checking.");
+        return;
+      }
+
+      if (s.limitType === "finite") {
+        if (selectedLabel !== "finite") {
+          const ly = s.evalLeft(s.target - d);
+          const ry = s.evalRight(s.target + d);
+          setFeedback(
+            "bad",
+            `The drones are approaching nearly the same height: left y ≈ ${fmt(ly)}, right y ≈ ${fmt(ry)}. That suggests a finite limit.`
+          );
+          return;
+        }
+
+        const tolerance = 0.18;
+        const markerError = Math.abs(markerY - s.limitValue);
+
+        if (markerError <= tolerance) {
+          setFeedback("good", s.success);
+          return;
+        }
+
+        if (s.id === "removable" && Math.abs(markerY - s.fAt) <= tolerance) {
+          setFeedback(
+            "bad",
+            "Your marker matches the filled point, but the drones are approaching a different height. The filled point is f(1), not the limit."
+          );
+          return;
+        }
+
+        const direction = markerY < s.limitValue ? "too low" : "too high";
+        setFeedback(
+          "bad",
+          `The finite label is reasonable, but the marker is ${direction}. Watch where both drones are landing on the y-axis.`
+        );
+        return;
+      }
+
+      if (s.limitType === "dne") {
+        if (selectedLabel === "dne" || selectedLabel === "lr-differ") {
+          setFeedback("good", s.success);
+          return;
+        }
+
+        if (selectedLabel === "finite") {
+          setFeedback(
+            "bad",
+            "The left and right drones are not meeting at the same y-value. A two-sided finite limit requires both sides to approach the same height."
+          );
+          return;
+        }
+
+        setFeedback(
+          "bad",
+          "This is a jump discontinuity. The key evidence is that the left and right limits differ."
+        );
+        return;
+      }
+
+      if (s.limitType === "posinf") {
+        if (selectedLabel === "posinf") {
+          setFeedback("good", s.success);
+          return;
+        }
+
+        if (selectedLabel === "dne") {
+          setFeedback(
+            "hint",
+            "The limit is not a finite number, but there is a more specific description: both drones shoot upward without bound."
+          );
+          return;
+        }
+
+        if (selectedLabel === "finite") {
+          setFeedback(
+            "bad",
+            "The drones are not settling near a fixed y-value. As they approach the target, the graph rises beyond the visible window."
+          );
+          return;
+        }
+
+        setFeedback(
+          "bad",
+          "Both sides rise upward near the vertical asymptote, so the correct classification is +∞."
+        );
+      }
+    });
+
+    window.addEventListener("resize", render);
+
+    buildStageButtons();
+    buildLabels();
+    setStage(0);
+  </script>
+  <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#f6f6f6"
+    }
+  </script>
+</body>
+</html>

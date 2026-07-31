@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Riemann Rescue</title>
+<style>
+body{margin:0;background:#0b1320;color:white;font-family:system-ui;display:flex;justify-content:center}
+.app{max-width:900px;padding:20px}
+canvas{background:#fff;border-radius:16px;width:100%;max-width:850px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
+input,select,button{font-size:17px;padding:10px;border:0;border-radius:10px}
+button{background:#ffcb05;color:#00274c;font-weight:800}
+.pill{background:#243b55;border-radius:999px;padding:8px 13px}
+</style>
+</head>
+<body>
+<div class="app">
+<h1>Riemann Rescue</h1>
+<p>Choose a sampling method and number of rectangles that approximates the true signed area closely enough.</p>
+<canvas id="cv" width="850" height="430"></canvas>
+<div class="row">
+<span id="lvl" class="pill"></span>
+<label>n <input id="n" type="number" min="1" max="80" value="4"></label>
+<select id="method"><option>Left</option><option>Right</option><option>Midpoint</option><option>Trapezoid</option></select>
+<button onclick="check()">Rescue</button>
+<span id="msg" class="pill"></span>
+</div>
+</div>
+<script>
+const cv=document.getElementById("cv"),c=cv.getContext("2d"),X=x=>80+x*110,Y=y=>230-y*55;
+const L=[
+ {f:x=>x*x/4,a:0,b:4,exact:64/12,t:"∫₀⁴ x²/4 dx",tol:.08},
+ {f:x=>Math.sin(x),a:0,b:Math.PI,exact:2,t:"∫₀π sin x dx",tol:.04},
+ {f:x=>x-2,a:0,b:5,exact:2.5,t:"∫₀⁵ (x-2) dx",tol:.05},
+ {f:x=>Math.exp(-x),a:0,b:3,exact:1-Math.exp(-3),t:"∫₀³ e^(-x) dx",tol:.03},
+ {f:x=>1/(1+x*x),a:0,b:1,exact:Math.PI/4,t:"∫₀¹ 1/(1+x²) dx",tol:.01}
+];
+let i=0;
+function sum(o,N,m){
+ let dx=(o.b-o.a)/N,s=0;
+ for(let k=0;k<N;k++){
+  let l=o.a+k*dx,r=l+dx,x=m=="Left"?l:m=="Right"?r:(l+r)/2;
+  if(m=="Trapezoid")s+=(o.f(l)+o.f(r))*dx/2;else s+=o.f(x)*dx;
+ }
+ return s;
+}
+function draw(){
+ let o=L[i],N=Math.max(1,+n.value||1),m=method.value,S=sum(o,N,m);
+ lvl.textContent=`Level ${i+1}/${L.length}: ${o.t}`;
+ c.clearRect(0,0,850,430);
+ c.strokeStyle="#ddd";for(let x=0;x<=6;x++){c.beginPath();c.moveTo(X(x),0);c.lineTo(X(x),430);c.stroke()}
+ for(let y=-3;y<=4;y++){c.beginPath();c.moveTo(0,Y(y));c.lineTo(850,Y(y));c.stroke()}
+ c.strokeStyle="#00274c";c.lineWidth=2;c.beginPath();c.moveTo(0,Y(0));c.lineTo(850,Y(0));c.stroke();
+ let dx=(o.b-o.a)/N;c.fillStyle="#ffcb0555";c.strokeStyle="#c99800";
+ for(let k=0;k<N;k++){
+  let l=o.a+k*dx,r=l+dx,x=m=="Left"?l:m=="Right"?r:(l+r)/2,h=o.f(x);
+  if(m=="Trapezoid"){c.beginPath();c.moveTo(X(l),Y(0));c.lineTo(X(l),Y(o.f(l)));c.lineTo(X(r),Y(o.f(r)));c.lineTo(X(r),Y(0));c.closePath();c.fill();c.stroke();}
+  else{c.fillRect(X(l),Y(Math.max(0,h)),X(r)-X(l),Math.abs(Y(h)-Y(0)));c.strokeRect(X(l),Y(Math.max(0,h)),X(r)-X(l),Math.abs(Y(h)-Y(0)));}
+ }
+ c.strokeStyle="#2f80ed";c.lineWidth=4;c.beginPath();let st=0;
+ for(let k=0;k<=500;k++){let x=o.a+(o.b-o.a)*k/500,y=o.f(x);if(!st){c.moveTo(X(x),Y(y));st=1}else c.lineTo(X(x),Y(y))}
+ c.stroke();c.fillStyle="#111";c.font="20px system-ui";c.fillText(`Approx ${S.toFixed(5)} | Error ${Math.abs(S-o.exact).toFixed(5)}`,25,35);
+}
+function check(){
+ let o=L[i],e=Math.abs(sum(o,+n.value,method.value)-o.exact);
+ if(e<o.tol){msg.textContent="Area rescued!";i=(i+1)%L.length;setTimeout(()=>{n.value=4;msg.textContent="";draw()},700)}
+ else msg.textContent="Refine your rectangles or pick a better sample rule.";
+}
+n.oninput=method.onchange=draw;draw();
+</script>
+  <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#e1e1e1"
+    }
+  </script>
+</body>
+</html>

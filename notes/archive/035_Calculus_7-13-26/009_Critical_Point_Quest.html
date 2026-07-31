@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Critical Point Quest</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --ink: #1d2433;
+      --muted: #64748b;
+      --blue: #2563eb;
+      --green: #16a34a;
+      --red: #dc2626;
+      --yellow: #facc15;
+      --purple: #7c3aed;
+      --line: #cbd5e1;
+      --good: #dcfce7;
+      --bad: #fee2e2;
+      --maize: #ffcb05;
+      --umblue: #00274c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(255, 203, 5, 0.22), transparent 32rem),
+        linear-gradient(135deg, #eef4ff, #f8fafc);
+      color: var(--ink);
+    }
+
+    header {
+      background: var(--umblue);
+      color: white;
+      padding: 1rem 1.25rem;
+      border-bottom: 5px solid var(--maize);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: clamp(1.35rem, 3vw, 2.1rem);
+    }
+
+    header p {
+      margin: 0.35rem 0 0;
+      color: #dbeafe;
+      max-width: 850px;
+    }
+
+    main {
+      max-width: 1180px;
+      margin: 1rem auto 2rem;
+      padding: 0 1rem;
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(290px, 0.9fr);
+      gap: 1rem;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid #dbe3ef;
+      border-radius: 18px;
+      box-shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
+      overflow: hidden;
+    }
+
+    .card-body {
+      padding: 1rem;
+    }
+
+    .stage-title {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.7rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.65rem;
+      border-radius: 999px;
+      background: #e0ecff;
+      color: #1e40af;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .formula {
+      padding: 0.25rem 0.55rem;
+      border-radius: 9px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      font-family: "Times New Roman", serif;
+      font-size: 1.05rem;
+    }
+
+    .instructions {
+      color: var(--muted);
+      margin: 0.4rem 0 0.9rem;
+      line-height: 1.45;
+    }
+
+    .graph-wrap {
+      position: relative;
+      border: 1px solid #dbe3ef;
+      border-radius: 16px;
+      background: linear-gradient(#ffffff, #f8fafc);
+      overflow: hidden;
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      touch-action: none;
+    }
+
+    .grid-line {
+      stroke: #e5eaf2;
+      stroke-width: 1;
+    }
+
+    .axis {
+      stroke: #64748b;
+      stroke-width: 1.6;
+    }
+
+    .curve {
+      fill: none;
+      stroke: var(--blue);
+      stroke-width: 4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .derivative-curve {
+      stroke: var(--purple);
+    }
+
+    .interval-zone rect {
+      fill: #eff6ff;
+      stroke: #93c5fd;
+      stroke-width: 2;
+      rx: 10;
+      cursor: pointer;
+    }
+
+    .point-zone rect {
+      fill: #fff7ed;
+      stroke: #fdba74;
+      stroke-width: 2;
+      rx: 9;
+      cursor: pointer;
+    }
+
+    .dropzone text {
+      pointer-events: none;
+      font-size: 12px;
+      font-weight: 700;
+      fill: #334155;
+    }
+
+    .dropzone.correct rect {
+      fill: var(--good);
+      stroke: var(--green);
+    }
+
+    .dropzone.incorrect rect {
+      fill: var(--bad);
+      stroke: var(--red);
+    }
+
+    .crit-dot {
+      fill: white;
+      stroke: #0f172a;
+      stroke-width: 2.5;
+    }
+
+    .character {
+      fill: var(--maize);
+      stroke: var(--umblue);
+      stroke-width: 3;
+      filter: drop-shadow(0 3px 4px rgba(0,0,0,0.25));
+    }
+
+    .character-eye {
+      fill: var(--umblue);
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.6rem;
+      margin-top: 0.9rem;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      min-width: 180px;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 0.68rem 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      background: var(--umblue);
+      color: white;
+      box-shadow: 0 6px 14px rgba(0, 39, 76, 0.18);
+    }
+
+    button.secondary {
+      background: #e2e8f0;
+      color: #0f172a;
+      box-shadow: none;
+    }
+
+    button.success {
+      background: var(--green);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .side h2 {
+      font-size: 1.05rem;
+      margin: 0 0 0.7rem;
+    }
+
+    .token-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.55rem;
+    }
+
+    .token,
+    .segment-card {
+      user-select: none;
+      border: 2px solid #dbe3ef;
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 0.65rem 0.7rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      cursor: grab;
+      min-height: 48px;
+      transition: transform 0.12s, border-color 0.12s, background 0.12s;
+    }
+
+    .token:hover,
+    .segment-card:hover {
+      transform: translateY(-1px);
+      border-color: #93c5fd;
+      background: #f8fbff;
+    }
+
+    .token.selected,
+    .segment-card.selected {
+      outline: 3px solid var(--maize);
+      border-color: var(--umblue);
+    }
+
+    .token small {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .legend {
+      margin-top: 0.8rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    .feedback {
+      margin-top: 1rem;
+      padding: 0.8rem;
+      border-radius: 14px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      min-height: 54px;
+      line-height: 1.45;
+    }
+
+    .feedback.good {
+      background: var(--good);
+      border-color: #86efac;
+      color: #14532d;
+    }
+
+    .feedback.bad {
+      background: var(--bad);
+      border-color: #fecaca;
+      color: #7f1d1d;
+    }
+
+    .builder {
+      margin-top: 1rem;
+      display: none;
+    }
+
+    .builder.active {
+      display: block;
+    }
+
+    .builder h3 {
+      margin: 0 0 0.45rem;
+      font-size: 1rem;
+    }
+
+    .segment-bank {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .segment-card {
+      min-width: 150px;
+    }
+
+    .segment-slots {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.6rem;
+    }
+
+    @media (max-width: 640px) {
+      .segment-slots {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .segment-slot {
+      border: 2px dashed #94a3b8;
+      background: #f8fafc;
+      border-radius: 16px;
+      min-height: 118px;
+      padding: 0.55rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      cursor: pointer;
+    }
+
+    .segment-slot.correct {
+      border-color: var(--green);
+      background: var(--good);
+    }
+
+    .segment-slot.incorrect {
+      border-color: var(--red);
+      background: var(--bad);
+    }
+
+    .slot-title {
+      font-size: 0.78rem;
+      color: #475569;
+      font-weight: 800;
+    }
+
+    .slot-content {
+      flex: 1;
+      display: grid;
+      place-items: center;
+      color: #64748b;
+      font-weight: 800;
+    }
+
+    .mini-curve {
+      width: 100%;
+      height: 64px;
+    }
+
+    .ghost {
+      position: fixed;
+      z-index: 1000;
+      pointer-events: none;
+      opacity: 0.88;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.24);
+    }
+
+    .status-line {
+      margin-top: 0.55rem;
+      color: #475569;
+      font-size: 0.92rem;
+    }
+
+    .open-trail {
+      display: none;
+      margin-top: 0.7rem;
+      padding: 0.75rem;
+      border-radius: 14px;
+      background: linear-gradient(90deg, #dcfce7, #fef9c3);
+      border: 1px solid #86efac;
+      color: #14532d;
+      font-weight: 900;
+    }
+
+    .open-trail.active {
+      display: block;
+    }
+
+    .sr-only {
+      position: absolute;
+      left: -9999px;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Critical Point Quest: Repair the Mountain Trail Map</h1>
+    <p>
+      Use derivative signs to mark where the trail climbs, descends, flattens,
+      peaks, or valleys. The trail opens only when every marker is correct.
+    </p>
+  </header>
+
+  <main>
+    <section class="card">
+      <div class="card-body">
+        <div class="stage-title">
+          <span class="badge" id="stageBadge">Stage 1</span>
+          <strong id="stageName">Simple parabola</strong>
+          <span class="formula" id="formula"></span>
+        </div>
+
+        <p class="instructions" id="instructions"></p>
+
+        <div class="graph-wrap">
+          <svg id="graph" viewBox="0 0 760 460" role="img" aria-label="Interactive calculus graph">
+            <defs>
+              <clipPath id="plotClip">
+                <rect x="55" y="30" width="660" height="370" rx="10"></rect>
+              </clipPath>
+            </defs>
+
+            <rect x="0" y="0" width="760" height="460" fill="transparent"></rect>
+            <g id="grid"></g>
+            <g id="axes"></g>
+            <g id="intervalZones"></g>
+            <g id="curveLayer" clip-path="url(#plotClip)"></g>
+            <g id="criticalLayer"></g>
+            <g id="pointZones"></g>
+
+            <g id="character">
+              <circle class="character" r="14"></circle>
+              <circle class="character-eye" r="2.2" cx="4" cy="-4"></circle>
+            </g>
+          </svg>
+        </div>
+
+        <div class="controls">
+          <button id="prevBtn" class="secondary">Previous</button>
+          <button id="nextBtn">Next stage</button>
+          <button id="checkBtn" class="success">Check map</button>
+          <button id="clearBtn" class="secondary">Clear markers</button>
+          <button id="playBtn" class="secondary">Roll scout</button>
+          <input id="scrub" type="range" min="0" max="1000" value="0" aria-label="Move character along graph">
+        </div>
+
+        <div class="status-line" id="statusLine"></div>
+        <div class="open-trail" id="openTrail">Trail opened! Excellent derivative detective work.</div>
+
+        <section class="builder" id="builder">
+          <h3>Build a possible graph of <em>f(x)</em></h3>
+          <p class="instructions">
+            The graph above is <em>f′(x)</em>. Drag curve segments below to build a possible
+            <em>f(x)</em>. Where <em>f′ &gt; 0</em>, your segment should rise. Where
+            <em>f′ &lt; 0</em>, your segment should fall.
+          </p>
+
+          <div class="segment-bank">
+            <div class="segment-card" data-token="rising">
+              📈 Rising segment
+            </div>
+            <div class="segment-card" data-token="falling">
+              📉 Falling segment
+            </div>
+          </div>
+
+          <div class="segment-slots" id="segmentSlots"></div>
+        </section>
+      </div>
+    </section>
+
+    <aside class="card side">
+      <div class="card-body">
+        <h2>Marker tokens</h2>
+
+        <div class="token-grid">
+          <div class="token" data-token="uphill">
+            ⬆️ <span>Uphill <small>f is increasing</small></span>
+          </div>
+          <div class="token" data-token="downhill">
+            ⬇️ <span>Downhill <small>f is decreasing</small></span>
+          </div>
+          <div class="token" data-token="flat">
+            ➖ <span>Flat point <small>f′(x)=0</small></span>
+          </div>
+          <div class="token" data-token="peak">
+            ⛰️ <span>Local peak <small>max</small></span>
+          </div>
+          <div class="token" data-token="valley">
+            🏞️ <span>Local valley <small>min</small></span>
+          </div>
+          <div class="token" data-token="not">
+            🚫 <span>Not extremum <small>flat but no max/min</small></span>
+          </div>
+        </div>
+
+        <div class="legend">
+          <strong>Rule of the trail:</strong><br>
+          If <em>f′(x) &gt; 0</em>, the function rises.<br>
+          If <em>f′(x) &lt; 0</em>, the function falls.<br>
+          If <em>f′</em> changes from positive to negative, there is a local maximum.<br>
+          If <em>f′</em> changes from negative to positive, there is a local minimum.<br>
+          A flat point is not always an extremum — hello, <em>x³</em>.
+        </div>
+
+        <div class="feedback" id="feedback">
+          Drag a token onto each interval bar and critical-point box.
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    const SVG_NS = "http://www.w3.org/2000/svg";
+
+    const tokenLabels = {
+      uphill: "⬆ Uphill",
+      downhill: "⬇ Downhill",
+      flat: "Flat",
+      peak: "Peak",
+      valley: "Valley",
+      not: "Not extremum",
+      rising: "📈 Rising",
+      falling: "📉 Falling"
+    };
+
+    const stages = [
+      {
+        name: "Simple parabola",
+        mode: "function",
+        formula: "f(x) = x²",
+        instructions:
+          "You are given the graph of f(x). Mark where the trail is uphill, downhill, flat, and classify the critical point.",
+        xMin: -3,
+        xMax: 3,
+        yMin: -1,
+        yMax: 8,
+        f: x => x * x,
+        fp: x => 2 * x,
+        intervals: [
+          { a: -3, b: 0, expect: "downhill", label: "x < 0" },
+          { a: 0, b: 3, expect: "uphill", label: "x > 0" }
+        ],
+        critical: [
+          { x: 0, y: 0, flat: "flat", type: "valley", label: "x = 0" }
+        ]
+      },
+      {
+        name: "Cubic with two critical points",
+        mode: "function",
+        formula: "f(x) = x³ − 3x",
+        instructions:
+          "This curve has two flat points. Use slope sign, not height alone, to decide peak or valley.",
+        xMin: -2.4,
+        xMax: 2.4,
+        yMin: -6,
+        yMax: 6,
+        f: x => x * x * x - 3 * x,
+        fp: x => 3 * x * x - 3,
+        intervals: [
+          { a: -2.4, b: -1, expect: "uphill", label: "x < −1" },
+          { a: -1, b: 1, expect: "downhill", label: "−1 < x < 1" },
+          { a: 1, b: 2.4, expect: "uphill", label: "x > 1" }
+        ],
+        critical: [
+          { x: -1, y: 2, flat: "flat", type: "peak", label: "x = −1" },
+          { x: 1, y: -2, flat: "flat", type: "valley", label: "x = 1" }
+        ]
+      },
+      {
+        name: "Flat inflection",
+        mode: "function",
+        formula: "f(x) = x³",
+        instructions:
+          "At x = 0 the graph is flat, but it keeps increasing through the point. Mark it carefully.",
+        xMin: -2.2,
+        xMax: 2.2,
+        yMin: -6,
+        yMax: 6,
+        f: x => x * x * x,
+        fp: x => 3 * x * x,
+        intervals: [
+          { a: -2.2, b: 0, expect: "uphill", label: "x < 0" },
+          { a: 0, b: 2.2, expect: "uphill", label: "x > 0" }
+        ],
+        critical: [
+          { x: 0, y: 0, flat: "flat", type: "not", label: "x = 0" }
+        ]
+      },
+      {
+        name: "Given derivative graph",
+        mode: "derivative",
+        formula: "f′(x) = (x + 2)(x − 1)",
+        instructions:
+          "You are given f′(x). Use where f′ is positive or negative to infer where f rises or falls.",
+        xMin: -4,
+        xMax: 3,
+        yMin: -7,
+        yMax: 8,
+        f: x => (x + 2) * (x - 1),
+        fp: x => (x + 2) * (x - 1),
+        intervals: [
+          { a: -4, b: -2, expect: "uphill", label: "x < −2" },
+          { a: -2, b: 1, expect: "downhill", label: "−2 < x < 1" },
+          { a: 1, b: 3, expect: "uphill", label: "x > 1" }
+        ],
+        critical: [
+          { x: -2, y: 0, flat: "flat", type: "peak", label: "x = −2" },
+          { x: 1, y: 0, flat: "flat", type: "valley", label: "x = 1" }
+        ],
+        segments: [
+          { label: "x < −2", expect: "rising" },
+          { label: "−2 < x < 1", expect: "falling" },
+          { label: "x > 1", expect: "rising" }
+        ]
+      }
+    ];
+
+    const graph = document.getElementById("graph");
+    const grid = document.getElementById("grid");
+    const axes = document.getElementById("axes");
+    const curveLayer = document.getElementById("curveLayer");
+    const intervalZones = document.getElementById("intervalZones");
+    const pointZones = document.getElementById("pointZones");
+    const criticalLayer = document.getElementById("criticalLayer");
+    const character = document.getElementById("character");
+
+    const stageBadge = document.getElementById("stageBadge");
+    const stageName = document.getElementById("stageName");
+    const formula = document.getElementById("formula");
+    const instructions = document.getElementById("instructions");
+    const feedback = document.getElementById("feedback");
+    const openTrail = document.getElementById("openTrail");
+    const statusLine = document.getElementById("statusLine");
+    const scrub = document.getElementById("scrub");
+
+    const builder = document.getElementById("builder");
+    const segmentSlots = document.getElementById("segmentSlots");
+
+    const checkBtn = document.getElementById("checkBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const prevBtn = document.getElementById("prevBtn");
+    const playBtn = document.getElementById("playBtn");
+
+    const plot = {
+      left: 55,
+      right: 715,
+      top: 30,
+      bottom: 400,
+      width: 660,
+      height: 370
+    };
+
+    let currentStage = 0;
+    let assignments = {};
+    let selectedToken = null;
+    let dragState = null;
+    let animating = false;
+
+    function sx(x) {
+      const s = stages[currentStage];
+      return plot.left + ((x - s.xMin) / (s.xMax - s.xMin)) * plot.width;
+    }
+
+    function sy(y) {
+      const s = stages[currentStage];
+      return plot.bottom - ((y - s.yMin) / (s.yMax - s.yMin)) * plot.height;
+    }
+
+    function clamp(v, lo, hi) {
+      return Math.max(lo, Math.min(hi, v));
+    }
+
+    function makeSvg(tag, attrs = {}) {
+      const el = document.createElementNS(SVG_NS, tag);
+      for (const [k, v] of Object.entries(attrs)) {
+        el.setAttribute(k, v);
+      }
+      return el;
+    }
+
+    function clearSvg(el) {
+      while (el.firstChild) el.removeChild(el.firstChild);
+    }
+
+    function drawGrid() {
+      clearSvg(grid);
+      clearSvg(axes);
+
+      const s = stages[currentStage];
+
+      for (let i = Math.ceil(s.xMin); i <= Math.floor(s.xMax); i++) {
+        const line = makeSvg("line", {
+          x1: sx(i), x2: sx(i), y1: plot.top, y2: plot.bottom,
+          class: "grid-line"
+        });
+        grid.appendChild(line);
+
+        const label = makeSvg("text", {
+          x: sx(i), y: plot.bottom + 22,
+          "text-anchor": "middle",
+          fill: "#64748b",
+          "font-size": 11
+        });
+        label.textContent = i;
+        grid.appendChild(label);
+      }
+
+      const yStep = niceYStep(s.yMin, s.yMax);
+      for (let y = Math.ceil(s.yMin / yStep) * yStep; y <= s.yMax; y += yStep) {
+        const line = makeSvg("line", {
+          x1: plot.left, x2: plot.right, y1: sy(y), y2: sy(y),
+          class: "grid-line"
+        });
+        grid.appendChild(line);
+
+        const label = makeSvg("text", {
+          x: plot.left - 10, y: sy(y) + 4,
+          "text-anchor": "end",
+          fill: "#64748b",
+          "font-size": 11
+        });
+        label.textContent = Number.isInteger(y) ? y : y.toFixed(1);
+        grid.appendChild(label);
+      }
+
+      if (s.yMin <= 0 && s.yMax >= 0) {
+        axes.appendChild(makeSvg("line", {
+          x1: plot.left, x2: plot.right, y1: sy(0), y2: sy(0),
+          class: "axis"
+        }));
+      }
+
+      if (s.xMin <= 0 && s.xMax >= 0) {
+        axes.appendChild(makeSvg("line", {
+          x1: sx(0), x2: sx(0), y1: plot.top, y2: plot.bottom,
+          class: "axis"
+        }));
+      }
+
+      const box = makeSvg("rect", {
+        x: plot.left,
+        y: plot.top,
+        width: plot.width,
+        height: plot.height,
+        fill: "none",
+        stroke: "#cbd5e1",
+        "stroke-width": 1.5,
+        rx: 10
+      });
+      axes.appendChild(box);
+    }
+
+    function niceYStep(min, max) {
+      const span = max - min;
+      if (span <= 8) return 1;
+      if (span <= 16) return 2;
+      return 5;
+    }
+
+    function drawCurve() {
+      clearSvg(curveLayer);
+
+      const s = stages[currentStage];
+      const path = makeSvg("path", {
+        class: s.mode === "derivative" ? "curve derivative-curve" : "curve"
+      });
+
+      let d = "";
+      const n = 280;
+
+      for (let i = 0; i <= n; i++) {
+        const x = s.xMin + (i / n) * (s.xMax - s.xMin);
+        const y = s.f(x);
+        const px = sx(x);
+        const py = sy(y);
+        d += i === 0 ? `M ${px} ${py}` : ` L ${px} ${py}`;
+      }
+
+      path.setAttribute("d", d);
+      curveLayer.appendChild(path);
+
+      const label = makeSvg("text", {
+        x: plot.right - 12,
+        y: plot.top + 24,
+        "text-anchor": "end",
+        fill: s.mode === "derivative" ? "#7c3aed" : "#2563eb",
+        "font-size": 14,
+        "font-weight": 800
+      });
+      label.textContent = s.mode === "derivative" ? "graph of f′(x)" : "graph of f(x)";
+      curveLayer.appendChild(label);
+    }
+
+    function drawIntervalZones() {
+      clearSvg(intervalZones);
+
+      const s = stages[currentStage];
+
+      s.intervals.forEach((interval, idx) => {
+        const id = `interval-${idx}`;
+        const x = sx(interval.a) + 4;
+        const width = sx(interval.b) - sx(interval.a) - 8;
+        const y = plot.top + 8;
+
+        const g = makeSvg("g", {
+          class: "dropzone interval-zone",
+          "data-zone": id,
+          "data-accept": "uphill,downhill",
+          tabindex: "0"
+        });
+
+        const rect = makeSvg("rect", {
+          x,
+          y,
+          width,
+          height: 38
+        });
+
+        const text = makeSvg("text", {
+          class: "zone-text",
+          x: x + width / 2,
+          y: y + 24,
+          "text-anchor": "middle"
+        });
+
+        text.textContent = assignments[id]
+          ? tokenLabels[assignments[id]]
+          : `${interval.label}: drop slope`;
+
+        g.appendChild(rect);
+        g.appendChild(text);
+        intervalZones.appendChild(g);
+      });
+    }
+
+    function drawCriticalZones() {
+      clearSvg(criticalLayer);
+      clearSvg(pointZones);
+
+      const s = stages[currentStage];
+
+      s.critical.forEach((c, idx) => {
+        const px = sx(c.x);
+        const py = sy(c.y);
+
+        const dot = makeSvg("circle", {
+          class: "crit-dot",
+          cx: px,
+          cy: py,
+          r: 6
+        });
+        criticalLayer.appendChild(dot);
+
+        const label = makeSvg("text", {
+          x: px,
+          y: py - 12,
+          "text-anchor": "middle",
+          fill: "#0f172a",
+          "font-size": 12,
+          "font-weight": 800
+        });
+        label.textContent = c.label;
+        criticalLayer.appendChild(label);
+
+        makePointZone({
+          id: `critical-${idx}-flat`,
+          x: clamp(px - 47, plot.left + 4, plot.right - 98),
+          y: clamp(py - 66, plot.top + 52, plot.bottom - 32),
+          prompt: "flat?",
+          accept: "flat"
+        });
+
+        makePointZone({
+          id: `critical-${idx}-type`,
+          x: clamp(px - 47, plot.left + 4, plot.right - 98),
+          y: clamp(py + 28, plot.top + 52, plot.bottom - 32),
+          prompt: "type?",
+          accept: "peak,valley,not"
+        });
+      });
+    }
+
+    function makePointZone({ id, x, y, prompt, accept }) {
+      const g = makeSvg("g", {
+        class: "dropzone point-zone",
+        "data-zone": id,
+        "data-accept": accept,
+        tabindex: "0"
+      });
+
+      const rect = makeSvg("rect", {
+        x,
+        y,
+        width: 98,
+        height: 30
+      });
+
+      const text = makeSvg("text", {
+        class: "zone-text",
+        x: x + 49,
+        y: y + 20,
+        "text-anchor": "middle"
+      });
+
+      text.textContent = assignments[id]
+        ? tokenLabels[assignments[id]]
+        : prompt;
+
+      g.appendChild(rect);
+      g.appendChild(text);
+      pointZones.appendChild(g);
+    }
+
+    function renderBuilder() {
+      segmentSlots.innerHTML = "";
+
+      const s = stages[currentStage];
+
+      if (!s.segments) {
+        builder.classList.remove("active");
+        return;
+      }
+
+      builder.classList.add("active");
+
+      s.segments.forEach((seg, idx) => {
+        const id = `segment-${idx}`;
+        const slot = document.createElement("div");
+        slot.className = "segment-slot";
+        slot.dataset.zone = id;
+        slot.dataset.accept = "rising,falling";
+        slot.tabIndex = 0;
+
+        const title = document.createElement("div");
+        title.className = "slot-title";
+        title.textContent = seg.label;
+
+        const content = document.createElement("div");
+        content.className = "slot-content";
+
+        if (assignments[id]) {
+          content.innerHTML = makeMiniCurve(assignments[id]);
+        } else {
+          content.textContent = "Drop segment";
+        }
+
+        slot.appendChild(title);
+        slot.appendChild(content);
+        segmentSlots.appendChild(slot);
+      });
+    }
+
+    function makeMiniCurve(type) {
+      if (type === "rising") {
+        return `
+          <svg class="mini-curve" viewBox="0 0 180 70">
+            <path d="M 12 55 C 55 55, 90 20, 168 12"
+              fill="none" stroke="#16a34a" stroke-width="8" stroke-linecap="round"/>
+            <text x="90" y="66" text-anchor="middle" font-size="13" font-weight="800" fill="#14532d">
+              Rising
+            </text>
+          </svg>`;
+      }
+
+      return `
+        <svg class="mini-curve" viewBox="0 0 180 70">
+          <path d="M 12 12 C 55 14, 95 52, 168 56"
+            fill="none" stroke="#dc2626" stroke-width="8" stroke-linecap="round"/>
+          <text x="90" y="66" text-anchor="middle" font-size="13" font-weight="800" fill="#7f1d1d">
+            Falling
+          </text>
+        </svg>`;
+    }
+
+    function renderStage() {
+      assignments = {};
+      selectedToken = null;
+      document.querySelectorAll(".selected").forEach(el => el.classList.remove("selected"));
+
+      const s = stages[currentStage];
+
+      stageBadge.textContent = `Stage ${currentStage + 1}`;
+      stageName.textContent = s.name;
+      formula.textContent = s.formula;
+      instructions.textContent = s.instructions;
+
+      feedback.className = "feedback";
+      feedback.textContent = "Drag a token onto each interval bar and critical-point box.";
+      openTrail.classList.remove("active");
+
+      prevBtn.disabled = currentStage === 0;
+      nextBtn.disabled = currentStage === stages.length - 1;
+
+      drawGrid();
+      drawCurve();
+      drawIntervalZones();
+      drawCriticalZones();
+      renderBuilder();
+      scrub.value = 0;
+      updateCharacter();
+    }
+
+    function rerenderDropzonesOnly() {
+      drawIntervalZones();
+      drawCriticalZones();
+      renderBuilder();
+      bindDropzoneClicks();
+    }
+
+    function updateCharacter() {
+      const s = stages[currentStage];
+      const t = Number(scrub.value) / 1000;
+      const x = s.xMin + t * (s.xMax - s.xMin);
+      const y = s.f(x);
+      const px = sx(x);
+      const py = sy(y);
+
+      character.setAttribute("transform", `translate(${px} ${py - 17})`);
+
+      const derivativeValue = s.fp(x);
+      let motion;
+
+      if (Math.abs(derivativeValue) < 0.05) {
+        motion = "flat";
+      } else if (derivativeValue > 0) {
+        motion = "uphill/increasing";
+      } else {
+        motion = "downhill/decreasing";
+      }
+
+      const shown = s.mode === "derivative" ? "f′" : "f′";
+      statusLine.innerHTML =
+        `Scout position: x ≈ ${x.toFixed(2)}. ${shown}(x) ≈ ${derivativeValue.toFixed(2)}, so the trail is <strong>${motion}</strong>.`;
+    }
+
+    function assignToZone(zoneEl, token) {
+      if (!zoneEl || !token) return;
+
+      const accepts = (zoneEl.dataset.accept || "").split(",");
+      if (!accepts.includes(token)) {
+        flashFeedback(`That token cannot go in this kind of box. Try a ${zoneEl.dataset.accept.replaceAll(",", " or ")} marker.`, false);
+        return;
+      }
+
+      const id = zoneEl.dataset.zone;
+      assignments[id] = token;
+
+      zoneEl.classList.remove("correct", "incorrect");
+      rerenderDropzonesOnly();
+    }
+
+    function expectedAssignments() {
+      const s = stages[currentStage];
+      const expected = {};
+
+      s.intervals.forEach((interval, idx) => {
+        expected[`interval-${idx}`] = interval.expect;
+      });
+
+      s.critical.forEach((c, idx) => {
+        expected[`critical-${idx}-flat`] = c.flat;
+        expected[`critical-${idx}-type`] = c.type;
+      });
+
+      if (s.segments) {
+        s.segments.forEach((seg, idx) => {
+          expected[`segment-${idx}`] = seg.expect;
+        });
+      }
+
+      return expected;
+    }
+
+    function checkMap() {
+      const expected = expectedAssignments();
+      let correct = 0;
+      const total = Object.keys(expected).length;
+
+      document.querySelectorAll(".dropzone, .segment-slot").forEach(el => {
+        el.classList.remove("correct", "incorrect");
+      });
+
+      for (const [zone, answer] of Object.entries(expected)) {
+        const el = document.querySelector(`[data-zone="${zone}"]`);
+        const actual = assignments[zone];
+
+        if (actual === answer) {
+          correct++;
+          if (el) el.classList.add("correct");
+        } else {
+          if (el) el.classList.add("incorrect");
+        }
+      }
+
+      if (correct === total) {
+        feedback.className = "feedback good";
+        feedback.innerHTML =
+          `<strong>Perfect!</strong> You repaired the trail map. You used derivative sign to determine increasing, decreasing, and extrema.`;
+        openTrail.classList.add("active");
+      } else {
+        feedback.className = "feedback bad";
+        feedback.innerHTML =
+          `<strong>${correct}/${total} correct.</strong> Recheck the sign of f′ on each interval. Remember: positive f′ means rising, negative f′ means falling.`;
+        openTrail.classList.remove("active");
+      }
+    }
+
+    function flashFeedback(message, good) {
+      feedback.className = good ? "feedback good" : "feedback bad";
+      feedback.textContent = message;
+    }
+
+    function clearMarkers() {
+      assignments = {};
+      feedback.className = "feedback";
+      feedback.textContent = "Markers cleared. Try again.";
+      openTrail.classList.remove("active");
+      rerenderDropzonesOnly();
+    }
+
+    function startAnimation() {
+      if (animating) return;
+
+      animating = true;
+      playBtn.textContent = "Rolling...";
+
+      const start = performance.now();
+      const duration = 3600;
+
+      function tick(now) {
+        const elapsed = now - start;
+        const t = Math.min(1, elapsed / duration);
+        scrub.value = Math.round(t * 1000);
+        updateCharacter();
+
+        if (t < 1 && animating) {
+          requestAnimationFrame(tick);
+        } else {
+          animating = false;
+          playBtn.textContent = "Roll scout";
+        }
+      }
+
+      requestAnimationFrame(tick);
+    }
+
+    function beginDrag(e, source) {
+      const token = source.dataset.token;
+      if (!token) return;
+
+      dragState = {
+        token,
+        ghost: source.cloneNode(true)
+      };
+
+      dragState.ghost.classList.add("ghost");
+      dragState.ghost.style.left = `${e.clientX}px`;
+      dragState.ghost.style.top = `${e.clientY}px`;
+      document.body.appendChild(dragState.ghost);
+
+      source.setPointerCapture?.(e.pointerId);
+      e.preventDefault();
+    }
+
+    function moveDrag(e) {
+      if (!dragState) return;
+      dragState.ghost.style.left = `${e.clientX}px`;
+      dragState.ghost.style.top = `${e.clientY}px`;
+    }
+
+    function endDrag(e) {
+      if (!dragState) return;
+
+      const ghost = dragState.ghost;
+      ghost.remove();
+
+      const under = document.elementFromPoint(e.clientX, e.clientY);
+      const zone = under?.closest?.("[data-zone]");
+
+      if (zone) {
+        assignToZone(zone, dragState.token);
+      }
+
+      dragState = null;
+    }
+
+    function bindTokenEvents() {
+      document.querySelectorAll(".token, .segment-card").forEach(el => {
+        el.addEventListener("pointerdown", e => beginDrag(e, el));
+
+        el.addEventListener("click", () => {
+          document.querySelectorAll(".selected").forEach(x => x.classList.remove("selected"));
+          selectedToken = el.dataset.token;
+          el.classList.add("selected");
+          feedback.className = "feedback";
+          feedback.textContent = `Selected ${tokenLabels[selectedToken]}. Now click a matching drop zone.`;
+        });
+      });
+
+      document.addEventListener("pointermove", moveDrag);
+      document.addEventListener("pointerup", endDrag);
+    }
+
+    function bindDropzoneClicks() {
+      document.querySelectorAll("[data-zone]").forEach(zone => {
+        zone.onclick = () => {
+          if (selectedToken) {
+            assignToZone(zone, selectedToken);
+          }
+        };
+
+        zone.onkeydown = e => {
+          if ((e.key === "Enter" || e.key === " ") && selectedToken) {
+            e.preventDefault();
+            assignToZone(zone, selectedToken);
+          }
+        };
+      });
+    }
+
+    checkBtn.addEventListener("click", checkMap);
+    clearBtn.addEventListener("click", clearMarkers);
+    scrub.addEventListener("input", updateCharacter);
+    playBtn.addEventListener("click", startAnimation);
+
+    nextBtn.addEventListener("click", () => {
+      if (currentStage < stages.length - 1) {
+        currentStage++;
+        renderStage();
+        bindDropzoneClicks();
+      }
+    });
+
+    prevBtn.addEventListener("click", () => {
+      if (currentStage > 0) {
+        currentStage--;
+        renderStage();
+        bindDropzoneClicks();
+      }
+    });
+
+    bindTokenEvents();
+    renderStage();
+    bindDropzoneClicks();
+  </script>
+    <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#f6f6f6"
+    }
+  </script>
+</body>
+</html>

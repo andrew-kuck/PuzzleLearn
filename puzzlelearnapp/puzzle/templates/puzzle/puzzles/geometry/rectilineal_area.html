@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ puzzle_name }}</title>
+  <style>
+    :root {
+      --blue: #2f65a7;
+      --blue-dark: #1e406a;
+      --green: #2f8f46;
+      --red: #b3261e;
+      --ink: #1f2937;
+      --paper: #ffffff;
+      --shape-fill: #eaf3ff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f7fb;
+      color: var(--ink);
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+    }
+
+    main {
+      width: min(1100px, 100%);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--paper);
+      border: 1px solid #d9dee8;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(31, 41, 55, 0.08);
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(1.25rem, 2vw, 1.8rem);
+    }
+
+    .instructions {
+      margin: 0;
+      line-height: 1.45;
+      color: #4b5563;
+    }
+
+    .progress-area {
+      display: grid;
+      gap: 6px;
+    }
+
+    .progress-label {
+      font-weight: 650;
+    }
+
+    .progress-shell {
+      height: 18px;
+      border: 1px solid #c4ccd8;
+      background: #eef2f7;
+      overflow: hidden;
+      border-radius: 999px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--blue), #64a1e8);
+      transition: width 250ms ease;
+    }
+
+    .problem-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .problem-title {
+      font-weight: 750;
+      font-size: 1.05rem;
+    }
+
+    .svg-wrap {
+      height: min(64vh, 650px);
+      min-height: 360px;
+      width: 100%;
+      border: 1px solid #d9dee8;
+      background:
+        linear-gradient(45deg, #fafafa 25%, transparent 25%),
+        linear-gradient(-45deg, #fafafa 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #fafafa 75%),
+        linear-gradient(-45deg, transparent 75%, #fafafa 75%);
+      background-size: 22px 22px;
+      background-position: 0 0, 0 11px, 11px -11px, -11px 0;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .answer-form {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    label {
+      font-weight: 650;
+    }
+
+    input[type="number"] {
+      width: 160px;
+      font-size: 1rem;
+      padding: 9px 10px;
+      border: 1px solid #aab3c2;
+      border-radius: 8px;
+    }
+
+    button {
+      font-size: 1rem;
+      padding: 9px 14px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--blue);
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: var(--blue-dark);
+    }
+
+    button:disabled,
+    input:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
+    .feedback {
+      min-height: 1.5em;
+      font-weight: 700;
+      margin: 5px;
+    }
+
+    .feedback.correct {
+      color: var(--green);
+    }
+
+    .feedback.incorrect {
+      color: var(--red);
+    }
+
+    .shape-outline {
+      fill: var(--shape-fill);
+      stroke: #111827;
+      stroke-width: 2;
+      stroke-linejoin: miter;
+      stroke-linecap: butt;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .side-label {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-weight: 750;
+      fill: #111827;
+      stroke: white;
+      stroke-width: 0.16;
+      paint-order: stroke;
+      dominant-baseline: middle;
+      text-anchor: middle;
+      user-select: none;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <!-- <section class="card">
+      <h1>Find the Area of the Orthogonal N-gon</h1>
+      <p class="instructions">
+        The shape has between 8 and 14 sides. Every side is horizontal or vertical, and all side lengths are integers.
+        Some labels are intentionally hidden. Enter the area of the shape.
+      </p>
+    </section> -->
+
+    <section class="card progress-area" aria-label="Progress">
+      <!-- <div class="progress-label">
+        Progress: <span id="scoreText">0</span>/10 correct
+      </div> -->
+      <div
+        class="progress-shell"
+        role="progressbar"
+        aria-valuemin="0"
+        aria-valuemax="10"
+        aria-valuenow="0"
+      >
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="problem-row">
+        <div class="problem-title" id="problemTitle">Shape</div>
+
+        <form class="answer-form" id="answerForm">
+          <label for="areaInput">Area:</label>
+          <input
+            id="areaInput"
+            type="number"
+            inputmode="decimal"
+            step="any"
+            autocomplete="off"
+            required
+          />
+          <button id="submitBtn" type="submit">Check</button>
+        </form>
+      </div>
+
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+
+      <div class="svg-wrap">
+        <svg id="shapeSvg" aria-label="Area problem shape"></svg>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    /*
+      If the host page already defines activityComplete(), this will not overwrite it.
+      After 10 correct answers, activityComplete() is called.
+    */
+    window.activityComplete = window.activityComplete || function () {
+      console.log("activityComplete() called");
+      alert("Activity complete!");
+    };
+
+    const TARGET_CORRECT = 5;
+
+    const svg = document.getElementById("shapeSvg");
+    const form = document.getElementById("answerForm");
+    const input = document.getElementById("areaInput");
+    const feedback = document.getElementById("feedback");
+    const progressFill = document.getElementById("progressFill");
+    // const scoreText = document.getElementById("scoreText");
+    const problemTitle = document.getElementById("problemTitle");
+    const submitBtn = document.getElementById("submitBtn");
+    const progressShell = document.querySelector(".progress-shell");
+
+    let correctCount = 0;
+    let currentArea = 0;
+    let currentProblem = null;
+
+    function randInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function shuffle(array) {
+      const copy = array.slice();
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = randInt(0, i);
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function choice(array) {
+      return array[randInt(0, array.length - 1)];
+    }
+
+    function randomPartition(total, parts) {
+      if (parts === 1) return [total];
+
+      const cuts = new Set();
+      while (cuts.size < parts - 1) {
+        cuts.add(randInt(1, total - 1));
+      }
+
+      const sorted = [0, ...Array.from(cuts).sort((a, b) => a - b), total];
+      const widths = [];
+
+      for (let i = 0; i < sorted.length - 1; i++) {
+        widths.push(sorted[i + 1] - sorted[i]);
+      }
+
+      return widths;
+    }
+
+    function randomStepHeights(count, min, max) {
+      const values = [];
+
+      for (let i = 0; i < count; i++) {
+        let value = randInt(min, max);
+
+        // Avoid consecutive equal heights so that every generated side is real.
+        while (i > 0 && value === values[i - 1]) {
+          value = randInt(min, max);
+        }
+
+        values.push(value);
+      }
+
+      return values;
+    }
+
+    function signedArea(points) {
+      let sum = 0;
+
+      for (let i = 0; i < points.length; i++) {
+        const a = points[i];
+        const b = points[(i + 1) % points.length];
+        sum += a.x * b.y - b.x * a.y;
+      }
+
+      return sum / 2;
+    }
+
+    function makeOrthogonalPolygon() {
+      // Total side count is 2 * (top horizontal segments + bottom horizontal segments).
+      // This gives 8, 10, 12, or 14 sides.
+      const halfSideCount = randInt(4, 7);
+      const n = halfSideCount * 2;
+
+      const topSegments = randInt(1, halfSideCount - 1);
+      const bottomSegments = halfSideCount - topSegments;
+
+      const width = randInt(Math.max(12, halfSideCount + 7), 20);
+
+      const topWidths = randomPartition(width, topSegments);
+      const bottomWidths = randomPartition(width, bottomSegments);
+
+      // Top is always above bottom, guaranteeing a simple orthogonal polygon.
+      const topYs = randomStepHeights(topSegments, 8, 15);
+      const bottomYs = randomStepHeights(bottomSegments, 0, 5);
+
+      const topXs = [0];
+      for (const w of topWidths) {
+        topXs.push(topXs[topXs.length - 1] + w);
+      }
+
+      const bottomXs = [0];
+      for (const w of bottomWidths) {
+        bottomXs.push(bottomXs[bottomXs.length - 1] + w);
+      }
+
+      const points = [];
+
+      // Start at upper-left and trace clockwise along the top chain.
+      points.push({ x: 0, y: topYs[0] });
+
+      let x = 0;
+      for (let i = 0; i < topSegments; i++) {
+        x += topWidths[i];
+        points.push({ x, y: topYs[i] });
+
+        if (i < topSegments - 1) {
+          points.push({ x, y: topYs[i + 1] });
+        }
+      }
+
+      // Right vertical side.
+      points.push({ x: width, y: bottomYs[bottomSegments - 1] });
+
+      // Trace the bottom chain from right to left.
+      for (let i = bottomSegments - 1; i >= 0; i--) {
+        points.push({ x: bottomXs[i], y: bottomYs[i] });
+
+        if (i > 0) {
+          points.push({ x: bottomXs[i], y: bottomYs[i - 1] });
+        }
+      }
+
+      return {
+        points,
+        n,
+        area: Math.abs(signedArea(points))
+      };
+    }
+
+    function getSides(points) {
+      return points.map((p1, i) => {
+        const p2 = points[(i + 1) % points.length];
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const orientation = dy === 0 ? "H" : "V";
+        const length = Math.abs(dx || dy);
+
+        return {
+          index: i,
+          p1,
+          p2,
+          dx,
+          dy,
+          orientation,
+          length,
+          minX: Math.min(p1.x, p2.x),
+          maxX: Math.max(p1.x, p2.x),
+          minY: Math.min(p1.y, p2.y),
+          maxY: Math.max(p1.y, p2.y),
+          label: true
+        };
+      });
+    }
+
+    function areHorizontalOrVerticalTranslations(a, b) {
+      if (a.orientation !== b.orientation) return false;
+      if (a.length !== b.length) return false;
+
+      if (a.orientation === "H") {
+        const sameHorizontalLine = a.p1.y === b.p1.y;
+        const sameXSpan = a.minX === b.minX && a.maxX === b.maxX;
+
+        // Horizontal sides can be horizontal translations or vertical translations.
+        return sameHorizontalLine || sameXSpan;
+      } else {
+        const sameVerticalLine = a.p1.x === b.p1.x;
+        const sameYSpan = a.minY === b.minY && a.maxY === b.maxY;
+
+        // Vertical sides can be vertical translations or horizontal translations.
+        return sameVerticalLine || sameYSpan;
+      }
+    }
+
+    function applyLabelRules(sides) {
+      sides.forEach(side => {
+        side.label = true;
+      });
+
+      const horizontalSides = sides.filter(side => side.orientation === "H");
+      const verticalSides = sides.filter(side => side.orientation === "V");
+
+      // Exception 1: Hide one random horizontal side and one random vertical side.
+      if (horizontalSides.length > 0) {
+        choice(horizontalSides).label = false;
+      }
+
+      if (verticalSides.length > 0) {
+        choice(verticalSides).label = false;
+      }
+
+      /*
+        Exception 2:
+        Among the sides that are still labeled, if sides are horizontal or vertical
+        translations of each other, keep only one label.
+
+        This intentionally considers only currently labeled sides, so the two randomly
+        removed sides above do not affect this duplicate-removal pass.
+      */
+      const stillLabeled = shuffle(sides.filter(side => side.label));
+      const kept = [];
+
+      for (const side of stillLabeled) {
+        const duplicateOfKeptSide = kept.some(keptSide =>
+          areHorizontalOrVerticalTranslations(side, keptSide)
+        );
+
+        if (duplicateOfKeptSide) {
+          side.label = false;
+        } else {
+          kept.push(side);
+        }
+      }
+    }
+
+    function clearSvg() {
+      while (svg.firstChild) {
+        svg.removeChild(svg.firstChild);
+      }
+    }
+
+    function createSvgElement(tag) {
+      return document.createElementNS("http://www.w3.org/2000/svg", tag);
+    }
+
+    function renderProblem(problem) {
+      clearSvg();
+
+      const points = problem.points;
+      const sides = getSides(points);
+      applyLabelRules(sides);
+
+      const minX = Math.min(...points.map(p => p.x));
+      const maxX = Math.max(...points.map(p => p.x));
+      const minY = Math.min(...points.map(p => p.y));
+      const maxY = Math.max(...points.map(p => p.y));
+
+      const width = maxX - minX;
+      const height = maxY - minY;
+      const margin = Math.max(1.4, Math.min(width, height) * 0.12);
+
+      svg.setAttribute(
+        "viewBox",
+        `${minX - margin} ${minY - margin} ${width + margin * 2} ${height + margin * 2}`
+      );
+
+      const polygon = createSvgElement("polygon");
+      polygon.setAttribute("points", points.map(p => `${p.x},${p.y}`).join(" "));
+      polygon.setAttribute("class", "shape-outline");
+      svg.appendChild(polygon);
+
+      const orientationSign = Math.sign(signedArea(points));
+      const clockwise = orientationSign < 0;
+
+      const fontSize = Math.max(0.34, Math.min(0.56, Math.min(width, height) / 22));
+      const labelOffset = Math.max(0.25, fontSize * 0.9);
+
+      for (const side of sides) {
+        if (!side.label) continue;
+
+        const mx = (side.p1.x + side.p2.x) / 2;
+        const my = (side.p1.y + side.p2.y) / 2;
+
+        const len = side.length;
+        const ux = side.dx / len;
+        const uy = side.dy / len;
+
+        // Interior normal: right normal for clockwise polygons, left normal otherwise.
+        let nx;
+        let ny;
+
+        if (clockwise) {
+          nx = uy;
+          ny = -ux;
+        } else {
+          nx = -uy;
+          ny = ux;
+        }
+
+        const tx = mx + nx * labelOffset;
+        const ty = my + ny * labelOffset;
+
+        const text = createSvgElement("text");
+        text.setAttribute("x", tx);
+        text.setAttribute("y", ty);
+        text.setAttribute("class", "side-label");
+        text.setAttribute("font-size", fontSize);
+        text.textContent = side.length;
+
+        // if (side.orientation === "V") {
+        //   text.setAttribute("transform", `rotate(-90 ${tx} ${ty})`);
+        // }
+
+        svg.appendChild(text);
+      }
+    }
+
+    function updateProgress() {
+      // scoreText.textContent = correctCount;
+      progressFill.style.width = `${(correctCount / TARGET_CORRECT) * 100}%`;
+      progressShell.setAttribute("aria-valuenow", String(correctCount));
+    }
+
+    function newProblem() {
+      currentProblem = makeOrthogonalPolygon();
+      currentArea = currentProblem.area;
+
+      problemTitle.textContent = `Find the Area`;
+      input.value = "";
+      feedback.textContent = "";
+      feedback.className = "feedback";
+
+      renderProblem(currentProblem);
+      input.focus();
+    }
+
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+
+      const userAnswer = Number(input.value);
+
+      if (!Number.isFinite(userAnswer)) {
+        feedback.textContent = "Please enter a number.";
+        feedback.className = "feedback incorrect";
+        return;
+      }
+
+      if (Math.abs(userAnswer - currentArea) < 1e-9) {
+        correctCount++;
+        updateProgress();
+
+        if (correctCount >= TARGET_CORRECT) {
+          feedback.textContent = "Correct! Progress complete.";
+          feedback.className = "feedback correct";
+          input.disabled = true;
+          submitBtn.disabled = true;
+
+          setTimeout(() => {
+            window.activityComplete();
+          }, 200);
+
+          return;
+        }
+
+        feedback.textContent = "Correct! Loading a new shape...";
+        feedback.className = "feedback correct";
+
+        setTimeout(newProblem, 450);
+      } else {
+        feedback.textContent = "Not quite. Try again.";
+        feedback.className = "feedback incorrect";
+      }
+    });
+
+    updateProgress();
+    newProblem();
+
+  </script>
+<script src="/static/puzzle/js/activity.js"></script>
+<script>autoZoom();</script>
+<script id="_metadata" type="application/json">
+  {
+    "summary": ""
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,817 @@
+create an activity using html, css, and javascript. except for a banner at the top, the page is a blank canvas for the user to do geometric constructions. in the traditional way, they are able to draw straight lines (as with a straightedge), and to draw circles (as with a compass). the user clicks and drags to draw a line. the endpoints of the line are not distinct in any way from the rest of the line. the user clicks and drags outwards to create a circle centered on the original click point. the center point of the circle does not display in any way. buttons on the top banner allow the user to switch between line and circle. clicking on a line or circle removes it. at the top the user can select the color that their next line or circle will be. they can select between medium gray, light gray, and blue. there is a javascript constant QUESTION_INFORMATION that is an array of n elements. each element is a dictionary with values for 'question', 'initialImage', 'evaluationFunction', and 'errorMargin'. 'question' gives a construction question, such as "Construct an equilateral triangle having a given segment as one side." 'initialImage' indicates what lines and points should already be on the canvas (these lines and points should be in black and cannot be removed by the user). 'evaluationFunction' is a function that will be used to evaluate if the blue lines and circles added by the user meet the criteria of the question. 'errorMargin' is the amount of error the user can have in their construction (from the perfect rendering of the desired construction). if the user successfully completes a construction within the margin or error, a progress bar is advanced, and the next problem from QUESTION_INFORMATION is presented. The progress bar should fill after all n questions have been successfully answered, at which point the function activityComplete() should be called. Begin by creating QUESTION_INFORMATION so that it has 2 constructions that correspond to the following 2 construction tasks: "Construct an equilateral triangle having a given segment as one side." and "Construct a segment congruent to a given segment and with a given point as one endpoint."
+
+Below is a complete single-file HTML activity. Save it as something like `geometric-construction-activity.html` and open it in a browser.
+
+create a QUESTION_INFORMATION array for the following questions (format the question so that proper symbols are used instead of language descriptions, where appropriate):
+- Construct an equilateral triangle having a given segment as one side.
+- Construct a segment congruent to a given segment and with a given point as one endpoint.
+- Given Ray AB and Line Segment CD, construct point E on Ray AB such that Line Segment AE is congruent to Line Segment CD.
+- Construct the angle bisector of a given angle.
+- Construct the midpoint of a given segment.
+- Given Line AB, construct the perpendicular to Line AB at A.
+- Given point C off Line AB, construct the perpendicular to Line AB
+that passes through C.
+- Construct a triangle having sides respectively congruent to three given segments whose lengths are such that the sum of the lengths of any two is greater than the length of the third.
+- Given Line AB and Angle CDE, construct a point F such that Angle FAB is congruent to Angle CDE.
+- Through a given point, construct the parallel to a given line.
+- Construct a parallelogram having an angle congruent to a given angle and having the area of a given triangle.
+- Construct a parallelogram having a given segment as a side, having an angle congruent to a given angle, and having the area of a given triangle.
+- Construct a parallelogram having an angle congruent to a given angle and having the area of a given polygon.
+- Construct a square having a given segment as one side.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Geometric Construction Activity</title>
+  <style>
+    :root {
+      --banner-height: 118px;
+      --blue: #1769ff;
+      --medium-gray: #777777;
+      --light-gray: #cfcfcf;
+      --black: #000000;
+      --border: #d8d8d8;
+      --bg: #ffffff;
+      --text: #1f1f1f;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    #banner {
+      height: var(--banner-height);
+      width: 100%;
+      border-bottom: 1px solid var(--border);
+      background: #f8f8f8;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-template-rows: auto auto;
+      gap: 8px 16px;
+      padding: 10px 14px;
+      align-items: center;
+    }
+
+    #questionArea {
+      min-width: 0;
+    }
+
+    #questionText {
+      font-weight: 650;
+      font-size: 16px;
+      line-height: 1.25;
+      margin-bottom: 5px;
+    }
+
+    #statusText {
+      font-size: 13px;
+      color: #555;
+    }
+
+    #controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .controlGroup {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+
+    .controlLabel {
+      font-size: 13px;
+      color: #444;
+      margin-right: 2px;
+    }
+
+    button,
+    select {
+      font: inherit;
+    }
+
+    .toolButton {
+      border: 1px solid #aaa;
+      background: #fff;
+      color: #222;
+      padding: 6px 10px;
+      border-radius: 7px;
+      cursor: pointer;
+    }
+
+    .toolButton.active {
+      background: #222;
+      color: #fff;
+      border-color: #222;
+    }
+
+    #colorSelect {
+      padding: 6px 8px;
+      border-radius: 7px;
+      border: 1px solid #aaa;
+      background: #fff;
+    }
+
+    #progressWrapper {
+      grid-column: 1 / -1;
+      width: 100%;
+      height: 16px;
+      border: 1px solid #bbb;
+      border-radius: 999px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    #progressBar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #1a73e8, #59a7ff);
+      transition: width 250ms ease;
+    }
+
+    #canvas {
+      display: block;
+      width: 100%;
+      height: calc(100vh - var(--banner-height));
+      background: #ffffff;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    @media (max-width: 720px) {
+      :root {
+        --banner-height: 154px;
+      }
+
+      #banner {
+        grid-template-columns: 1fr;
+      }
+
+      #controls {
+        justify-content: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header id="banner">
+    <section id="questionArea" aria-live="polite">
+      <div id="questionText"></div>
+      <div id="statusText">
+        Use gray for auxiliary marks if you like. Only blue final objects are checked.
+        Click an existing user-drawn line or circle to remove it.
+      </div>
+    </section>
+
+    <section id="controls" aria-label="Construction controls">
+      <div class="controlGroup">
+        <span class="controlLabel">Tool:</span>
+        <button id="lineTool" class="toolButton active" type="button">Line</button>
+        <button id="circleTool" class="toolButton" type="button">Circle</button>
+      </div>
+
+      <div class="controlGroup">
+        <label class="controlLabel" for="colorSelect">Color:</label>
+        <select id="colorSelect">
+          <option value="mediumGray">Medium gray</option>
+          <option value="lightGray">Light gray</option>
+          <option value="blue" selected>Blue</option>
+        </select>
+      </div>
+    </section>
+
+    <div id="progressWrapper" aria-label="Progress">
+      <div id="progressBar"></div>
+    </div>
+  </header>
+
+  <canvas id="canvas" aria-label="Geometric construction canvas"></canvas>
+
+  <script>
+    /********************************************************************
+     * QUESTION_INFORMATION
+     *
+     * initialImage uses normalized coordinates from 0 to 1.
+     * These are resolved to actual canvas pixels at runtime.
+     *
+     * Each evaluationFunction receives:
+     * {
+     *   userShapes,
+     *   initialImage,
+     *   canvasWidth,
+     *   canvasHeight,
+     *   errorMargin,
+     *   helpers
+     * }
+     ********************************************************************/
+
+    const QUESTION_INFORMATION = [
+      {
+        question: "Construct an equilateral triangle having a given segment as one side.",
+        initialImage: {
+          lines: [
+            { x1: 0.34, y1: 0.58, x2: 0.66, y2: 0.58 }
+          ],
+          circles: [],
+          points: []
+        },
+        errorMargin: 14,
+        evaluationFunction: function (ctx) {
+          const {
+            userShapes,
+            initialImage,
+            canvasWidth,
+            canvasHeight,
+            errorMargin,
+            helpers
+          } = ctx;
+
+          const resolved = helpers.resolveInitialImage(
+            initialImage,
+            canvasWidth,
+            canvasHeight
+          );
+
+          const givenSegment = resolved.lines[0];
+          const A = { x: givenSegment.x1, y: givenSegment.y1 };
+          const B = { x: givenSegment.x2, y: givenSegment.y2 };
+
+          const possibleVertices = helpers.equilateralVertices(A, B);
+
+          const blueLines = userShapes.filter(
+            shape => shape.type === "line" && shape.colorKey === "blue"
+          );
+
+          return possibleVertices.some(C => {
+            const hasSideAC = blueLines.some(line =>
+              helpers.lineCoversTwoPoints(line, A, C, errorMargin)
+            );
+
+            const hasSideBC = blueLines.some(line =>
+              helpers.lineCoversTwoPoints(line, B, C, errorMargin)
+            );
+
+            return hasSideAC && hasSideBC;
+          });
+        }
+      },
+      {
+        question: "Construct a segment congruent to a given segment and with a given point as one endpoint.",
+        initialImage: {
+          lines: [
+            { x1: 0.16, y1: 0.28, x2: 0.38, y2: 0.28 }
+          ],
+          circles: [],
+          points: [
+            { x: 0.46, y: 0.64 }
+          ]
+        },
+        errorMargin: 14,
+        evaluationFunction: function (ctx) {
+          const {
+            userShapes,
+            initialImage,
+            canvasWidth,
+            canvasHeight,
+            errorMargin,
+            helpers
+          } = ctx;
+
+          const resolved = helpers.resolveInitialImage(
+            initialImage,
+            canvasWidth,
+            canvasHeight
+          );
+
+          const givenSegment = resolved.lines[0];
+          const P = resolved.points[0];
+
+          const targetLength = helpers.distance(
+            { x: givenSegment.x1, y: givenSegment.y1 },
+            { x: givenSegment.x2, y: givenSegment.y2 }
+          );
+
+          const blueLines = userShapes.filter(
+            shape => shape.type === "line" && shape.colorKey === "blue"
+          );
+
+          return blueLines.some(line =>
+            helpers.segmentHasEndpointAndLength(
+              line,
+              P,
+              targetLength,
+              errorMargin
+            )
+          );
+        }
+      }
+    ];
+
+    const COLORS = {
+      mediumGray: "#777777",
+      lightGray: "#cfcfcf",
+      blue: "#1769ff",
+      black: "#000000"
+    };
+
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    const questionText = document.getElementById("questionText");
+    const statusText = document.getElementById("statusText");
+    const progressBar = document.getElementById("progressBar");
+
+    const lineToolButton = document.getElementById("lineTool");
+    const circleToolButton = document.getElementById("circleTool");
+    const colorSelect = document.getElementById("colorSelect");
+
+    let canvasWidth = 0;
+    let canvasHeight = 0;
+
+    let currentQuestionIndex = 0;
+    let userShapes = [];
+
+    let currentTool = "line";
+    let currentColorKey = "blue";
+
+    let isDrawing = false;
+    let pointerStart = null;
+    let pointerCurrent = null;
+    let pendingHitIndex = -1;
+    let isFinished = false;
+
+    const CLICK_TOLERANCE = 5;
+    const MIN_DRAW_DISTANCE = 6;
+    const HIT_TOLERANCE = 9;
+
+    const helpers = {
+      resolveInitialImage,
+      distance,
+      equilateralVertices,
+      lineCoversTwoPoints,
+      segmentHasEndpointAndLength,
+      distancePointToSegment
+    };
+
+    function activityComplete() {
+      statusText.textContent = "Activity complete. Excellent construction work!";
+      console.log("activityComplete() called");
+    }
+
+    function setup() {
+      resizeCanvas();
+      setupControls();
+      loadQuestion(0);
+      draw();
+      window.addEventListener("resize", resizeCanvas);
+    }
+
+    function setupControls() {
+      lineToolButton.addEventListener("click", () => {
+        currentTool = "line";
+        lineToolButton.classList.add("active");
+        circleToolButton.classList.remove("active");
+      });
+
+      circleToolButton.addEventListener("click", () => {
+        currentTool = "circle";
+        circleToolButton.classList.add("active");
+        lineToolButton.classList.remove("active");
+      });
+
+      colorSelect.addEventListener("change", () => {
+        currentColorKey = colorSelect.value;
+      });
+
+      canvas.addEventListener("pointerdown", handlePointerDown);
+      canvas.addEventListener("pointermove", handlePointerMove);
+      canvas.addEventListener("pointerup", handlePointerUp);
+      canvas.addEventListener("pointercancel", cancelDrawing);
+      canvas.addEventListener("pointerleave", event => {
+        if (isDrawing && event.buttons === 0) {
+          cancelDrawing();
+        }
+      });
+    }
+
+    function resizeCanvas() {
+      const oldWidth = canvasWidth;
+      const oldHeight = canvasHeight;
+
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+
+      canvasWidth = rect.width;
+      canvasHeight = rect.height;
+
+      canvas.width = Math.round(canvasWidth * dpr);
+      canvas.height = Math.round(canvasHeight * dpr);
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      if (oldWidth > 0 && oldHeight > 0) {
+        const sx = canvasWidth / oldWidth;
+        const sy = canvasHeight / oldHeight;
+        scaleUserShapes(sx, sy);
+      }
+
+      draw();
+    }
+
+    function scaleUserShapes(sx, sy) {
+      for (const shape of userShapes) {
+        if (shape.type === "line") {
+          shape.x1 *= sx;
+          shape.y1 *= sy;
+          shape.x2 *= sx;
+          shape.y2 *= sy;
+        } else if (shape.type === "circle") {
+          shape.cx *= sx;
+          shape.cy *= sy;
+          shape.r *= (sx + sy) / 2;
+        }
+      }
+
+      if (pointerStart) {
+        pointerStart.x *= sx;
+        pointerStart.y *= sy;
+      }
+
+      if (pointerCurrent) {
+        pointerCurrent.x *= sx;
+        pointerCurrent.y *= sy;
+      }
+    }
+
+    function loadQuestion(index) {
+      currentQuestionIndex = index;
+      userShapes = [];
+      isDrawing = false;
+      pointerStart = null;
+      pointerCurrent = null;
+      pendingHitIndex = -1;
+
+      const questionInfo = QUESTION_INFORMATION[currentQuestionIndex];
+
+      questionText.textContent =
+        `Problem ${currentQuestionIndex + 1} of ${QUESTION_INFORMATION.length}: ` +
+        questionInfo.question;
+
+      statusText.textContent =
+        "Use gray for auxiliary marks if you like. Only blue final objects are checked. Click an existing user-drawn line or circle to remove it.";
+
+      updateProgress();
+      draw();
+    }
+
+    function updateProgress() {
+      const percent =
+        (currentQuestionIndex / QUESTION_INFORMATION.length) * 100;
+      progressBar.style.width = `${percent}%`;
+    }
+
+    function completeCurrentQuestion() {
+      currentQuestionIndex += 1;
+      progressBar.style.width =
+        `${(currentQuestionIndex / QUESTION_INFORMATION.length) * 100}%`;
+
+      if (currentQuestionIndex >= QUESTION_INFORMATION.length) {
+        isFinished = true;
+        questionText.textContent = "All constructions completed.";
+        userShapes = [];
+        draw();
+        activityComplete();
+        return;
+      }
+
+      statusText.textContent = "Correct! Loading the next construction...";
+      setTimeout(() => {
+        loadQuestion(currentQuestionIndex);
+      }, 650);
+    }
+
+    function handlePointerDown(event) {
+      if (isFinished) return;
+
+      canvas.setPointerCapture(event.pointerId);
+
+      const point = getCanvasPoint(event);
+      pointerStart = point;
+      pointerCurrent = point;
+      isDrawing = true;
+
+      pendingHitIndex = hitTestUserShapes(point);
+      draw();
+    }
+
+    function handlePointerMove(event) {
+      if (!isDrawing || isFinished) return;
+      pointerCurrent = getCanvasPoint(event);
+      draw();
+    }
+
+    function handlePointerUp(event) {
+      if (!isDrawing || isFinished) return;
+
+      pointerCurrent = getCanvasPoint(event);
+
+      const moveDistance = distance(pointerStart, pointerCurrent);
+
+      if (moveDistance <= CLICK_TOLERANCE && pendingHitIndex !== -1) {
+        userShapes.splice(pendingHitIndex, 1);
+        cancelDrawing();
+        draw();
+        return;
+      }
+
+      if (moveDistance >= MIN_DRAW_DISTANCE) {
+        const newShape = createShapeFromDrag(pointerStart, pointerCurrent);
+        userShapes.push(newShape);
+        cancelDrawing();
+        draw();
+        checkAnswer();
+        return;
+      }
+
+      cancelDrawing();
+      draw();
+    }
+
+    function cancelDrawing() {
+      isDrawing = false;
+      pointerStart = null;
+      pointerCurrent = null;
+      pendingHitIndex = -1;
+    }
+
+    function createShapeFromDrag(start, end) {
+      if (currentTool === "circle") {
+        return {
+          type: "circle",
+          cx: start.x,
+          cy: start.y,
+          r: distance(start, end),
+          colorKey: currentColorKey,
+          color: COLORS[currentColorKey]
+        };
+      }
+
+      return {
+        type: "line",
+        x1: start.x,
+        y1: start.y,
+        x2: end.x,
+        y2: end.y,
+        colorKey: currentColorKey,
+        color: COLORS[currentColorKey]
+      };
+    }
+
+    function checkAnswer() {
+      const questionInfo = QUESTION_INFORMATION[currentQuestionIndex];
+
+      const isCorrect = questionInfo.evaluationFunction({
+        userShapes,
+        initialImage: questionInfo.initialImage,
+        canvasWidth,
+        canvasHeight,
+        errorMargin: questionInfo.errorMargin,
+        helpers
+      });
+
+      if (isCorrect) {
+        completeCurrentQuestion();
+      }
+    }
+
+    function getCanvasPoint(event) {
+      const rect = canvas.getBoundingClientRect();
+
+      return {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top
+      };
+    }
+
+    function draw() {
+      if (!ctx) return;
+
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+      if (!isFinished && QUESTION_INFORMATION[currentQuestionIndex]) {
+        drawInitialImage(QUESTION_INFORMATION[currentQuestionIndex].initialImage);
+      }
+
+      for (const shape of userShapes) {
+        drawShape(shape, false);
+      }
+
+      if (isDrawing && pointerStart && pointerCurrent) {
+        const previewShape = createShapeFromDrag(pointerStart, pointerCurrent);
+        drawShape(previewShape, true);
+      }
+    }
+
+    function drawInitialImage(initialImage) {
+      const resolved = resolveInitialImage(
+        initialImage,
+        canvasWidth,
+        canvasHeight
+      );
+
+      ctx.save();
+      ctx.strokeStyle = COLORS.black;
+      ctx.fillStyle = COLORS.black;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([]);
+
+      for (const line of resolved.lines) {
+        ctx.beginPath();
+        ctx.moveTo(line.x1, line.y1);
+        ctx.lineTo(line.x2, line.y2);
+        ctx.stroke();
+      }
+
+      for (const circle of resolved.circles) {
+        ctx.beginPath();
+        ctx.arc(circle.cx, circle.cy, circle.r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      for (const point of resolved.points) {
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    function drawShape(shape, isPreview) {
+      ctx.save();
+
+      ctx.strokeStyle = shape.color;
+      ctx.fillStyle = shape.color;
+      ctx.globalAlpha = isPreview ? 0.65 : 1;
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.setLineDash(isPreview ? [6, 5] : []);
+
+      if (shape.type === "line") {
+        ctx.beginPath();
+        ctx.moveTo(shape.x1, shape.y1);
+        ctx.lineTo(shape.x2, shape.y2);
+        ctx.stroke();
+      }
+
+      if (shape.type === "circle") {
+        ctx.beginPath();
+        ctx.arc(shape.cx, shape.cy, shape.r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    function hitTestUserShapes(point) {
+      for (let i = userShapes.length - 1; i >= 0; i--) {
+        const shape = userShapes[i];
+
+        if (shape.type === "line") {
+          const d = distancePointToSegment(
+            point,
+            { x: shape.x1, y: shape.y1 },
+            { x: shape.x2, y: shape.y2 }
+          );
+
+          if (d <= HIT_TOLERANCE) return i;
+        }
+
+        if (shape.type === "circle") {
+          const d = Math.abs(
+            distance(point, { x: shape.cx, y: shape.cy }) - shape.r
+          );
+
+          if (d <= HIT_TOLERANCE) return i;
+        }
+      }
+
+      return -1;
+    }
+
+    function resolveInitialImage(initialImage, width, height) {
+      const lines = (initialImage.lines || []).map(line => ({
+        x1: line.x1 * width,
+        y1: line.y1 * height,
+        x2: line.x2 * width,
+        y2: line.y2 * height
+      }));
+
+      const points = (initialImage.points || []).map(point => ({
+        x: point.x * width,
+        y: point.y * height
+      }));
+
+      const circles = (initialImage.circles || []).map(circle => ({
+        cx: circle.cx * width,
+        cy: circle.cy * height,
+        r: circle.r * Math.min(width, height)
+      }));
+
+      return { lines, points, circles };
+    }
+
+    function distance(a, b) {
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function distancePointToSegment(point, a, b) {
+      const vx = b.x - a.x;
+      const vy = b.y - a.y;
+      const wx = point.x - a.x;
+      const wy = point.y - a.y;
+
+      const lenSq = vx * vx + vy * vy;
+
+      if (lenSq === 0) {
+        return distance(point, a);
+      }
+
+      let t = (wx * vx + wy * vy) / lenSq;
+      t = Math.max(0, Math.min(1, t));
+
+      const projection = {
+        x: a.x + t * vx,
+        y: a.y + t * vy
+      };
+
+      return distance(point, projection);
+    }
+
+    function lineCoversTwoPoints(line, p, q, margin) {
+      const a = { x: line.x1, y: line.y1 };
+      const b = { x: line.x2, y: line.y2 };
+
+      return (
+        distancePointToSegment(p, a, b) <= margin &&
+        distancePointToSegment(q, a, b) <= margin
+      );
+    }
+
+    function segmentHasEndpointAndLength(line, requiredEndpoint, targetLength, margin) {
+      const A = { x: line.x1, y: line.y1 };
+      const B = { x: line.x2, y: line.y2 };
+      const drawnLength = distance(A, B);
+
+      const oneEndpointMatches =
+        distance(A, requiredEndpoint) <= margin ||
+        distance(B, requiredEndpoint) <= margin;
+
+      const lengthMatches =
+        Math.abs(drawnLength - targetLength) <= margin;
+
+      return oneEndpointMatches && lengthMatches;
+    }
+
+    function equilateralVertices(A, B) {
+      const dx = B.x - A.x;
+      const dy = B.y - A.y;
+
+      const cos60 = 0.5;
+      const sin60 = Math.sqrt(3) / 2;
+
+      const C1 = {
+        x: A.x + dx * cos60 - dy * sin60,
+        y: A.y + dx * sin60 + dy * cos60
+      };
+
+      const C2 = {
+        x: A.x + dx * cos60 + dy * sin60,
+        y: A.y - dx * sin60 + dy * cos60
+      };
+
+      return [C1, C2];
+    }
+
+    setup();
+  </script>
+</body>
+</html>
+```

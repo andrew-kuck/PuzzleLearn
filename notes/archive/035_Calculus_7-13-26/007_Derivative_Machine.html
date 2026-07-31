@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Derivative Machine</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --blue: #2f6fdb;
+      --blue-dark: #184c9b;
+      --orange: #f28c28;
+      --orange-dark: #b85f08;
+      --green: #22a06b;
+      --green-dark: #126b46;
+      --red: #d64545;
+      --red-dark: #982b2b;
+      --gray: #f4f6f8;
+      --dark: #1f2937;
+      --border: #d0d7de;
+      --focus: #ffcb05;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #eef2f7;
+      color: var(--dark);
+    }
+
+    header {
+      background: #00274c;
+      color: white;
+      padding: 1.2rem;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: clamp(1.5rem, 4vw, 2.3rem);
+    }
+
+    header p {
+      margin: 0.4rem 0 0;
+      opacity: 0.9;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+
+    .topbar {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .stage-tabs {
+      display: flex;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      border-radius: 0.5rem;
+      padding: 0.65rem 0.9rem;
+      cursor: pointer;
+      font-weight: 700;
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    button:hover {
+      filter: brightness(0.96);
+    }
+
+    button:focus-visible,
+    .block:focus-visible,
+    .dropzone:focus-visible {
+      outline: 4px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    .stage-btn.active {
+      background: #00274c;
+      color: white;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .primary {
+      background: #00274c;
+      color: white;
+    }
+
+    .success-btn {
+      background: var(--green);
+      color: white;
+    }
+
+    .panel {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1rem;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.07);
+      margin-bottom: 1rem;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(260px, 0.95fr) minmax(320px, 1.35fr);
+      gap: 1rem;
+      align-items: start;
+    }
+
+    @media (max-width: 860px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .equation {
+      font-size: 1.45rem;
+      font-weight: 800;
+      margin: 0.4rem 0 0.8rem;
+      color: #00274c;
+    }
+
+    .hintline {
+      margin: 0.4rem 0 0;
+      color: #4b5563;
+    }
+
+    .machine {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+      margin-top: 0.8rem;
+    }
+
+    .arrow {
+      color: #6b7280;
+      font-weight: 900;
+    }
+
+    .block,
+    .mini-block {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      border-radius: 0.55rem;
+      padding: 0.55rem 0.7rem;
+      color: white;
+      font-weight: 800;
+      line-height: 1.15;
+      user-select: none;
+      box-shadow: inset 0 -3px 0 rgba(0,0,0,0.18);
+      min-height: 2.25rem;
+    }
+
+    .block {
+      cursor: grab;
+    }
+
+    .block:active {
+      cursor: grabbing;
+    }
+
+    .kind-original {
+      background: var(--blue);
+    }
+
+    .kind-deriv {
+      background: var(--orange);
+    }
+
+    .kind-rule,
+    .kind-connector {
+      background: var(--green);
+    }
+
+    .kind-error {
+      background: var(--red);
+    }
+
+    .block.selected {
+      outline: 4px solid var(--focus);
+      outline-offset: 3px;
+      transform: translateY(-1px);
+    }
+
+    .palette {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      margin-top: 0.75rem;
+    }
+
+    .legend {
+      display: flex;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+      margin-top: 0.75rem;
+      font-size: 0.92rem;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .swatch {
+      width: 1rem;
+      height: 1rem;
+      border-radius: 0.25rem;
+      display: inline-block;
+    }
+
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+      margin-top: 0.75rem;
+    }
+
+    .formula-card {
+      background: var(--gray);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 0.75rem;
+    }
+
+    .formula-card h3 {
+      margin: 0 0 0.6rem;
+      font-size: 1rem;
+    }
+
+    .slot-row {
+      display: grid;
+      grid-template-columns: minmax(150px, 240px) 1fr;
+      gap: 0.55rem;
+      align-items: center;
+      margin-bottom: 0.55rem;
+    }
+
+    @media (max-width: 600px) {
+      .slot-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .slot-label {
+      font-weight: 800;
+      color: #374151;
+    }
+
+    .dropzone {
+      min-height: 3rem;
+      border: 2px dashed #9ca3af;
+      background: white;
+      border-radius: 0.65rem;
+      display: flex;
+      align-items: center;
+      padding: 0.35rem;
+      transition: 0.15s;
+    }
+
+    .dropzone.dragover {
+      border-color: #00274c;
+      background: #eaf2ff;
+    }
+
+    .dropzone.empty::before {
+      content: "Drop or click a selected block here";
+      color: #6b7280;
+      font-size: 0.9rem;
+      padding-left: 0.35rem;
+    }
+
+    .remove {
+      margin-left: 0.35rem;
+      background: rgba(255,255,255,0.25);
+      color: white;
+      padding: 0.1rem 0.35rem;
+      border-radius: 0.35rem;
+      font-weight: 900;
+    }
+
+    .preview {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      background: #111827;
+      color: #d1fae5;
+      padding: 0.85rem;
+      border-radius: 0.75rem;
+      overflow-x: auto;
+      margin-top: 0.75rem;
+    }
+
+    .feedback {
+      border-radius: 0.75rem;
+      padding: 0.85rem;
+      margin-top: 0.75rem;
+      font-weight: 750;
+      display: none;
+    }
+
+    .feedback.show {
+      display: block;
+    }
+
+    .feedback.good {
+      background: #dcfce7;
+      color: #14532d;
+      border: 1px solid #86efac;
+    }
+
+    .feedback.warn {
+      background: #fff7ed;
+      color: #7c2d12;
+      border: 1px solid #fdba74;
+    }
+
+    .feedback.bad {
+      background: #fee2e2;
+      color: #7f1d1d;
+      border: 1px solid #fca5a5;
+    }
+
+    details {
+      margin-top: 0.75rem;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    code {
+      background: #f3f4f6;
+      padding: 0.1rem 0.25rem;
+      border-radius: 0.25rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Derivative Machine</h1>
+    <p>Build derivative rules from function blocks.</p>
+  </header>
+
+  <main>
+    <section class="topbar">
+      <div class="stage-tabs" id="stageTabs"></div>
+      <div class="actions">
+        <button id="resetBtn">Reset puzzle</button>
+        <button id="checkBtn" class="success-btn">Test derivative</button>
+        <button id="nextBtn" class="primary">Next stage</button>
+      </div>
+    </section>
+
+    <section class="layout">
+      <section class="panel">
+        <h2 id="stageTitle"></h2>
+        <div class="equation" id="equation"></div>
+        <p class="hintline" id="goal"></p>
+
+        <h3>Original function machine</h3>
+        <div class="machine" id="machine"></div>
+
+        <details>
+          <summary>How validation works</summary>
+          <p>
+            Your block machine is converted into an expression tree and compared
+            with the true derivative at several hidden x-values. The x-values are
+            hidden so the goal is structure, not guesswork. Sneaky, but fair.
+          </p>
+        </details>
+      </section>
+
+      <section class="panel">
+        <h2>Derivative workspace</h2>
+        <p>
+          Drag blocks into the slots, or click a block and then click a slot.
+          Blue blocks usually mean “copy unchanged,” orange blocks mean
+          “differentiate,” green blocks mean “rule/connective,” and red blocks
+          are common tempting errors.
+        </p>
+
+        <h3>Block palette</h3>
+        <div class="palette" id="palette"></div>
+
+        <div class="legend">
+          <span class="legend-item"><span class="swatch" style="background: var(--blue)"></span> original/copy</span>
+          <span class="legend-item"><span class="swatch" style="background: var(--orange)"></span> derivative piece</span>
+          <span class="legend-item"><span class="swatch" style="background: var(--green)"></span> rule/connector</span>
+          <span class="legend-item"><span class="swatch" style="background: var(--red)"></span> common error</span>
+        </div>
+
+        <div class="workspace-grid">
+          <div class="formula-card">
+            <h3>1. Choose the main structure</h3>
+            <div class="slot-row">
+              <div class="slot-label">Structure rule</div>
+              <div class="dropzone empty" tabindex="0" data-zone="rule" aria-label="Structure rule drop zone"></div>
+            </div>
+          </div>
+
+          <div class="formula-card">
+            <h3>2. Fill the derivative machine</h3>
+            <div id="slots"></div>
+          </div>
+        </div>
+
+        <div class="preview" id="preview">Preview: incomplete</div>
+        <div class="feedback" id="feedback"></div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    /***********************
+     * Expression utilities
+     ***********************/
+    const X = { type: "x" };
+    const C = value => ({ type: "const", value });
+    const add = (left, right) => ({ type: "add", left, right });
+    const sub = (left, right) => ({ type: "sub", left, right });
+    const mul = (left, right) => ({ type: "mul", left, right });
+    const div = (left, right) => ({ type: "div", left, right });
+    const pow = (base, exponent) => ({ type: "pow", base, exponent });
+    const sin = arg => ({ type: "sin", arg });
+    const cos = arg => ({ type: "cos", arg });
+    const exp = arg => ({ type: "exp", arg });
+    const sqrt = arg => ({ type: "sqrt", arg });
+    const neg = arg => ({ type: "neg", arg });
+
+    function evalExpr(expr, x) {
+      switch (expr.type) {
+        case "x": return x;
+        case "const": return expr.value;
+        case "add": return evalExpr(expr.left, x) + evalExpr(expr.right, x);
+        case "sub": return evalExpr(expr.left, x) - evalExpr(expr.right, x);
+        case "mul": return evalExpr(expr.left, x) * evalExpr(expr.right, x);
+        case "div": return evalExpr(expr.left, x) / evalExpr(expr.right, x);
+        case "pow": return Math.pow(evalExpr(expr.base, x), evalExpr(expr.exponent, x));
+        case "sin": return Math.sin(evalExpr(expr.arg, x));
+        case "cos": return Math.cos(evalExpr(expr.arg, x));
+        case "exp": return Math.exp(evalExpr(expr.arg, x));
+        case "sqrt": return Math.sqrt(evalExpr(expr.arg, x));
+        case "neg": return -evalExpr(expr.arg, x);
+        default: throw new Error("Unknown expression type: " + expr.type);
+      }
+    }
+
+    function derivative(expr) {
+      switch (expr.type) {
+        case "x":
+          return C(1);
+        case "const":
+          return C(0);
+        case "add":
+          return add(derivative(expr.left), derivative(expr.right));
+        case "sub":
+          return sub(derivative(expr.left), derivative(expr.right));
+        case "mul":
+          return add(
+            mul(derivative(expr.left), expr.right),
+            mul(expr.left, derivative(expr.right))
+          );
+        case "div":
+          return div(
+            sub(
+              mul(derivative(expr.left), expr.right),
+              mul(expr.left, derivative(expr.right))
+            ),
+            pow(expr.right, C(2))
+          );
+        case "pow": {
+          if (expr.exponent.type === "const") {
+            const n = expr.exponent.value;
+            return mul(
+              mul(C(n), pow(expr.base, C(n - 1))),
+              derivative(expr.base)
+            );
+          }
+          throw new Error("Only constant powers are supported in this activity.");
+        }
+        case "sin":
+          return mul(cos(expr.arg), derivative(expr.arg));
+        case "cos":
+          return mul(neg(sin(expr.arg)), derivative(expr.arg));
+        case "exp":
+          return mul(exp(expr.arg), derivative(expr.arg));
+        case "sqrt":
+          return div(derivative(expr.arg), mul(C(2), sqrt(expr.arg)));
+        case "neg":
+          return neg(derivative(expr.arg));
+        default:
+          throw new Error("Unknown expression type: " + expr.type);
+      }
+    }
+
+    function exprToText(expr) {
+      switch (expr.type) {
+        case "x": return "x";
+        case "const": return Number.isInteger(expr.value) ? String(expr.value) : expr.value.toFixed(3);
+        case "add": return "(" + exprToText(expr.left) + " + " + exprToText(expr.right) + ")";
+        case "sub": return "(" + exprToText(expr.left) + " - " + exprToText(expr.right) + ")";
+        case "mul": return "(" + exprToText(expr.left) + " · " + exprToText(expr.right) + ")";
+        case "div": return "(" + exprToText(expr.left) + " / " + exprToText(expr.right) + ")";
+        case "pow": return "(" + exprToText(expr.base) + "^" + exprToText(expr.exponent) + ")";
+        case "sin": return "sin(" + exprToText(expr.arg) + ")";
+        case "cos": return "cos(" + exprToText(expr.arg) + ")";
+        case "exp": return "e^(" + exprToText(expr.arg) + ")";
+        case "sqrt": return "√(" + exprToText(expr.arg) + ")";
+        case "neg": return "-(" + exprToText(expr.arg) + ")";
+        default: return "?";
+      }
+    }
+
+    function closeEnough(a, b) {
+      if (!Number.isFinite(a) || !Number.isFinite(b)) return false;
+      const diff = Math.abs(a - b);
+      const scale = Math.max(1, Math.abs(a), Math.abs(b));
+      return diff / scale < 1e-6;
+    }
+
+    function sameNumerically(aExpr, bExpr, xs) {
+      for (const x of xs) {
+        let a, b;
+        try {
+          a = evalExpr(aExpr, x);
+          b = evalExpr(bExpr, x);
+        } catch {
+          return false;
+        }
+        if (!closeEnough(a, b)) return false;
+      }
+      return true;
+    }
+
+    function sumAll(parts) {
+      return parts.reduce((acc, item) => acc ? add(acc, item) : item, null);
+    }
+
+    /***********************
+     * Puzzle data
+     ***********************/
+    const puzzles = [
+      {
+        title: "Stage 1: Power and sum rules",
+        equation: "f(x) = 4x³ − 2x + 7",
+        goal: "Differentiate each term. Constants disappear because their derivative is 0.",
+        expr: add(sub(mul(C(4), pow(X, C(3))), mul(C(2), X)), C(7)),
+        xs: [-2, -1, 0.5, 1.25, 2.1],
+        expectedRule: "rule-sum",
+        machine: ["input x", "cube", "× 4", "subtract 2x", "add 7"],
+        slots: [
+          {
+            key: "t1",
+            label: "Derivative of 4x³",
+            expectedExpr: mul(C(12), pow(X, C(2))),
+            hint: "Use the power rule and multiply by the coefficient: d/dx[4x³] = 12x²."
+          },
+          {
+            key: "t2",
+            label: "Derivative of −2x",
+            expectedExpr: C(-2),
+            hint: "The derivative of −2x is −2."
+          },
+          {
+            key: "t3",
+            label: "Derivative of 7",
+            expectedExpr: C(0),
+            hint: "A constant has derivative 0."
+          }
+        ],
+        build(get) {
+          return sumAll([get("t1"), get("t2"), get("t3")]);
+        },
+        palette: [
+          { id: "rule-sum", label: "sum term branches", kind: "rule" },
+          { id: "rule-product", label: "product split", kind: "rule" },
+          { id: "rule-chain", label: "chain composition", kind: "rule" },
+          { id: "b-12x2", label: "12x²", kind: "deriv", expr: mul(C(12), pow(X, C(2))) },
+          { id: "b-minus2", label: "−2", kind: "deriv", expr: C(-2) },
+          { id: "b-zero", label: "0", kind: "deriv", expr: C(0) },
+          { id: "b-4x2", label: "4x²", kind: "error", expr: mul(C(4), pow(X, C(2))) },
+          { id: "b-minus2x", label: "−2x", kind: "error", expr: mul(C(-2), X) },
+          { id: "b-seven", label: "7", kind: "error", expr: C(7) }
+        ]
+      },
+      {
+        title: "Stage 2: Product rule",
+        equation: "f(x) = x² sin(x)",
+        goal: "Split the product into two branches: u′v + uv′.",
+        expr: mul(pow(X, C(2)), sin(X)),
+        xs: [-2, -0.75, 0.5, 1.4, 2.2],
+        expectedRule: "rule-product",
+        machine: ["input x", "branch A: x²", "branch B: sin(x)", "multiply branches"],
+        slots: [
+          {
+            key: "uPrime",
+            label: "Branch 1: u′",
+            expectedExpr: mul(C(2), X),
+            hint: "In the first branch, differentiate x² to get 2x."
+          },
+          {
+            key: "vKeep",
+            label: "Branch 1: keep v",
+            expectedExpr: sin(X),
+            hint: "The second factor should stay unchanged in one branch: keep sin(x)."
+          },
+          {
+            key: "uKeep",
+            label: "Branch 2: keep u",
+            expectedExpr: pow(X, C(2)),
+            hint: "The first factor should stay unchanged in the second branch: keep x²."
+          },
+          {
+            key: "vPrime",
+            label: "Branch 2: v′",
+            expectedExpr: cos(X),
+            hint: "Differentiate sin(x) to get cos(x)."
+          }
+        ],
+        build(get) {
+          return add(
+            mul(get("uPrime"), get("vKeep")),
+            mul(get("uKeep"), get("vPrime"))
+          );
+        },
+        palette: [
+          { id: "rule-product", label: "product split", kind: "rule" },
+          { id: "rule-chain", label: "chain composition", kind: "rule" },
+          { id: "rule-sum", label: "sum term branches", kind: "rule" },
+          { id: "b-2x", label: "2x", kind: "deriv", expr: mul(C(2), X) },
+          { id: "b-sinx", label: "sin(x)", kind: "original", expr: sin(X) },
+          { id: "b-x2", label: "x²", kind: "original", expr: pow(X, C(2)) },
+          { id: "b-cosx", label: "cos(x)", kind: "deriv", expr: cos(X) },
+          { id: "b-2xcos", label: "2x cos(x)", kind: "error", expr: mul(mul(C(2), X), cos(X)) },
+          { id: "b-sinx-prime-wrong", label: "−sin(x)", kind: "error", expr: neg(sin(X)) }
+        ]
+      },
+      {
+        title: "Stage 3: Chain rule",
+        equation: "f(x) = sin(x² + 1)",
+        goal: "Differentiate the outside while copying the inside unchanged, then multiply by the inside derivative.",
+        expr: sin(add(pow(X, C(2)), C(1))),
+        xs: [-2, -0.5, 0.25, 1.3, 2.0],
+        expectedRule: "rule-chain",
+        machine: ["input x", "square", "add 1", "sin( inner )"],
+        slots: [
+          {
+            key: "outerPrime",
+            label: "Outer derivative with inner copied",
+            expectedExpr: cos(add(pow(X, C(2)), C(1))),
+            hint: "You need cos(x² + 1): differentiate the outside sin(□), but copy the inner expression unchanged."
+          },
+          {
+            key: "innerPrime",
+            label: "Multiply by inner derivative",
+            expectedExpr: mul(C(2), X),
+            hint: "You differentiated the outside, but the inside derivative is missing or incorrect. d/dx[x² + 1] = 2x."
+          }
+        ],
+        build(get) {
+          return mul(get("outerPrime"), get("innerPrime"));
+        },
+        palette: [
+          { id: "rule-chain", label: "chain composition", kind: "rule" },
+          { id: "rule-product", label: "product split", kind: "rule" },
+          { id: "rule-sum", label: "sum term branches", kind: "rule" },
+          { id: "b-cos-inner", label: "cos(x² + 1)", kind: "deriv", expr: cos(add(pow(X, C(2)), C(1))) },
+          { id: "b-2x-chain", label: "2x", kind: "deriv", expr: mul(C(2), X) },
+          { id: "b-cosx", label: "cos(x)", kind: "error", expr: cos(X) },
+          { id: "b-sin-inner", label: "sin(x² + 1)", kind: "original", expr: sin(add(pow(X, C(2)), C(1))) },
+          { id: "b-x2plus1", label: "x² + 1", kind: "original", expr: add(pow(X, C(2)), C(1)) }
+        ]
+      },
+      {
+        title: "Stage 4A: Mixed product and chain",
+        equation: "f(x) = x² e^(3x)",
+        goal: "This is a product, and one factor also needs the chain rule.",
+        expr: mul(pow(X, C(2)), exp(mul(C(3), X))),
+        xs: [-1.5, -0.25, 0.5, 1.1, 1.8],
+        expectedRule: "rule-product",
+        machine: ["input x", "branch A: x²", "branch B: e^(3x)", "multiply branches"],
+        slots: [
+          {
+            key: "uPrime",
+            label: "Branch 1: u′",
+            expectedExpr: mul(C(2), X),
+            hint: "Differentiate x² to get 2x."
+          },
+          {
+            key: "vKeep",
+            label: "Branch 1: keep v",
+            expectedExpr: exp(mul(C(3), X)),
+            hint: "In one product-rule branch, keep e^(3x) unchanged."
+          },
+          {
+            key: "uKeep",
+            label: "Branch 2: keep u",
+            expectedExpr: pow(X, C(2)),
+            hint: "In the other branch, keep x² unchanged."
+          },
+          {
+            key: "vPrime",
+            label: "Branch 2: v′",
+            expectedExpr: mul(C(3), exp(mul(C(3), X))),
+            hint: "For e^(3x), copy e^(3x) and multiply by the inner derivative 3."
+          }
+        ],
+        build(get) {
+          return add(
+            mul(get("uPrime"), get("vKeep")),
+            mul(get("uKeep"), get("vPrime"))
+          );
+        },
+        palette: [
+          { id: "rule-product", label: "product split", kind: "rule" },
+          { id: "rule-chain", label: "chain composition only", kind: "rule" },
+          { id: "rule-quotient", label: "quotient split", kind: "rule" },
+          { id: "b-2x-mixed", label: "2x", kind: "deriv", expr: mul(C(2), X) },
+          { id: "b-exp3x", label: "e^(3x)", kind: "original", expr: exp(mul(C(3), X)) },
+          { id: "b-x2-mixed", label: "x²", kind: "original", expr: pow(X, C(2)) },
+          { id: "b-3exp3x", label: "3e^(3x)", kind: "deriv", expr: mul(C(3), exp(mul(C(3), X))) },
+          { id: "b-expx", label: "e^x", kind: "error", expr: exp(X) },
+          { id: "b-exp3x-only", label: "derivative e^(3x)", kind: "error", expr: exp(mul(C(3), X)) }
+        ]
+      },
+      {
+        title: "Stage 4B: Mixed quotient challenge",
+        equation: "f(x) = (x² + 1) / √x",
+        goal: "Use the quotient rule: (u′v − uv′) / v².",
+        expr: div(add(pow(X, C(2)), C(1)), sqrt(X)),
+        xs: [0.25, 0.7, 1.2, 2.0, 3.4],
+        expectedRule: "rule-quotient",
+        machine: ["input x", "top: x² + 1", "bottom: √x", "divide top by bottom"],
+        slots: [
+          {
+            key: "uPrime",
+            label: "Numerator branch: u′",
+            expectedExpr: mul(C(2), X),
+            hint: "The derivative of the top x² + 1 is 2x."
+          },
+          {
+            key: "vKeep",
+            label: "Numerator branch: keep v",
+            expectedExpr: sqrt(X),
+            hint: "In u′v, keep the denominator √x unchanged."
+          },
+          {
+            key: "uKeep",
+            label: "Subtract branch: keep u",
+            expectedExpr: add(pow(X, C(2)), C(1)),
+            hint: "In uv′, keep the numerator x² + 1 unchanged."
+          },
+          {
+            key: "vPrime",
+            label: "Subtract branch: v′",
+            expectedExpr: div(C(1), mul(C(2), sqrt(X))),
+            hint: "The derivative of √x is 1 / (2√x)."
+          },
+          {
+            key: "denom",
+            label: "Whole denominator: v²",
+            expectedExpr: pow(sqrt(X), C(2)),
+            hint: "The quotient rule denominator is the original denominator squared: (√x)²."
+          }
+        ],
+        build(get) {
+          return div(
+            sub(
+              mul(get("uPrime"), get("vKeep")),
+              mul(get("uKeep"), get("vPrime"))
+            ),
+            get("denom")
+          );
+        },
+        palette: [
+          { id: "rule-quotient", label: "quotient split", kind: "rule" },
+          { id: "rule-product", label: "product split", kind: "rule" },
+          { id: "rule-chain", label: "chain composition", kind: "rule" },
+          { id: "b-2x-quot", label: "2x", kind: "deriv", expr: mul(C(2), X) },
+          { id: "b-sqrtx", label: "√x", kind: "original", expr: sqrt(X) },
+          { id: "b-x2plus1-quot", label: "x² + 1", kind: "original", expr: add(pow(X, C(2)), C(1)) },
+          { id: "b-sqrt-prime", label: "1/(2√x)", kind: "deriv", expr: div(C(1), mul(C(2), sqrt(X))) },
+          { id: "b-sqrt-squared", label: "(√x)²", kind: "connector", expr: pow(sqrt(X), C(2)) },
+          { id: "b-halfx", label: "1/2 x", kind: "error", expr: mul(C(0.5), X) },
+          { id: "b-no-square", label: "√x only", kind: "error", expr: sqrt(X) }
+        ]
+      }
+    ];
+
+    /***********************
+     * App state
+     ***********************/
+    let currentIndex = 0;
+    let selectedBlockId = null;
+    let state = {
+      rule: null,
+      slots: {}
+    };
+
+    const stageTabs = document.getElementById("stageTabs");
+    const stageTitle = document.getElementById("stageTitle");
+    const equation = document.getElementById("equation");
+    const goal = document.getElementById("goal");
+    const machine = document.getElementById("machine");
+    const palette = document.getElementById("palette");
+    const slots = document.getElementById("slots");
+    const preview = document.getElementById("preview");
+    const feedback = document.getElementById("feedback");
+
+    document.getElementById("resetBtn").addEventListener("click", resetPuzzle);
+    document.getElementById("checkBtn").addEventListener("click", validatePuzzle);
+    document.getElementById("nextBtn").addEventListener("click", () => {
+      currentIndex = (currentIndex + 1) % puzzles.length;
+      resetPuzzle();
+      render();
+    });
+
+    function currentPuzzle() {
+      return puzzles[currentIndex];
+    }
+
+    function getBlock(id) {
+      if (!id) return null;
+      return currentPuzzle().palette.find(b => b.id === id);
+    }
+
+    function resetPuzzle() {
+      selectedBlockId = null;
+      state = { rule: null, slots: {} };
+      setFeedback("", "");
+      render();
+    }
+
+    function render() {
+      renderTabs();
+      renderPuzzleInfo();
+      renderPalette();
+      renderSlots();
+      updatePreview();
+    }
+
+    function renderTabs() {
+      stageTabs.innerHTML = "";
+      puzzles.forEach((p, i) => {
+        const btn = document.createElement("button");
+        btn.className = "stage-btn" + (i === currentIndex ? " active" : "");
+        btn.textContent = "Stage " + (i + 1);
+        btn.addEventListener("click", () => {
+          currentIndex = i;
+          resetPuzzle();
+          render();
+        });
+        stageTabs.appendChild(btn);
+      });
+    }
+
+    function renderPuzzleInfo() {
+      const p = currentPuzzle();
+      stageTitle.textContent = p.title;
+      equation.textContent = p.equation;
+      goal.textContent = p.goal;
+
+      machine.innerHTML = "";
+      p.machine.forEach((label, i) => {
+        const b = document.createElement("span");
+        b.className = "mini-block kind-original";
+        b.textContent = label;
+        machine.appendChild(b);
+
+        if (i < p.machine.length - 1) {
+          const arrow = document.createElement("span");
+          arrow.className = "arrow";
+          arrow.textContent = "→";
+          machine.appendChild(arrow);
+        }
+      });
+    }
+
+    function renderPalette() {
+      const p = currentPuzzle();
+      palette.innerHTML = "";
+
+      p.palette.forEach(block => {
+        const el = document.createElement("div");
+        el.className = "block kind-" + block.kind + (selectedBlockId === block.id ? " selected" : "");
+        el.draggable = true;
+        el.tabIndex = 0;
+        el.textContent = block.label;
+        el.setAttribute("role", "button");
+        el.setAttribute("aria-label", "Block " + block.label);
+        el.dataset.blockId = block.id;
+
+        el.addEventListener("click", () => {
+          selectedBlockId = block.id;
+          renderPalette();
+        });
+
+        el.addEventListener("keydown", e => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            selectedBlockId = block.id;
+            renderPalette();
+          }
+        });
+
+        el.addEventListener("dragstart", e => {
+          e.dataTransfer.setData("text/plain", block.id);
+        });
+
+        palette.appendChild(el);
+      });
+    }
+
+    function renderSlots() {
+      const p = currentPuzzle();
+      slots.innerHTML = "";
+
+      setupDropzone(document.querySelector('[data-zone="rule"]'), "rule");
+
+      p.slots.forEach(slot => {
+        const row = document.createElement("div");
+        row.className = "slot-row";
+
+        const label = document.createElement("div");
+        label.className = "slot-label";
+        label.textContent = slot.label;
+
+        const dz = document.createElement("div");
+        dz.className = "dropzone empty";
+        dz.tabIndex = 0;
+        dz.dataset.zone = slot.key;
+        dz.setAttribute("aria-label", slot.label + " drop zone");
+
+        row.appendChild(label);
+        row.appendChild(dz);
+        slots.appendChild(row);
+
+        setupDropzone(dz, slot.key);
+      });
+
+      refreshDropzones();
+    }
+
+    function setupDropzone(dz, zoneKey) {
+      if (!dz) return;
+
+      dz.addEventListener("dragover", e => {
+        e.preventDefault();
+        dz.classList.add("dragover");
+      });
+
+      dz.addEventListener("dragleave", () => {
+        dz.classList.remove("dragover");
+      });
+
+      dz.addEventListener("drop", e => {
+        e.preventDefault();
+        dz.classList.remove("dragover");
+        const id = e.dataTransfer.getData("text/plain");
+        placeBlock(zoneKey, id);
+      });
+
+      dz.addEventListener("click", () => {
+        if (selectedBlockId) {
+          placeBlock(zoneKey, selectedBlockId);
+        }
+      });
+
+      dz.addEventListener("keydown", e => {
+        if ((e.key === "Enter" || e.key === " ") && selectedBlockId) {
+          e.preventDefault();
+          placeBlock(zoneKey, selectedBlockId);
+        }
+      });
+    }
+
+    function placeBlock(zoneKey, blockId) {
+      if (zoneKey === "rule") {
+        state.rule = blockId;
+      } else {
+        state.slots[zoneKey] = blockId;
+      }
+      selectedBlockId = null;
+      setFeedback("", "");
+      render();
+    }
+
+    function refreshDropzones() {
+      const all = document.querySelectorAll(".dropzone");
+      all.forEach(dz => {
+        const zone = dz.dataset.zone;
+        const blockId = zone === "rule" ? state.rule : state.slots[zone];
+        dz.innerHTML = "";
+        dz.classList.toggle("empty", !blockId);
+
+        if (blockId) {
+          const block = getBlock(blockId);
+          const mini = document.createElement("span");
+          mini.className = "mini-block kind-" + block.kind;
+          mini.textContent = block.label;
+
+          const remove = document.createElement("button");
+          remove.className = "remove";
+          remove.textContent = "×";
+          remove.title = "Remove block";
+          remove.addEventListener("click", e => {
+            e.stopPropagation();
+            if (zone === "rule") state.rule = null;
+            else delete state.slots[zone];
+            render();
+          });
+
+          mini.appendChild(remove);
+          dz.appendChild(mini);
+        }
+      });
+    }
+
+    function getSlotExpr(key) {
+      const id = state.slots[key];
+      const block = getBlock(id);
+      if (!block || !block.expr) {
+        throw new Error("Missing expression for slot " + key);
+      }
+      return block.expr;
+    }
+
+    function studentExprIfComplete() {
+      const p = currentPuzzle();
+      for (const slot of p.slots) {
+        if (!state.slots[slot.key]) return null;
+        const block = getBlock(state.slots[slot.key]);
+        if (!block || !block.expr) return null;
+      }
+
+      try {
+        return p.build(getSlotExpr);
+      } catch {
+        return null;
+      }
+    }
+
+    function updatePreview() {
+      const expr = studentExprIfComplete();
+      if (!expr) {
+        preview.textContent = "Preview: incomplete";
+      } else {
+        preview.textContent = "Preview: y′ = " + exprToText(expr);
+      }
+    }
+
+    function setFeedback(type, message) {
+      feedback.className = "feedback";
+      feedback.textContent = "";
+
+      if (!message) return;
+
+      feedback.classList.add("show", type);
+      feedback.textContent = message;
+    }
+
+    function validatePuzzle() {
+      const p = currentPuzzle();
+
+      if (!state.rule) {
+        setFeedback("warn", "Choose the main structure rule first.");
+        return;
+      }
+
+      const ruleBlock = getBlock(state.rule);
+      if (!ruleBlock || ruleBlock.kind !== "rule") {
+        setFeedback("bad", "That first slot needs a rule block, such as product split, chain composition, or sum term branches.");
+        return;
+      }
+
+      if (state.rule !== p.expectedRule) {
+        const chosen = ruleBlock.label;
+        const expected = getBlock(p.expectedRule)?.label || p.expectedRule;
+
+        if (p.expectedRule === "rule-product" && state.rule === "rule-chain") {
+          setFeedback("bad", "This is a product, not a composition. Use the product split: u′v + uv′.");
+          return;
+        }
+
+        if (p.expectedRule === "rule-chain" && state.rule === "rule-product") {
+          setFeedback("bad", "This is a composition, not a product. The outside function acts on the whole inside expression.");
+          return;
+        }
+
+        if (p.expectedRule === "rule-quotient") {
+          setFeedback("bad", "This is a quotient. Use the quotient split: (u′v − uv′) / v².");
+          return;
+        }
+
+        setFeedback("bad", `The structure rule is not quite right. You chose “${chosen},” but this machine needs “${expected}.”`);
+        return;
+      }
+
+      for (const slot of p.slots) {
+        const id = state.slots[slot.key];
+
+        if (!id) {
+          setFeedback("warn", `The slot “${slot.label}” is still empty.`);
+          return;
+        }
+
+        const block = getBlock(id);
+
+        if (!block || !block.expr) {
+          setFeedback("bad", `The slot “${slot.label}” needs an expression block, not a rule block.`);
+          return;
+        }
+
+        if (!sameNumerically(block.expr, slot.expectedExpr, p.xs)) {
+          setFeedback("bad", slot.hint);
+          return;
+        }
+      }
+
+      const student = studentExprIfComplete();
+      const trueDerivative = derivative(p.expr);
+
+      if (!student) {
+        setFeedback("warn", "The derivative machine is incomplete.");
+        return;
+      }
+
+      if (sameNumerically(student, trueDerivative, p.xs)) {
+        setFeedback(
+          "good",
+          "Correct! Your derivative machine matches the true derivative at the hidden test values. y′ = " + exprToText(student)
+        );
+      } else {
+        setFeedback(
+          "bad",
+          "The structure looks close, but the full machine failed the hidden x-value test. Check signs, copied factors, and inner derivatives."
+        );
+      }
+    }
+
+    render();
+  </script>
+    <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#f6f6f6"
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Polynomial Lens</title>
+<style>
+  :root {
+    --bg: #101827;
+    --panel: #172033;
+    --panel2: #1d2940;
+    --text: #eef4ff;
+    --muted: #aab7d1;
+    --blue: #58a6ff;
+    --gold: #ffcb4c;
+    --green: #4ade80;
+    --red: #fb7185;
+    --purple: #c084fc;
+    --grid: rgba(255,255,255,0.12);
+    --axis: rgba(255,255,255,0.45);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: radial-gradient(circle at top, #1e2c47 0%, var(--bg) 55%);
+    color: var(--text);
+  }
+
+  .app {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 18px;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-end;
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(1.7rem, 3vw, 2.6rem);
+    letter-spacing: 0.02em;
+  }
+
+  .tagline {
+    color: var(--muted);
+    margin-top: 4px;
+    font-size: 0.95rem;
+  }
+
+  .level-pill {
+    background: linear-gradient(135deg, #27395b, #172033);
+    border: 1px solid rgba(255,255,255,0.14);
+    padding: 10px 14px;
+    border-radius: 999px;
+    color: var(--gold);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 14px;
+  }
+
+  @media (max-width: 900px) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .card {
+    background: rgba(23, 32, 51, 0.92);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 18px;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.28);
+    overflow: hidden;
+  }
+
+  .graph-wrap {
+    padding: 12px;
+  }
+
+  svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: linear-gradient(180deg, #111b2d 0%, #0d1422 100%);
+    border-radius: 14px;
+    touch-action: none;
+  }
+
+  .controls {
+    padding: 16px;
+  }
+
+  .level-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+
+  .mini {
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.35;
+  }
+
+  .row {
+    margin-top: 15px;
+  }
+
+  label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    color: var(--muted);
+    font-size: 0.92rem;
+    margin-bottom: 7px;
+  }
+
+  label strong {
+    color: var(--text);
+  }
+
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--blue);
+  }
+
+  .degree-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  button {
+    border: 0;
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-weight: 800;
+    color: var(--text);
+    background: #283854;
+    cursor: pointer;
+    transition: transform 0.08s ease, background 0.15s ease, opacity 0.15s ease;
+  }
+
+  button:hover {
+    background: #33476b;
+  }
+
+  button:active {
+    transform: translateY(1px);
+  }
+
+  button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .degree-box {
+    flex: 1;
+    text-align: center;
+    background: #0f1727;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    padding: 10px 8px;
+    font-weight: 800;
+  }
+
+  .btn-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .primary {
+    background: linear-gradient(135deg, #1f8f54, #176a42);
+  }
+
+  .primary:hover {
+    background: linear-gradient(135deg, #25a762, #1b7d4e);
+  }
+
+  .hint {
+    margin-top: 12px;
+    background: rgba(255, 203, 76, 0.1);
+    border: 1px solid rgba(255, 203, 76, 0.25);
+    color: #ffe4a3;
+    padding: 10px;
+    border-radius: 12px;
+    display: none;
+    font-size: 0.9rem;
+    line-height: 1.35;
+  }
+
+  .meter {
+    height: 13px;
+    background: #0b1220;
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+
+  .fill {
+    height: 100%;
+    width: 0%;
+    border-radius: inherit;
+    transition: width 0.2s ease, background 0.2s ease;
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .stat {
+    background: #0f1727;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 9px;
+    text-align: center;
+  }
+
+  .stat .num {
+    font-weight: 900;
+    font-size: 1.05rem;
+  }
+
+  .stat .cap {
+    color: var(--muted);
+    font-size: 0.74rem;
+    margin-top: 2px;
+  }
+
+  .status {
+    margin-top: 12px;
+    padding: 11px;
+    border-radius: 12px;
+    background: rgba(88,166,255,0.1);
+    border: 1px solid rgba(88,166,255,0.22);
+    color: #cfe6ff;
+    font-size: 0.92rem;
+    line-height: 1.35;
+  }
+
+  .status.win {
+    background: rgba(74,222,128,0.12);
+    border-color: rgba(74,222,128,0.35);
+    color: #d3ffe2;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px 2px 0;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  .key {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .swatch {
+    width: 16px;
+    height: 4px;
+    border-radius: 999px;
+  }
+
+  .true { background: var(--blue); }
+  .poly { background: var(--gold); }
+  .err { background: rgba(192,132,252,0.45); height: 10px; }
+  .gate { background: var(--green); height: 10px; width: 10px; }
+
+  .footer-note {
+    color: var(--muted);
+    font-size: 0.82rem;
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Polynomial Lens</h1>
+      <div class="tagline">Drag the center. Spend terms. Pass the accuracy gates.</div>
+    </div>
+    <div class="level-pill" id="levelPill">Level 1 / 5</div>
+  </header>
+
+  <div class="layout">
+    <div class="card graph-wrap">
+      <svg id="svg" viewBox="0 0 900 540" role="img" aria-label="Graph of true function, Taylor polynomial, error band, center, and gates">
+        <defs>
+          <clipPath id="plotClip">
+            <rect id="clipRect" x="70" y="30" width="790" height="430" rx="8"></rect>
+          </clipPath>
+        </defs>
+
+        <rect x="70" y="30" width="790" height="430" fill="#0b1220" stroke="rgba(255,255,255,0.16)" rx="8"></rect>
+
+        <g id="grid"></g>
+        <g id="invalidRegion" clip-path="url(#plotClip)"></g>
+        <g id="errorBand" clip-path="url(#plotClip)"></g>
+        <g id="axes"></g>
+        <g id="gates" clip-path="url(#plotClip)"></g>
+
+        <path id="truePath" clip-path="url(#plotClip)" fill="none" stroke="#58a6ff" stroke-width="3"></path>
+        <path id="polyPath" clip-path="url(#plotClip)" fill="none" stroke="#ffcb4c" stroke-width="3.5"></path>
+
+        <g id="centerLayer" clip-path="url(#plotClip)">
+          <line id="centerLine" y1="30" y2="460" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="6 6" opacity="0.65"></line>
+          <circle id="centerPoint" r="8" fill="#ffffff" stroke="#ffcb4c" stroke-width="3" style="cursor: grab;"></circle>
+        </g>
+
+        <text id="xLabel" x="858" y="487" fill="#aab7d1" font-size="14">x</text>
+        <text id="yLabel" x="50" y="38" fill="#aab7d1" font-size="14">y</text>
+      </svg>
+
+      <div class="legend">
+        <span class="key"><span class="swatch true"></span>true function</span>
+        <span class="key"><span class="swatch poly"></span>Taylor polynomial</span>
+        <span class="key"><span class="swatch err"></span>vertical error</span>
+        <span class="key"><span class="swatch gate"></span>accuracy gate</span>
+      </div>
+    </div>
+
+    <aside class="card controls">
+      <div class="level-title" id="levelTitle"></div>
+      <div class="mini" id="levelDesc"></div>
+
+      <div class="row">
+        <label for="centerSlider">
+          Center <strong id="centerValue">0.00</strong>
+        </label>
+        <input id="centerSlider" type="range" min="-1" max="1" step="0.01" value="0" />
+      </div>
+
+      <div class="row">
+        <label>
+          Degree / term budget
+          <strong id="budgetText">3 uses 4/4 terms</strong>
+        </label>
+        <div class="degree-controls">
+          <button id="minusDegree" aria-label="Decrease degree">−</button>
+          <div class="degree-box" id="degreeBox">degree 3</div>
+          <button id="plusDegree" aria-label="Increase degree">+</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <label>
+          Gate error meter
+          <strong id="errorText">—</strong>
+        </label>
+        <div class="meter">
+          <div class="fill" id="errorFill"></div>
+        </div>
+      </div>
+
+      <div class="row">
+        <label>
+          Lens stability
+          <strong id="stabilityText">—</strong>
+        </label>
+        <div class="meter">
+          <div class="fill" id="stabilityFill"></div>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="num" id="gateCount">0/0</div>
+          <div class="cap">gates passed</div>
+        </div>
+        <div class="stat">
+          <div class="num" id="bonus">—</div>
+          <div class="cap">efficiency bonus</div>
+        </div>
+      </div>
+
+      <div class="status" id="statusBox">
+        Match the function at the center, then aim the polynomial through the gates.
+      </div>
+
+      <div class="btn-row">
+        <button id="resetBtn">Reset</button>
+        <button id="hintBtn">Hint</button>
+        <button id="nextBtn" class="primary" disabled>Next</button>
+      </div>
+
+      <div class="hint" id="hintBox"></div>
+
+      <div class="footer-note">
+        Tip: the center point is draggable. A degree <em>n</em> Taylor polynomial uses <em>n + 1</em> terms.
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(() => {
+  const svg = document.getElementById("svg");
+  const gridG = document.getElementById("grid");
+  const axesG = document.getElementById("axes");
+  const gatesG = document.getElementById("gates");
+  const invalidRegionG = document.getElementById("invalidRegion");
+  const errorBandG = document.getElementById("errorBand");
+  const truePath = document.getElementById("truePath");
+  const polyPath = document.getElementById("polyPath");
+  const centerLine = document.getElementById("centerLine");
+  const centerPoint = document.getElementById("centerPoint");
+
+  const levelPill = document.getElementById("levelPill");
+  const levelTitle = document.getElementById("levelTitle");
+  const levelDesc = document.getElementById("levelDesc");
+  const centerSlider = document.getElementById("centerSlider");
+  const centerValue = document.getElementById("centerValue");
+  const budgetText = document.getElementById("budgetText");
+  const degreeBox = document.getElementById("degreeBox");
+  const minusDegree = document.getElementById("minusDegree");
+  const plusDegree = document.getElementById("plusDegree");
+  const errorText = document.getElementById("errorText");
+  const errorFill = document.getElementById("errorFill");
+  const stabilityText = document.getElementById("stabilityText");
+  const stabilityFill = document.getElementById("stabilityFill");
+  const gateCount = document.getElementById("gateCount");
+  const bonus = document.getElementById("bonus");
+  const statusBox = document.getElementById("statusBox");
+  const resetBtn = document.getElementById("resetBtn");
+  const hintBtn = document.getElementById("hintBtn");
+  const nextBtn = document.getElementById("nextBtn");
+  const hintBox = document.getElementById("hintBox");
+
+  const plot = { x: 70, y: 30, w: 790, h: 430 };
+
+  const levels = [
+    {
+      name: "Warm Lens: eˣ",
+      desc: "The lens is centered near 0. Add terms and watch the fit spread outward.",
+      fn: "exp",
+      xMin: -1.4, xMax: 1.4, yMin: -0.2, yMax: 4.2,
+      centerMin: -1.1, centerMax: 1.1, startCenter: 0,
+      startDegree: 1, budget: 4,
+      gates: [-0.6, 0.45, 0.8],
+      tol: 0.035,
+      stabilityRadius: 1.4,
+      hint: "For eˣ, every derivative is eˣ. Higher degree helps most near the chosen center."
+    },
+    {
+      name: "Alternating Beam: sin(x)",
+      desc: "Sine’s Taylor terms alternate between sine and cosine behavior.",
+      fn: "sin",
+      xMin: -2.1, xMax: 2.1, yMin: -1.45, yMax: 1.45,
+      centerMin: -1.4, centerMax: 1.4, startCenter: 0,
+      startDegree: 1, budget: 5,
+      gates: [-1.2, -0.55, 0.9, 1.35],
+      tol: 0.03,
+      stabilityRadius: 1.9,
+      hint: "At center 0, sin(x) begins x − x³/3! + x⁵/5! − … . Odd terms do the heavy lifting."
+    },
+    {
+      name: "Even Glow: cos(x)",
+      desc: "Cosine is flat at 0, so low-degree behavior may surprise you.",
+      fn: "cos",
+      xMin: -2.2, xMax: 2.2, yMin: -1.35, yMax: 1.35,
+      centerMin: -1.5, centerMax: 1.5, startCenter: 0,
+      startDegree: 0, budget: 5,
+      gates: [-1.35, -0.7, 0.7, 1.35],
+      tol: 0.045,
+      stabilityRadius: 2.0,
+      hint: "At center 0, cos(x) starts 1 − x²/2! + x⁴/4! − … . Even-degree terms matter here."
+    },
+    {
+      name: "Domain Edge: ln(1 + x)",
+      desc: "The function exists only for x > −1. The lens gets nervous near that wall.",
+      fn: "ln1p",
+      xMin: -1.15, xMax: 1.65, yMin: -2.4, yMax: 1.2,
+      centerMin: -0.85, centerMax: 1.25, startCenter: 0,
+      startDegree: 1, budget: 5,
+      gates: [-0.55, -0.2, 0.45, 0.8],
+      tol: 0.065,
+      stabilityRadius: 1.5,
+      hint: "ln(1+x) has a domain boundary at x = −1. A center closer to a difficult gate can beat blindly adding terms."
+    },
+    {
+      name: "Final Challenge: choose the center",
+      desc: "Same function, tiny budget. Moving the center is better than spending terms far away.",
+      fn: "exp",
+      xMin: -0.2, xMax: 2.25, yMin: 0.3, yMax: 8.2,
+      centerMin: 0.0, centerMax: 2.05, startCenter: 0.1,
+      startDegree: 2, budget: 3,
+      gates: [1.2, 1.5, 1.8],
+      tol: 0.055,
+      stabilityRadius: 1.05,
+      hint: "With only 3 terms, center the lens inside the target interval. Try near the middle gate."
+    }
+  ];
+
+  let levelIndex = 0;
+  let center = 0;
+  let degree = 1;
+  let dragging = false;
+
+  function clamp(v, lo, hi) {
+    return Math.max(lo, Math.min(hi, v));
+  }
+
+  function fmt(v, d = 2) {
+    if (!Number.isFinite(v)) return "—";
+    return v.toFixed(d);
+  }
+
+  function currentLevel() {
+    return levels[levelIndex];
+  }
+
+  function trueValue(fn, x) {
+    if (fn === "exp") return Math.exp(x);
+    if (fn === "sin") return Math.sin(x);
+    if (fn === "cos") return Math.cos(x);
+    if (fn === "ln1p") {
+      if (x <= -1) return NaN;
+      return Math.log1p(x);
+    }
+    return NaN;
+  }
+
+  function derivativeValue(fn, k, a) {
+    if (fn === "exp") return Math.exp(a);
+    if (fn === "sin") return Math.sin(a + k * Math.PI / 2);
+    if (fn === "cos") return Math.cos(a + k * Math.PI / 2);
+    if (fn === "ln1p") {
+      if (a <= -1) return NaN;
+      if (k === 0) return Math.log1p(a);
+      let sign = (k % 2 === 1) ? 1 : -1;
+      return sign * factorial(k - 1) / Math.pow(1 + a, k);
+    }
+    return NaN;
+  }
+
+  function factorial(n) {
+    let out = 1;
+    for (let i = 2; i <= n; i++) out *= i;
+    return out;
+  }
+
+  function taylorValue(fn, x, a, n) {
+    if (fn === "ln1p" && a <= -1) return NaN;
+    let sum = 0;
+    const dx = x - a;
+    for (let k = 0; k <= n; k++) {
+      const deriv = derivativeValue(fn, k, a);
+      if (!Number.isFinite(deriv)) return NaN;
+      sum += deriv * Math.pow(dx, k) / factorial(k);
+    }
+    return sum;
+  }
+
+  function xToPx(x, L = currentLevel()) {
+    return plot.x + (x - L.xMin) / (L.xMax - L.xMin) * plot.w;
+  }
+
+  function yToPx(y, L = currentLevel()) {
+    return plot.y + (L.yMax - y) / (L.yMax - L.yMin) * plot.h;
+  }
+
+  function pxToX(px, L = currentLevel()) {
+    return L.xMin + (px - plot.x) / plot.w * (L.xMax - L.xMin);
+  }
+
+  function svgPointFromEvent(evt) {
+    const pt = svg.createSVGPoint();
+    pt.x = evt.clientX;
+    pt.y = evt.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+
+  function makePath(samples, yGetter) {
+    let d = "";
+    let penDown = false;
+
+    for (const x of samples) {
+      const y = yGetter(x);
+      if (!Number.isFinite(y)) {
+        penDown = false;
+        continue;
+      }
+
+      const px = xToPx(x);
+      const py = yToPx(y);
+
+      if (!penDown) {
+        d += `M ${px.toFixed(2)} ${py.toFixed(2)} `;
+        penDown = true;
+      } else {
+        d += `L ${px.toFixed(2)} ${py.toFixed(2)} `;
+      }
+    }
+    return d;
+  }
+
+  function makeErrorBands(samples, L) {
+    errorBandG.innerHTML = "";
+
+    let segment = [];
+
+    function flush() {
+      if (segment.length < 2) {
+        segment = [];
+        return;
+      }
+
+      const top = [];
+      const bottom = [];
+
+      for (const item of segment) {
+        top.push([xToPx(item.x), yToPx(item.f)]);
+        bottom.push([xToPx(item.x), yToPx(item.p)]);
+      }
+
+      let d = `M ${top[0][0].toFixed(2)} ${top[0][1].toFixed(2)} `;
+      for (let i = 1; i < top.length; i++) {
+        d += `L ${top[i][0].toFixed(2)} ${top[i][1].toFixed(2)} `;
+      }
+      for (let i = bottom.length - 1; i >= 0; i--) {
+        d += `L ${bottom[i][0].toFixed(2)} ${bottom[i][1].toFixed(2)} `;
+      }
+      d += "Z";
+
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", d);
+      path.setAttribute("fill", "rgba(192,132,252,0.28)");
+      path.setAttribute("stroke", "rgba(192,132,252,0.18)");
+      path.setAttribute("stroke-width", "1");
+      errorBandG.appendChild(path);
+
+      segment = [];
+    }
+
+    for (const x of samples) {
+      const f = trueValue(L.fn, x);
+      const p = taylorValue(L.fn, x, center, degree);
+      if (Number.isFinite(f) && Number.isFinite(p)) {
+        segment.push({ x, f, p });
+      } else {
+        flush();
+      }
+    }
+    flush();
+  }
+
+  function drawGrid(L) {
+    gridG.innerHTML = "";
+    axesG.innerHTML = "";
+
+    const xTicks = niceTicks(L.xMin, L.xMax, 8);
+    const yTicks = niceTicks(L.yMin, L.yMax, 7);
+
+    for (const x of xTicks) {
+      const px = xToPx(x, L);
+      const line = svgEl("line", {
+        x1: px, x2: px, y1: plot.y, y2: plot.y + plot.h,
+        stroke: "rgba(255,255,255,0.10)", "stroke-width": 1
+      });
+      gridG.appendChild(line);
+
+      const txt = svgEl("text", {
+        x: px, y: plot.y + plot.h + 22,
+        fill: "#aab7d1", "font-size": 12, "text-anchor": "middle"
+      });
+      txt.textContent = roundTick(x);
+      gridG.appendChild(txt);
+    }
+
+    for (const y of yTicks) {
+      const py = yToPx(y, L);
+      const line = svgEl("line", {
+        x1: plot.x, x2: plot.x + plot.w, y1: py, y2: py,
+        stroke: "rgba(255,255,255,0.10)", "stroke-width": 1
+      });
+      gridG.appendChild(line);
+
+      const txt = svgEl("text", {
+        x: plot.x - 10, y: py + 4,
+        fill: "#aab7d1", "font-size": 12, "text-anchor": "end"
+      });
+      txt.textContent = roundTick(y);
+      gridG.appendChild(txt);
+    }
+
+    if (L.yMin <= 0 && L.yMax >= 0) {
+      axesG.appendChild(svgEl("line", {
+        x1: plot.x, x2: plot.x + plot.w, y1: yToPx(0, L), y2: yToPx(0, L),
+        stroke: "rgba(255,255,255,0.45)", "stroke-width": 1.4
+      }));
+    }
+
+    if (L.xMin <= 0 && L.xMax >= 0) {
+      axesG.appendChild(svgEl("line", {
+        x1: xToPx(0, L), x2: xToPx(0, L), y1: plot.y, y2: plot.y + plot.h,
+        stroke: "rgba(255,255,255,0.45)", "stroke-width": 1.4
+      }));
+    }
+
+    invalidRegionG.innerHTML = "";
+    if (L.fn === "ln1p" && L.xMin < -1) {
+      const x0 = plot.x;
+      const x1 = xToPx(-1, L);
+      const r = svgEl("rect", {
+        x: x0, y: plot.y, width: Math.max(0, x1 - x0), height: plot.h,
+        fill: "rgba(251,113,133,0.14)"
+      });
+      invalidRegionG.appendChild(r);
+
+      const wall = svgEl("line", {
+        x1: x1, x2: x1, y1: plot.y, y2: plot.y + plot.h,
+        stroke: "rgba(251,113,133,0.8)", "stroke-width": 2,
+        "stroke-dasharray": "5 5"
+      });
+      invalidRegionG.appendChild(wall);
+
+      const txt = svgEl("text", {
+        x: x1 + 8, y: plot.y + 20,
+        fill: "#fb7185", "font-size": 13
+      });
+      txt.textContent = "domain wall: x = −1";
+      invalidRegionG.appendChild(txt);
+    }
+  }
+
+  function niceTicks(min, max, count) {
+    const span = max - min;
+    const raw = span / count;
+    const pow = Math.pow(10, Math.floor(Math.log10(raw)));
+    const mult = raw / pow;
+    let step = pow;
+    if (mult > 5) step = 10 * pow;
+    else if (mult > 2) step = 5 * pow;
+    else if (mult > 1) step = 2 * pow;
+
+    const start = Math.ceil(min / step) * step;
+    const ticks = [];
+    for (let v = start; v <= max + 1e-9; v += step) {
+      ticks.push(Math.abs(v) < 1e-10 ? 0 : v);
+    }
+    return ticks;
+  }
+
+  function roundTick(v) {
+    if (Math.abs(v) >= 10) return v.toFixed(0);
+    if (Math.abs(v) >= 1) return v.toFixed(1).replace(/\.0$/, "");
+    return v.toFixed(2).replace(/0$/, "").replace(/\.0$/, "");
+  }
+
+  function svgEl(tag, attrs) {
+    const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      el.setAttribute(k, v);
+    }
+    return el;
+  }
+
+  function gateResults(L, testDegree = degree, testCenter = center) {
+    return L.gates.map(x => {
+      const f = trueValue(L.fn, x);
+      const p = taylorValue(L.fn, x, testCenter, testDegree);
+      const err = Math.abs(p - f);
+      return {
+        x, f, p, err,
+        ok: Number.isFinite(f) && Number.isFinite(p) && err <= L.tol
+      };
+    });
+  }
+
+  function drawGates(L, results) {
+    gatesG.innerHTML = "";
+
+    for (const g of results) {
+      const gx = xToPx(g.x, L);
+      const gyTop = yToPx(g.f + L.tol, L);
+      const gyBot = yToPx(g.f - L.tol, L);
+      const ok = g.ok;
+
+      const rect = svgEl("rect", {
+        x: gx - 10,
+        y: Math.min(gyTop, gyBot),
+        width: 20,
+        height: Math.max(8, Math.abs(gyBot - gyTop)),
+        rx: 5,
+        fill: ok ? "rgba(74,222,128,0.25)" : "rgba(251,113,133,0.18)",
+        stroke: ok ? "#4ade80" : "#fb7185",
+        "stroke-width": 2
+      });
+      gatesG.appendChild(rect);
+
+      const line = svgEl("line", {
+        x1: gx, x2: gx,
+        y1: plot.y, y2: plot.y + plot.h,
+        stroke: ok ? "rgba(74,222,128,0.35)" : "rgba(251,113,133,0.25)",
+        "stroke-width": 1,
+        "stroke-dasharray": "3 5"
+      });
+      gatesG.insertBefore(line, rect);
+
+      if (Number.isFinite(g.p)) {
+        const dot = svgEl("circle", {
+          cx: gx,
+          cy: yToPx(g.p, L),
+          r: 5.5,
+          fill: ok ? "#4ade80" : "#fb7185",
+          stroke: "#0b1220",
+          "stroke-width": 2
+        });
+        gatesG.appendChild(dot);
+      }
+
+      const label = svgEl("text", {
+        x: gx,
+        y: plot.y + 16,
+        fill: ok ? "#86efac" : "#fecdd3",
+        "font-size": 12,
+        "font-weight": 800,
+        "text-anchor": "middle"
+      });
+      label.textContent = ok ? "✓" : "gate";
+      gatesG.appendChild(label);
+    }
+  }
+
+  function computeStability(L) {
+    const maxGateDist = Math.max(...L.gates.map(x => Math.abs(x - center)));
+    let stability = 100 * (1 - maxGateDist / L.stabilityRadius);
+
+    if (L.fn === "ln1p") {
+      const radiusToWall = center + 1;
+      const nearestWallPressure = Math.max(...L.gates.map(x => Math.abs(x - center))) / Math.max(0.05, radiusToWall);
+      stability -= Math.max(0, nearestWallPressure - 0.65) * 35;
+    }
+
+    stability += Math.min(12, degree * 2);
+    return clamp(stability, 0, 100);
+  }
+
+  function lowestPassingDegree(L) {
+    for (let n = 0; n <= L.budget - 1; n++) {
+      const res = gateResults(L, n, center);
+      if (res.every(r => r.ok)) return n;
+    }
+    return null;
+  }
+
+  function update() {
+    const L = currentLevel();
+
+    center = clamp(center, L.centerMin, L.centerMax);
+    if (L.fn === "ln1p") center = Math.max(center, -0.95);
+    degree = clamp(degree, 0, L.budget - 1);
+
+    centerSlider.value = center;
+    centerValue.textContent = fmt(center, 2);
+    degreeBox.textContent = `degree ${degree}`;
+    budgetText.textContent = `${degree} uses ${degree + 1}/${L.budget} terms`;
+    minusDegree.disabled = degree <= 0;
+    plusDegree.disabled = degree >= L.budget - 1;
+
+    const N = 420;
+    const samples = [];
+    for (let i = 0; i <= N; i++) {
+      samples.push(L.xMin + (L.xMax - L.xMin) * i / N);
+    }
+
+    truePath.setAttribute("d", makePath(samples, x => trueValue(L.fn, x)));
+    polyPath.setAttribute("d", makePath(samples, x => taylorValue(L.fn, x, center, degree)));
+    makeErrorBands(samples, L);
+
+    const cy = trueValue(L.fn, center);
+    centerLine.setAttribute("x1", xToPx(center, L));
+    centerLine.setAttribute("x2", xToPx(center, L));
+    centerPoint.setAttribute("cx", xToPx(center, L));
+    centerPoint.setAttribute("cy", Number.isFinite(cy) ? yToPx(cy, L) : plot.y + plot.h / 2);
+
+    const results = gateResults(L);
+    drawGates(L, results);
+
+    const passed = results.filter(r => r.ok).length;
+    const allPassed = passed === results.length;
+    gateCount.textContent = `${passed}/${results.length}`;
+
+    const worstRatio = Math.max(...results.map(r => Number.isFinite(r.err) ? r.err / L.tol : Infinity));
+    const errorScore = Number.isFinite(worstRatio) ? clamp(100 * worstRatio, 0, 100) : 100;
+    const goodError = 100 - errorScore;
+    errorText.textContent = Number.isFinite(worstRatio)
+      ? `${fmt(Math.max(...results.map(r => r.err)), 4)} max`
+      : "domain issue";
+    errorFill.style.width = `${goodError}%`;
+    errorFill.style.background = goodError > 70 ? "#4ade80" : goodError > 35 ? "#ffcb4c" : "#fb7185";
+
+    const stability = computeStability(L);
+    stabilityText.textContent = `${Math.round(stability)}%`;
+    stabilityFill.style.width = `${stability}%`;
+    stabilityFill.style.background = stability > 70 ? "#4ade80" : stability > 35 ? "#ffcb4c" : "#fb7185";
+
+    const low = lowestPassingDegree(L);
+    if (allPassed) {
+      const saved = (L.budget - 1) - degree;
+      const efficient = low !== null && degree === low;
+      bonus.textContent = efficient ? "★ best" : (saved > 0 ? `+${saved}` : "0");
+      statusBox.className = "status win";
+      statusBox.innerHTML = efficient
+        ? "Lens locked. All gates passed with the lowest degree for this center."
+        : "Lens locked. All gates passed. Could a lower degree or better center also work?";
+      nextBtn.disabled = false;
+    } else {
+      bonus.textContent = "—";
+      statusBox.className = "status";
+      statusBox.innerHTML = "Not all gates are lit. Try moving the center or changing degree.";
+      nextBtn.disabled = true;
+    }
+  }
+
+  function loadLevel(i) {
+    levelIndex = clamp(i, 0, levels.length - 1);
+    const L = currentLevel();
+
+    levelPill.textContent = `Level ${levelIndex + 1} / ${levels.length}`;
+    levelTitle.textContent = L.name;
+    levelDesc.textContent = L.desc;
+
+    center = L.startCenter;
+    degree = L.startDegree;
+
+    centerSlider.min = L.centerMin;
+    centerSlider.max = L.centerMax;
+    centerSlider.step = 0.01;
+
+    hintBox.style.display = "none";
+    hintBox.textContent = L.hint;
+
+    drawGrid(L);
+    update();
+  }
+
+  centerSlider.addEventListener("input", () => {
+    center = parseFloat(centerSlider.value);
+    update();
+  });
+
+  minusDegree.addEventListener("click", () => {
+    degree--;
+    update();
+  });
+
+  plusDegree.addEventListener("click", () => {
+    degree++;
+    update();
+  });
+
+  resetBtn.addEventListener("click", () => {
+    const L = currentLevel();
+    center = L.startCenter;
+    degree = L.startDegree;
+    hintBox.style.display = "none";
+    update();
+  });
+
+  hintBtn.addEventListener("click", () => {
+    hintBox.style.display = hintBox.style.display === "block" ? "none" : "block";
+  });
+
+  nextBtn.addEventListener("click", () => {
+    if (levelIndex < levels.length - 1) {
+      loadLevel(levelIndex + 1);
+    } else {
+      statusBox.className = "status win";
+      statusBox.innerHTML = "Polynomial Lens complete. You found the local nature of Taylor approximation.";
+      nextBtn.disabled = true;
+    }
+  });
+
+  function startDrag(evt) {
+    dragging = true;
+    centerPoint.style.cursor = "grabbing";
+    svg.setPointerCapture?.(evt.pointerId);
+    moveDrag(evt);
+  }
+
+  function moveDrag(evt) {
+    if (!dragging) return;
+    const L = currentLevel();
+    const p = svgPointFromEvent(evt);
+    center = clamp(pxToX(p.x, L), L.centerMin, L.centerMax);
+    if (L.fn === "ln1p") center = Math.max(center, -0.95);
+    update();
+  }
+
+  function endDrag(evt) {
+    dragging = false;
+    centerPoint.style.cursor = "grab";
+    svg.releasePointerCapture?.(evt.pointerId);
+  }
+
+  centerPoint.addEventListener("pointerdown", startDrag);
+  centerLine.addEventListener("pointerdown", startDrag);
+  svg.addEventListener("pointermove", moveDrag);
+  svg.addEventListener("pointerup", endDrag);
+  svg.addEventListener("pointercancel", endDrag);
+  svg.addEventListener("pointerleave", endDrag);
+
+  loadLevel(0);
+})();
+</script>
+  <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#ececec"
+    }
+  </script>
+</body>
+</html>

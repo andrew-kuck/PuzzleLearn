@@ -1,0 +1,16 @@
+{% load static %}
+<html>
+<head>
+    <title>PuzzleLearn</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- <link rel="icon" href="{% static 'puzzle/images/logos/favicon.ico' %}" sizes="any"> -->
+    <link rel="stylesheet" href="{% static 'puzzle/css/base.css' %}">
+    {% block custom_head %}{% endblock %}
+</head>
+<body>
+    {% block content %}{% endblock %}
+    <script src="{% static 'puzzle/js/base.js' %}"></script>
+    {% block custom_js %}{% endblock %}
+</body>
+</html>

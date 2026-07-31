@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Area Harvester</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #111827;
+    --panel2: #1f2937;
+    --text: #e5e7eb;
+    --muted: #9ca3af;
+    --blue: #38bdf8;
+    --green: #34d399;
+    --red: #fb7185;
+    --purple: #c084fc;
+    --yellow: #facc15;
+    --line: #94a3b8;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: radial-gradient(circle at top, #1e293b, #020617 70%);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 18px;
+  }
+
+  .app {
+    width: min(1180px, 100%);
+    display: grid;
+    gap: 14px;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    background: rgba(15, 23, 42, 0.78);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 18px;
+    padding: 14px 18px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(1.4rem, 3vw, 2.2rem);
+    letter-spacing: 0.03em;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 270px;
+    gap: 14px;
+  }
+
+  @media (max-width: 900px) {
+    .main {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .graphCard, .sideCard {
+    background: rgba(17, 24, 39, 0.92);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 18px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.28);
+  }
+
+  .graphCard {
+    padding: 12px;
+  }
+
+  canvas {
+    width: 100%;
+    height: 540px;
+    display: block;
+    background: linear-gradient(#0b1220, #111827);
+    border-radius: 14px;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    touch-action: none;
+    cursor: crosshair;
+  }
+
+  .sideCard {
+    padding: 14px;
+    display: grid;
+    gap: 13px;
+    align-content: start;
+  }
+
+  .levelTitle {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: white;
+  }
+
+  .tiny {
+    color: var(--muted);
+    font-size: 0.82rem;
+    line-height: 1.35;
+  }
+
+  .controls {
+    display: grid;
+    gap: 10px;
+  }
+
+  label {
+    font-size: 0.86rem;
+    color: #cbd5e1;
+    display: grid;
+    gap: 5px;
+  }
+
+  select, input[type="range"] {
+    width: 100%;
+  }
+
+  select {
+    background: #020617;
+    color: var(--text);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 10px;
+    padding: 8px;
+  }
+
+  input[type="range"] {
+    accent-color: var(--green);
+  }
+
+  .buttonRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  button {
+    border: 0;
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-weight: 800;
+    color: #06111f;
+    background: var(--green);
+    cursor: pointer;
+    transition: transform 0.08s, opacity 0.15s, filter 0.15s;
+  }
+
+  button:hover {
+    filter: brightness(1.08);
+  }
+
+  button:active {
+    transform: translateY(1px);
+  }
+
+  button.secondary {
+    background: #93c5fd;
+  }
+
+  button.warn {
+    background: var(--yellow);
+  }
+
+  button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .meterWrap {
+    background: #020617;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 16px;
+    padding: 12px;
+  }
+
+  .meterTitle {
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+
+  .meterBox {
+    position: relative;
+    height: 190px;
+    width: 72px;
+    margin: 0 auto;
+    border-radius: 16px;
+    background:
+      linear-gradient(to bottom, rgba(52,211,153,0.12), transparent 48%, rgba(251,113,133,0.12)),
+      #111827;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    overflow: hidden;
+  }
+
+  .zeroLine {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    border-top: 2px solid rgba(229, 231, 235, 0.7);
+    z-index: 5;
+  }
+
+  .bar {
+    position: absolute;
+    left: 16px;
+    width: 40px;
+    border-radius: 10px;
+    z-index: 4;
+    background: var(--green);
+    box-shadow: 0 0 18px rgba(52,211,153,0.5);
+  }
+
+  .bar.negative {
+    background: var(--red);
+    box-shadow: 0 0 18px rgba(251,113,133,0.5);
+  }
+
+  .targetLine {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    border-top: 3px dashed var(--yellow);
+    z-index: 6;
+    display: none;
+  }
+
+  .targetBand {
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    background: rgba(250, 204, 21, 0.18);
+    border-top: 1px solid rgba(250,204,21,0.45);
+    border-bottom: 1px solid rgba(250,204,21,0.45);
+    z-index: 3;
+    display: none;
+  }
+
+  .readout {
+    text-align: center;
+    margin-top: 9px;
+    font-weight: 800;
+  }
+
+  .concept {
+    background: rgba(2, 6, 23, 0.65);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 14px;
+    padding: 10px;
+    display: grid;
+    gap: 8px;
+  }
+
+  .message {
+    min-height: 58px;
+    background: rgba(2, 6, 23, 0.65);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 14px;
+    padding: 10px;
+    color: #dbeafe;
+    line-height: 1.35;
+    font-size: 0.92rem;
+  }
+
+  .pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(56, 189, 248, 0.15);
+    color: #bae6fd;
+    font-weight: 700;
+    font-size: 0.78rem;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .swatch {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .box {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+
+  .positive { background: rgba(52, 211, 153, 0.75); }
+  .negative { background: rgba(251, 113, 133, 0.75); }
+  .trueArea { background: rgba(56, 189, 248, 0.38); }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Area Harvester</h1>
+      <div class="subtitle">Collect signed area. Above the x-axis adds energy; below it subtracts energy.</div>
+    </div>
+    <div class="pill" id="levelBadge">Level 1 / 5</div>
+  </header>
+
+  <div class="main">
+    <section class="graphCard">
+      <canvas id="graph" width="920" height="540" aria-label="Interactive graph of function and area approximation"></canvas>
+    </section>
+
+    <aside class="sideCard">
+      <div>
+        <div class="levelTitle" id="levelTitle"></div>
+        <div class="tiny" id="levelGoal"></div>
+      </div>
+
+      <div class="legend">
+        <span class="swatch"><span class="box positive"></span>positive</span>
+        <span class="swatch"><span class="box negative"></span>negative</span>
+        <span class="swatch"><span class="box trueArea"></span>true area after submit</span>
+      </div>
+
+      <div class="controls">
+        <label>
+          Method
+          <select id="method">
+            <option value="left">Left rectangles</option>
+            <option value="right">Right rectangles</option>
+            <option value="mid">Midpoint rectangles</option>
+            <option value="trap">Trapezoids</option>
+          </select>
+        </label>
+
+        <label>
+          Subintervals: <span id="nText"></span>
+          <input id="nRange" type="range" min="1" max="4" value="2" />
+        </label>
+
+        <div class="tiny" id="limitText"></div>
+      </div>
+
+      <div class="concept">
+        <div class="tiny" id="conceptPrompt"></div>
+        <select id="conceptSelect"></select>
+      </div>
+
+      <div class="meterWrap">
+        <div class="meterTitle">Net accumulation</div>
+        <div class="meterBox" id="meterBox">
+          <div class="targetBand" id="targetBand"></div>
+          <div class="targetLine" id="targetLine"></div>
+          <div class="zeroLine"></div>
+          <div class="bar" id="meterBar"></div>
+        </div>
+        <div class="readout" id="readout">0.00</div>
+        <div class="tiny" style="text-align:center;">units: rate × input</div>
+      </div>
+
+      <div class="buttonRow">
+        <button id="submitBtn">Submit</button>
+        <button class="secondary" id="hintBtn">Hint</button>
+      </div>
+
+      <div class="buttonRow">
+        <button class="warn" id="resetBtn">Reset</button>
+        <button id="nextBtn" disabled>Next</button>
+      </div>
+
+      <div class="message" id="message"></div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById("graph");
+  const ctx = canvas.getContext("2d");
+
+  const els = {
+    levelBadge: document.getElementById("levelBadge"),
+    levelTitle: document.getElementById("levelTitle"),
+    levelGoal: document.getElementById("levelGoal"),
+    method: document.getElementById("method"),
+    nRange: document.getElementById("nRange"),
+    nText: document.getElementById("nText"),
+    limitText: document.getElementById("limitText"),
+    conceptPrompt: document.getElementById("conceptPrompt"),
+    conceptSelect: document.getElementById("conceptSelect"),
+    meterBar: document.getElementById("meterBar"),
+    meterBox: document.getElementById("meterBox"),
+    targetLine: document.getElementById("targetLine"),
+    targetBand: document.getElementById("targetBand"),
+    readout: document.getElementById("readout"),
+    submitBtn: document.getElementById("submitBtn"),
+    hintBtn: document.getElementById("hintBtn"),
+    resetBtn: document.getElementById("resetBtn"),
+    nextBtn: document.getElementById("nextBtn"),
+    message: document.getElementById("message")
+  };
+
+  const levels = [
+    {
+      name: "Level 1: Solar Ramp",
+      goal: "Positive straight-line energy. Trapezoids are powerful here.",
+      f: x => 0.6 * x + 1,
+      a: 0, b: 4, yMin: -1, yMax: 4,
+      exact: 8.8,
+      tol: 0.15,
+      maxN: 3,
+      defaultN: 2,
+      defaultMethod: "trap",
+      concept: {
+        prompt: "For a straight-line graph, trapezoids give an approximation that is…",
+        options: [["", "choose"], ["exact", "exact"], ["under", "an underestimate"], ["over", "an overestimate"]],
+        answer: "exact"
+      },
+      hint: "A line segment already matches the top of a trapezoid. Try trapezoids."
+    },
+    {
+      name: "Level 2: Curved Orchard",
+      goal: "A positive curved function. Midpoints often beat left/right rectangles.",
+      f: x => 0.3 * x * x + 0.4,
+      a: 0, b: 4, yMin: -1, yMax: 6,
+      exact: 8,
+      tol: 0.2,
+      maxN: 4,
+      defaultN: 4,
+      defaultMethod: "mid",
+      concept: {
+        prompt: "For this concave-up curve, midpoint rectangles usually…",
+        options: [["", "choose"], ["under", "underestimate"], ["over", "overestimate"], ["cancel", "cancel to zero"]],
+        answer: "under"
+      },
+      hint: "The curve bends upward. Midpoints balance the left and right errors better than endpoints."
+    },
+    {
+      name: "Level 3: Shadow Crossing",
+      goal: "The graph crosses the x-axis. Below-axis area subtracts from the total.",
+      f: x => 0.7 * (x + 1) * (x - 2),
+      a: -2, b: 3, yMin: -2.2, yMax: 3.4,
+      exact: -7 / 12,
+      tol: 0.3,
+      maxN: 5,
+      defaultN: 5,
+      defaultMethod: "mid",
+      concept: {
+        prompt: "Energy below the x-axis should be counted as…",
+        options: [["", "choose"], ["positive", "positive"], ["negative", "negative"], ["ignored", "ignored"]],
+        answer: "negative"
+      },
+      hint: "Do not add all areas as positive. Red/purple regions lower the balance meter."
+    },
+    {
+      name: "Level 4: Wave Field",
+      goal: "Oscillation creates cancellation. Positive and negative lobes can balance.",
+      f: x => Math.sin(2 * x),
+      a: 0, b: Math.PI * 2, yMin: -1.4, yMax: 1.4,
+      exact: 0,
+      tol: 0.15,
+      maxN: 6,
+      defaultN: 4,
+      defaultMethod: "trap",
+      concept: {
+        prompt: "If equal positive and negative signed areas occur, the net integral can…",
+        options: [["", "choose"], ["double", "double"], ["cancel", "cancel"], ["alwaysPositive", "stay positive"]],
+        answer: "cancel"
+      },
+      hint: "Try partition points at symmetric wave landmarks: zeros, peaks, and valleys."
+    },
+    {
+      name: "Level 5: Challenge Harvest",
+      goal: "Only four panels. Drag partitions strategically where the curve changes fastest.",
+      f: x =>
+        1.2 * Math.exp(-8 * (x - 0.8) * (x - 0.8))
+        - 1.0 * Math.exp(-14 * (x - 2.2) * (x - 2.2))
+        + 0.35 * Math.sin(3 * x)
+        + 0.2,
+      a: 0, b: 3.2, yMin: -1.2, yMax: 1.7,
+      exact: null,
+      tol: 0.25,
+      maxN: 4,
+      defaultN: 4,
+      defaultMethod: "mid",
+      concept: {
+        prompt: "With few panels, smart partitions should be…",
+        options: [["", "choose"], ["uniformOnly", "always equally spaced"], ["strategic", "narrower where the graph changes fast"], ["random", "randomly placed"]],
+        answer: "strategic"
+      },
+      hint: "Use narrower intervals near the positive bump and negative dip. Midpoints are a good first try."
+    }
+  ];
+
+  const graph = {
+    left: 58,
+    right: 24,
+    top: 28,
+    bottom: 48
+  };
+
+  let levelIndex = 0;
+  let level = levels[0];
+  let parts = [];
+  let submitted = false;
+  let passed = false;
+  let dragging = -1;
+  let trueValue = 0;
+
+  function highResIntegral(f, a, b) {
+    let n = 6000;
+    if (n % 2) n++;
+    const h = (b - a) / n;
+    let sum = f(a) + f(b);
+    for (let i = 1; i < n; i++) {
+      sum += f(a + i * h) * (i % 2 ? 4 : 2);
+    }
+    return sum * h / 3;
+  }
+
+  function xToPx(x) {
+    return graph.left + (x - level.a) / (level.b - level.a) * (canvas.width - graph.left - graph.right);
+  }
+
+  function yToPx(y) {
+    return graph.top + (level.yMax - y) / (level.yMax - level.yMin) * (canvas.height - graph.top - graph.bottom);
+  }
+
+  function pxToX(px) {
+    return level.a + (px - graph.left) / (canvas.width - graph.left - graph.right) * (level.b - level.a);
+  }
+
+  function resetParts(n = level.defaultN) {
+    parts = [];
+    for (let i = 0; i <= n; i++) {
+      parts.push(level.a + (level.b - level.a) * i / n);
+    }
+  }
+
+  function computeApprox() {
+    const f = level.f;
+    const method = els.method.value;
+    let total = 0;
+
+    for (let i = 0; i < parts.length - 1; i++) {
+      const x0 = parts[i], x1 = parts[i + 1];
+      const h = x1 - x0;
+
+      if (method === "left") total += f(x0) * h;
+      else if (method === "right") total += f(x1) * h;
+      else if (method === "mid") total += f((x0 + x1) / 2) * h;
+      else total += ((f(x0) + f(x1)) / 2) * h;
+    }
+
+    return total;
+  }
+
+  function drawGrid() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#0b1220";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const plotW = canvas.width - graph.left - graph.right;
+    const plotH = canvas.height - graph.top - graph.bottom;
+
+    ctx.strokeStyle = "rgba(148,163,184,0.15)";
+    ctx.lineWidth = 1;
+
+    for (let i = 0; i <= 8; i++) {
+      const x = graph.left + plotW * i / 8;
+      ctx.beginPath();
+      ctx.moveTo(x, graph.top);
+      ctx.lineTo(x, canvas.height - graph.bottom);
+      ctx.stroke();
+    }
+
+    for (let i = 0; i <= 8; i++) {
+      const y = graph.top + plotH * i / 8;
+      ctx.beginPath();
+      ctx.moveTo(graph.left, y);
+      ctx.lineTo(canvas.width - graph.right, y);
+      ctx.stroke();
+    }
+
+    const axisY = yToPx(0);
+    ctx.strokeStyle = "rgba(229,231,235,0.9)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(graph.left, axisY);
+    ctx.lineTo(canvas.width - graph.right, axisY);
+    ctx.stroke();
+
+    const axisX = xToPx(0);
+    if (axisX >= graph.left && axisX <= canvas.width - graph.right) {
+      ctx.beginPath();
+      ctx.moveTo(axisX, graph.top);
+      ctx.lineTo(axisX, canvas.height - graph.bottom);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = "#cbd5e1";
+    ctx.font = "12px system-ui";
+    ctx.fillText("x-axis", canvas.width - graph.right - 45, axisY - 7);
+  }
+
+  function drawTrueArea() {
+    if (!submitted) return;
+
+    const n = 300;
+    const axis = yToPx(0);
+    for (let i = 0; i < n; i++) {
+      const x0 = level.a + (level.b - level.a) * i / n;
+      const x1 = level.a + (level.b - level.a) * (i + 1) / n;
+      const xm = (x0 + x1) / 2;
+      const ym = level.f(xm);
+
+      ctx.fillStyle = ym >= 0 ? "rgba(56,189,248,0.25)" : "rgba(192,132,252,0.25)";
+      ctx.beginPath();
+      ctx.moveTo(xToPx(x0), axis);
+      ctx.lineTo(xToPx(x0), yToPx(level.f(x0)));
+      ctx.lineTo(xToPx(x1), yToPx(level.f(x1)));
+      ctx.lineTo(xToPx(x1), axis);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  function drawApprox() {
+    const f = level.f;
+    const method = els.method.value;
+    const axis = yToPx(0);
+
+    for (let i = 0; i < parts.length - 1; i++) {
+      const x0 = parts[i], x1 = parts[i + 1];
+      const px0 = xToPx(x0), px1 = xToPx(x1);
+      let contribution = 0;
+
+      ctx.beginPath();
+
+      if (method === "trap") {
+        const y0 = f(x0), y1 = f(x1);
+        contribution = ((y0 + y1) / 2) * (x1 - x0);
+
+        ctx.moveTo(px0, axis);
+        ctx.lineTo(px0, yToPx(y0));
+        ctx.lineTo(px1, yToPx(y1));
+        ctx.lineTo(px1, axis);
+      } else {
+        let xs = x0;
+        if (method === "right") xs = x1;
+        if (method === "mid") xs = (x0 + x1) / 2;
+
+        const y = f(xs);
+        contribution = y * (x1 - x0);
+
+        ctx.moveTo(px0, axis);
+        ctx.lineTo(px0, yToPx(y));
+        ctx.lineTo(px1, yToPx(y));
+        ctx.lineTo(px1, axis);
+      }
+
+      ctx.closePath();
+      ctx.fillStyle = contribution >= 0 ? "rgba(52,211,153,0.42)" : "rgba(251,113,133,0.42)";
+      ctx.strokeStyle = contribution >= 0 ? "rgba(52,211,153,0.95)" : "rgba(251,113,133,0.95)";
+      ctx.lineWidth = 2;
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
+
+  function drawCurve() {
+    ctx.strokeStyle = "#f8fafc";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+
+    const steps = 700;
+    for (let i = 0; i <= steps; i++) {
+      const x = level.a + (level.b - level.a) * i / steps;
+      const px = xToPx(x);
+      const py = yToPx(level.f(x));
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+
+  function drawPartitions() {
+    const top = graph.top;
+    const bottom = canvas.height - graph.bottom;
+    const axis = yToPx(0);
+
+    for (let i = 0; i < parts.length; i++) {
+      const px = xToPx(parts[i]);
+      ctx.strokeStyle = i === 0 || i === parts.length - 1
+        ? "rgba(226,232,240,0.6)"
+        : "rgba(250,204,21,0.85)";
+      ctx.setLineDash(i === 0 || i === parts.length - 1 ? [] : [6, 5]);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(px, top);
+      ctx.lineTo(px, bottom);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      if (i > 0 && i < parts.length - 1) {
+        ctx.fillStyle = dragging === i ? "#fde68a" : "#facc15";
+        ctx.strokeStyle = "#111827";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(px, axis, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+
+    ctx.fillStyle = "#9ca3af";
+    ctx.font = "12px system-ui";
+    ctx.fillText("Drag yellow partition points", graph.left + 8, canvas.height - 18);
+  }
+
+  function drawLabels() {
+    ctx.fillStyle = "#cbd5e1";
+    ctx.font = "12px system-ui";
+
+    const axis = yToPx(0);
+    ctx.fillText(level.a.toFixed(1), graph.left - 10, axis + 22);
+    ctx.fillText(level.b.toFixed(1), canvas.width - graph.right - 24, axis + 22);
+
+    ctx.fillStyle = submitted ? "#fde68a" : "#94a3b8";
+    ctx.fillText(
+      submitted ? "True signed area revealed" : "True area hidden until Submit",
+      graph.left + 8,
+      graph.top + 18
+    );
+  }
+
+  function draw() {
+    drawGrid();
+    drawTrueArea();
+    drawApprox();
+    drawCurve();
+    drawPartitions();
+    drawLabels();
+  }
+
+  function updateMeter() {
+    const approx = computeApprox();
+    const trueAbs = Math.abs(trueValue);
+    const approxAbs = Math.abs(approx);
+    const scale = Math.max(trueAbs, approxAbs, 1) * 1.35;
+
+    const half = els.meterBox.clientHeight / 2;
+    const clamped = Math.max(-scale, Math.min(scale, approx));
+    const h = Math.abs(clamped) / scale * half;
+
+    els.meterBar.classList.toggle("negative", approx < 0);
+    els.meterBar.style.height = `${h}px`;
+
+    if (approx >= 0) {
+      els.meterBar.style.top = `${half - h}px`;
+    } else {
+      els.meterBar.style.top = `${half}px`;
+    }
+
+    els.readout.textContent = `${approx.toFixed(3)}`;
+
+    if (submitted) {
+      const t = Math.max(-scale, Math.min(scale, trueValue));
+      const targetTop = half - t / scale * half;
+      els.targetLine.style.display = "block";
+      els.targetLine.style.top = `${targetTop}px`;
+
+      const bandH = Math.max(4, level.tol / scale * half * 2);
+      els.targetBand.style.display = "block";
+      els.targetBand.style.top = `${targetTop - bandH / 2}px`;
+      els.targetBand.style.height = `${bandH}px`;
+    } else {
+      els.targetLine.style.display = "none";
+      els.targetBand.style.display = "none";
+    }
+  }
+
+  function updateAll() {
+    els.nText.textContent = `${parts.length - 1} / max ${level.maxN}`;
+    updateMeter();
+    draw();
+  }
+
+  function loadLevel(i) {
+    levelIndex = i;
+    level = levels[levelIndex];
+    trueValue = level.exact === null ? highResIntegral(level.f, level.a, level.b) : level.exact;
+    submitted = false;
+    passed = false;
+    dragging = -1;
+
+    els.levelBadge.textContent = `Level ${levelIndex + 1} / ${levels.length}`;
+    els.levelTitle.textContent = level.name;
+    els.levelGoal.textContent = level.goal;
+    els.method.value = level.defaultMethod;
+    els.nRange.max = level.maxN;
+    els.nRange.value = level.defaultN;
+    els.limitText.textContent = `Rectangle limit: ${level.maxN}. You cannot win by endlessly refining.`;
+    els.nextBtn.disabled = true;
+    els.message.innerHTML = `Reach the hidden target within tolerance. Drag yellow partition points.`;
+
+    els.conceptPrompt.textContent = level.concept.prompt;
+    els.conceptSelect.innerHTML = "";
+    level.concept.options.forEach(([value, text]) => {
+      const opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = text;
+      els.conceptSelect.appendChild(opt);
+    });
+
+    resetParts(level.defaultN);
+    updateAll();
+  }
+
+  function submit() {
+    submitted = true;
+    const approx = computeApprox();
+    const error = Math.abs(approx - trueValue);
+    const conceptOK = els.conceptSelect.value === level.concept.answer;
+    const approxOK = error <= level.tol;
+    passed = conceptOK && approxOK;
+
+    if (passed) {
+      els.message.innerHTML =
+        `✅ Harvest complete!<br>` +
+        `True integral: <b>${trueValue.toFixed(4)}</b><br>` +
+        `Error: <b>${error.toFixed(4)}</b>`;
+      els.nextBtn.disabled = levelIndex === levels.length - 1;
+      if (levelIndex === levels.length - 1) {
+        els.message.innerHTML += `<br>🏆 Final level cleared. Signed area mastered.`;
+      }
+    } else {
+      let msg = `Target revealed. True integral: <b>${trueValue.toFixed(4)}</b><br>`;
+      msg += `Error: <b>${error.toFixed(4)}</b>. Need ≤ <b>${level.tol}</b>.<br>`;
+      if (!conceptOK) msg += `Concept check needs another look. `;
+      if (!approxOK) msg += `Adjust method or drag partitions.`;
+      els.message.innerHTML = msg;
+      els.nextBtn.disabled = true;
+    }
+
+    updateAll();
+  }
+
+  function resetLevel() {
+    submitted = false;
+    passed = false;
+    els.nRange.value = level.defaultN;
+    els.method.value = level.defaultMethod;
+    els.conceptSelect.value = "";
+    els.nextBtn.disabled = true;
+    els.message.textContent = "Reset. Try a fresh harvest.";
+    resetParts(level.defaultN);
+    updateAll();
+  }
+
+  function changeN() {
+    submitted = false;
+    passed = false;
+    els.nextBtn.disabled = true;
+    resetParts(Number(els.nRange.value));
+    els.message.textContent = "Partitions reset evenly. Drag yellow points to customize.";
+    updateAll();
+  }
+
+  function eventPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left) * canvas.width / rect.width,
+      y: (e.clientY - rect.top) * canvas.height / rect.height
+    };
+  }
+
+  canvas.addEventListener("pointerdown", e => {
+    const p = eventPos(e);
+    const axis = yToPx(0);
+    dragging = -1;
+
+    for (let i = 1; i < parts.length - 1; i++) {
+      const px = xToPx(parts[i]);
+      if (Math.abs(p.x - px) < 13 && Math.abs(p.y - axis) < 35) {
+        dragging = i;
+        canvas.setPointerCapture(e.pointerId);
+        break;
+      }
+    }
+
+    updateAll();
+  });
+
+  canvas.addEventListener("pointermove", e => {
+    if (dragging < 0) return;
+    const p = eventPos(e);
+    const minGap = (level.b - level.a) * 0.035;
+    let x = pxToX(p.x);
+    x = Math.max(parts[dragging - 1] + minGap, Math.min(parts[dragging + 1] - minGap, x));
+    parts[dragging] = x;
+    submitted = false;
+    passed = false;
+    els.nextBtn.disabled = true;
+    els.message.textContent = "Partition moved. Submit to reveal the target again.";
+    updateAll();
+  });
+
+  canvas.addEventListener("pointerup", () => {
+    dragging = -1;
+    updateAll();
+  });
+
+  canvas.addEventListener("pointercancel", () => {
+    dragging = -1;
+    updateAll();
+  });
+
+  els.method.addEventListener("change", () => {
+    submitted = false;
+    passed = false;
+    els.nextBtn.disabled = true;
+    els.message.textContent = "Method changed. Watch how the harvested area changes.";
+    updateAll();
+  });
+
+  els.nRange.addEventListener("input", changeN);
+  els.submitBtn.addEventListener("click", submit);
+  els.resetBtn.addEventListener("click", resetLevel);
+
+  els.hintBtn.addEventListener("click", () => {
+    els.message.textContent = level.hint;
+  });
+
+  els.nextBtn.addEventListener("click", () => {
+    if (levelIndex < levels.length - 1) loadLevel(levelIndex + 1);
+  });
+
+  els.conceptSelect.addEventListener("change", () => {
+    if (!submitted) {
+      els.message.textContent = "Concept prediction saved. Now harvest the area.";
+    }
+  });
+
+  loadLevel(0);
+})();
+</script>
+  <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#ececec"
+    }
+  </script>
+</body>
+</html>

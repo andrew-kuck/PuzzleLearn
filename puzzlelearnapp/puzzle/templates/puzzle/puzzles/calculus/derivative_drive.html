@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>{{ puzzle_name }}</title>
+  <style>
+    :root {
+      --blue-dark: #0b3d91;
+      --blue-light: rgba(78, 157, 255, 0.28);
+      --gray-axis: #777;
+      --gray-grid: #e4e4e4;
+      --active: #ffd966;
+      --active-border: #8a6d00;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #fafafa;
+      color: #222;
+    }
+
+    .activity {
+      max-width: 760px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 1.25rem;
+      margin-bottom: 8px;
+    }
+
+    .instructions {
+      margin: 0 auto 12px;
+      max-width: 640px;
+      font-size: 0.95rem;
+      color: #444;
+    }
+
+    .progress-wrap {
+      width: 100%;
+      max-width: 680px;
+      height: 16px;
+      margin: 12px auto;
+      border: 1px solid #999;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #eee;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: #2f8f46;
+      transition: width 300ms ease;
+    }
+
+    .button-area {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px;
+      max-width: 680px;
+      margin: 8px auto 12px;
+    }
+
+    .slope-button {
+      font-size: 0.95rem;
+      line-height: 1;
+      padding: 6px 10px;
+      min-width: unset;
+      border: 1px solid #777;
+      border-radius: 6px;
+      background: #fff;
+      color: #111;
+      cursor: pointer;
+    }
+
+    .slope-button:hover {
+      background: #f1f1f1;
+    }
+
+    .slope-button.active {
+      background: var(--active);
+      border-color: var(--active-border);
+      box-shadow: 0 0 0 2px rgba(255, 217, 102, 0.35);
+    }
+
+    .slope-button:disabled {
+      cursor: default;
+      opacity: 0.7;
+    }
+
+    canvas {
+      display: block;
+      margin: 0 auto;
+      max-width: 100%;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
+    .status {
+      min-height: 1.4em;
+      margin-top: 10px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <main class="activity">
+    <h1>{{ puzzle_name }}</h1>
+
+    <p class="instructions">
+      Choose slope buttons to guide the circle from left to right. Stay inside the blue region.
+    </p>
+
+    <div class="progress-wrap" aria-label="Progress">
+      <div id="progressFill" class="progress-fill"></div>
+    </div>
+
+    <div id="buttonArea" class="button-area" aria-label="Slope choices"></div>
+
+    <canvas
+      id="graph"
+      width="680"
+      height="680"
+      aria-label="Coordinate graph with a function and a movable point"
+      role="img"
+    ></canvas>
+
+    <div style="display: none;" id="status" class="status" aria-live="polite"></div>
+  </main>
+
+  <script>
+
+    /*
+      Each inner array describes one question.
+
+      Format:
+        [
+          shouldUseSmoothFunction,
+          perpendicularBandRadius,
+          absoluteSpeed
+        ]
+
+      The third value is the circle's total speed along its current slope path,
+      not its horizontal speed.
+    */
+    const QUESTION_SETTINGS = [
+      [false, 1.00, 0.8],
+      [false, 0.75, 1.0],
+      [false, 0.5, 1.2],
+      [true, 0.5, 0.8],
+      [true, 0.5, 1.2]
+    ];
+
+    if (!QUESTION_SETTINGS.every(item =>
+      Array.isArray(item) &&
+      item.length === 3 &&
+      typeof item[0] === "boolean" &&
+      typeof item[1] === "number" &&
+      item[1] > 0 &&
+      typeof item[2] === "number" &&
+      item[2] > 0
+    )) {
+      throw new Error(
+        "Each item in QUESTION_SETTINGS must be [boolean, positiveBandRadius, positiveAbsoluteSpeed]."
+      );
+    }
+
+    const QUESTIONS_TO_COMPLETE = QUESTION_SETTINGS.length;
+
+    /*
+      Edit these constants to customize the activity.
+      Slope values are strings so fractions like "1/2" or "-3/4" can be used.
+    */
+    const SLOPE_BUTTON_VALUES = [
+      "-8", "-6", "-4", "-2", "-1",
+      "-1/2", "-1/4", "0", "1/4", "1/2",
+      "1", "2", "4", "6", "8",
+    ];
+    // const HORIZONTAL_UNITS_PER_SECOND = 0.25;
+    // const QUESTIONS_TO_COMPLETE = 5;
+
+    const X_MIN = -10;
+    const X_MAX = 10;
+    const Y_MIN = -10;
+    const Y_MAX = 10;
+
+    /*
+      Toggle function style.
+
+      true  = smooth, differentiable functions on [-10, 10]
+      false = continuous, non-smooth piecewise-linear functions
+    */
+    // const USE_SMOOTH_FUNCTIONS = true;
+    const CURVE_DRAW_SAMPLES = 900;
+    const CURVE_DISTANCE_SAMPLES = 1200;
+
+    /*
+      The graph itself is kept between -8 and 8.
+      Since the perpendicular blue band has radius 1, the full band remains visible
+      inside the -10 to 10 viewing window.
+    */
+    const FUNCTION_Y_BOUND = 8;
+
+    /*
+      This is now a perpendicular distance from the curve, not a vertical distance.
+    */
+    // const currentPerpendicularBandRadius = 0.5;
+
+    const CIRCLE_DIAMETER_UNITS = 0.5;
+    const CIRCLE_RADIUS_UNITS = CIRCLE_DIAMETER_UNITS / 2;
+
+    const canvas = document.getElementById("graph");
+    const ctx = canvas.getContext("2d");
+
+    const buttonArea = document.getElementById("buttonArea");
+    const progressFill = document.getElementById("progressFill");
+    const statusEl = document.getElementById("status");
+
+    const plot = {
+      left: 20,
+      top: 20,
+      size: 640
+    };
+
+    const unitPx = plot.size / (X_MAX - X_MIN);
+
+    let slopeNumbers = SLOPE_BUTTON_VALUES.map(parseSlope).filter(Number.isFinite);
+
+    if (slopeNumbers.length === 0) {
+      slopeNumbers = [0];
+    }
+
+    let functionData = null;
+    let curveSamples = [];
+    let activeButtonIndex = null;
+    let activeSlope = null;
+
+    let circleX = X_MIN;
+    let circleY = 0;
+    let circleColor = "black";
+
+    let completedQuestions = 0;
+    let mode = "waiting";
+    // modes: waiting, moving, lost, won, complete
+
+    let lastTime = null;
+    let completionCalled = false;
+
+    let currentQuestionUsesSmoothFunction = false;
+    let currentPerpendicularBandRadius = 1;
+    let currentAbsoluteSpeed = 0.5;
+
+    if (typeof window.activityComplete !== "function") {
+      window.activityComplete = function () {
+        console.log("activityComplete() called");
+      };
+    }
+
+    function parseSlope(value) {
+      const text = String(value).trim().replace("−", "-");
+
+      if (text.includes("/")) {
+        const parts = text.split("/");
+        if (parts.length !== 2) return NaN;
+
+        const numerator = Number(parts[0].trim());
+        const denominator = Number(parts[1].trim());
+
+        if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0) {
+          return NaN;
+        }
+
+        return numerator / denominator;
+      }
+
+      return Number(text);
+    }
+
+    function toCanvasX(x) {
+      return plot.left + (x - X_MIN) * unitPx;
+    }
+
+    function toCanvasY(y) {
+      return plot.top + (Y_MAX - y) * unitPx;
+    }
+
+    function randomBetween(a, b) {
+      return a + Math.random() * (b - a);
+    }
+
+    function randomChoice(array) {
+      return array[Math.floor(Math.random() * array.length)];
+    }
+
+    function generateRandomFunction() {
+      if (currentQuestionUsesSmoothFunction) {
+        return generateSmoothFunction();
+      } else {
+        return generatePiecewiseLinearFunction();
+      }
+    }
+
+    function generateSmoothFunction() {
+      /*
+        Smooth function type.
+
+        f(x) is a random finite sum of sine/cosine terms:
+
+          f(x) = offset + scale * Σ aᵢ sin(kᵢx + pᵢ) + bᵢ cos(kᵢx + qᵢ)
+
+        This is smooth and differentiable for all x.
+        The function is scaled so values stay between -8 and 8.
+      */
+
+      const maxAttempts = 300;
+
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const termCount = Math.floor(randomBetween(2, 5));
+
+        const possibleFrequencies = [0.18, 0.25, 0.35, 0.45, 0.6, 0.8];
+
+        const terms = [];
+
+        for (let i = 0; i < termCount; i++) {
+          terms.push({
+            sinAmp: randomBetween(-1, 1),
+            cosAmp: randomBetween(-1, 1),
+            frequency: randomChoice(possibleFrequencies),
+            sinPhase: randomBetween(0, Math.PI * 2),
+            cosPhase: randomBetween(0, Math.PI * 2)
+          });
+        }
+
+        const offset = randomBetween(-1.25, 1.25);
+
+        function rawAt(x) {
+          let total = 0;
+
+          for (const term of terms) {
+            total += term.sinAmp * Math.sin(term.frequency * x + term.sinPhase);
+            total += term.cosAmp * Math.cos(term.frequency * x + term.cosPhase);
+          }
+
+          return total;
+        }
+
+        let rawMaxAbs = 0;
+
+        for (let i = 0; i <= 1000; i++) {
+          const x = X_MIN + i * (X_MAX - X_MIN) / 1000;
+          rawMaxAbs = Math.max(rawMaxAbs, Math.abs(rawAt(x)));
+        }
+
+        if (rawMaxAbs < 0.001) {
+          continue;
+        }
+
+        const targetAmplitude = randomBetween(4.5, 7.25);
+        const scale = targetAmplitude / rawMaxAbs;
+
+        const data = {
+          type: "smooth",
+          terms,
+          offset,
+          scale
+        };
+
+        if (validateFunctionBounds(data)) {
+          return data;
+        }
+      }
+
+      /*
+        Fallback smooth function, safely between -8 and 8.
+      */
+      return {
+        type: "smooth",
+        terms: [
+          {
+            sinAmp: 1,
+            cosAmp: 0.35,
+            frequency: 0.45,
+            sinPhase: 0,
+            cosPhase: 1.1
+          }
+        ],
+        offset: 0,
+        scale: 4
+      };
+    }
+
+    function generatePiecewiseLinearFunction() {
+      /*
+        Continuous but generally non-smooth piecewise-linear function.
+        Corners occur where line segments meet.
+      */
+
+      const maxAttempts = 500;
+
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const points = [];
+
+        let x = X_MIN;
+        let y = randomBetween(-3, 3);
+
+        points.push({ x, y });
+
+        let guard = 0;
+        let failed = false;
+
+        while (x < X_MAX - 1e-9 && guard < 200) {
+          guard++;
+
+          const remaining = X_MAX - x;
+          let dx = Math.min(randomBetween(0.75, 2.25), remaining);
+
+          let candidates = slopeNumbers.filter(m => {
+            const nextY = y + m * dx;
+            return nextY >= -FUNCTION_Y_BOUND && nextY <= FUNCTION_Y_BOUND;
+          });
+
+          if (candidates.length === 0) {
+            const trialDXs = [
+              Math.min(1.0, remaining),
+              Math.min(0.75, remaining),
+              Math.min(0.5, remaining),
+              Math.min(0.25, remaining),
+              Math.min(0.1, remaining)
+            ];
+
+            let found = false;
+
+            for (const trialDX of trialDXs) {
+              candidates = slopeNumbers.filter(m => {
+                const nextY = y + m * trialDX;
+                return nextY >= -FUNCTION_Y_BOUND && nextY <= FUNCTION_Y_BOUND;
+              });
+
+              if (candidates.length > 0) {
+                dx = trialDX;
+                found = true;
+                break;
+              }
+            }
+
+            if (!found) {
+              failed = true;
+              break;
+            }
+          }
+
+          let preferred = candidates;
+
+          if (y > FUNCTION_Y_BOUND * 0.55) {
+            preferred = candidates.filter(m => m < 0);
+          } else if (y < -FUNCTION_Y_BOUND * 0.55) {
+            preferred = candidates.filter(m => m > 0);
+          }
+
+          if (preferred.length === 0) {
+            preferred = candidates;
+          }
+
+          const m = randomChoice(preferred);
+
+          x += dx;
+
+          if (x > X_MAX) {
+            x = X_MAX;
+          }
+
+          y = y + m * dx;
+
+          points.push({ x, y });
+        }
+
+        if (!failed && points.length > 2 && Math.abs(points[points.length - 1].x - X_MAX) < 1e-6) {
+          return {
+            type: "piecewise",
+            points
+          };
+        }
+      }
+
+      return {
+        type: "piecewise",
+        points: [
+          { x: -10, y: 0 },
+          { x: -5, y: 5 },
+          { x: 0, y: -2 },
+          { x: 5, y: 4 },
+          { x: 10, y: 0 }
+        ]
+      };
+    }
+
+    function fAt(x) {
+      if (!functionData) {
+        return 0;
+      }
+
+      if (functionData.type === "smooth") {
+        return smoothFAt(functionData, x);
+      }
+
+      return piecewiseFAt(functionData.points, x);
+    }
+
+    function smoothFAt(data, x) {
+      let total = 0;
+
+      for (const term of data.terms) {
+        total += term.sinAmp * Math.sin(term.frequency * x + term.sinPhase);
+        total += term.cosAmp * Math.cos(term.frequency * x + term.cosPhase);
+      }
+
+      return data.offset + data.scale * total;
+    }
+
+    function piecewiseFAt(points, x) {
+      if (x <= points[0].x) {
+        return points[0].y;
+      }
+
+      const last = points[points.length - 1];
+
+      if (x >= last.x) {
+        return last.y;
+      }
+
+      for (let i = 0; i < points.length - 1; i++) {
+        const p1 = points[i];
+        const p2 = points[i + 1];
+
+        if (x >= p1.x && x <= p2.x) {
+          const t = (x - p1.x) / (p2.x - p1.x);
+          return p1.y + t * (p2.y - p1.y);
+        }
+      }
+
+      return 0;
+    }
+
+    function slopeAt(x) {
+      if (!functionData) {
+        return 0;
+      }
+
+      if (functionData.type === "smooth") {
+        return smoothSlopeAt(functionData, x);
+      }
+
+      return piecewiseSlopeAt(functionData.points, x);
+    }
+
+    function smoothSlopeAt(data, x) {
+      /*
+        Exact derivative of the smooth sine/cosine function.
+      */
+
+      let total = 0;
+
+      for (const term of data.terms) {
+        total += term.sinAmp * term.frequency * Math.cos(term.frequency * x + term.sinPhase);
+        total += -term.cosAmp * term.frequency * Math.sin(term.frequency * x + term.cosPhase);
+      }
+
+      return data.scale * total;
+    }
+
+    function piecewiseSlopeAt(points, x) {
+      if (x <= points[0].x) {
+        const p1 = points[0];
+        const p2 = points[1];
+        return (p2.y - p1.y) / (p2.x - p1.x);
+      }
+
+      for (let i = 0; i < points.length - 1; i++) {
+        const p1 = points[i];
+        const p2 = points[i + 1];
+
+        if (x >= p1.x && x <= p2.x) {
+          return (p2.y - p1.y) / (p2.x - p1.x);
+        }
+      }
+
+      const n = points.length;
+      const p1 = points[n - 2];
+      const p2 = points[n - 1];
+
+      return (p2.y - p1.y) / (p2.x - p1.x);
+    }
+
+    function validateFunctionBounds(data) {
+      for (let i = 0; i <= 1200; i++) {
+        const x = X_MIN + i * (X_MAX - X_MIN) / 1200;
+
+        let y;
+
+        if (data.type === "smooth") {
+          y = smoothFAt(data, x);
+        } else {
+          y = piecewiseFAt(data.points, x);
+        }
+
+        if (y < -FUNCTION_Y_BOUND || y > FUNCTION_Y_BOUND) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    function rebuildCurveSamples() {
+      curveSamples = [];
+
+      for (let i = 0; i <= CURVE_DISTANCE_SAMPLES; i++) {
+        const x = X_MIN + i * (X_MAX - X_MIN) / CURVE_DISTANCE_SAMPLES;
+        const y = fAt(x);
+
+        curveSamples.push({ x, y });
+      }
+    }
+
+    function getOffsetPoint(x, side) {
+      /*
+        For y = f(x), tangent direction is proportional to <1, f'(x)>.
+
+        A perpendicular unit normal vector is:
+
+          <-f'(x), 1> / sqrt(1 + f'(x)^2)
+
+        Multiplying by currentPerpendicularBandRadius gives an offset exactly
+        1 coordinate unit away from the graph, perpendicular to the tangent.
+      */
+      const y = fAt(x);
+      const m = slopeAt(x);
+
+      const length = Math.sqrt(1 + m * m);
+      const nx = -m / length;
+      const ny = 1 / length;
+
+      return {
+        x: x + side * currentPerpendicularBandRadius * nx,
+        y: y + side * currentPerpendicularBandRadius * ny
+      };
+    }
+
+    function distancePointToSegment(px, py, ax, ay, bx, by) {
+      const vx = bx - ax;
+      const vy = by - ay;
+
+      const wx = px - ax;
+      const wy = py - ay;
+
+      const lenSq = vx * vx + vy * vy;
+
+      if (lenSq === 0) {
+        const dx = px - ax;
+        const dy = py - ay;
+        return Math.sqrt(dx * dx + dy * dy);
+      }
+
+      let t = (wx * vx + wy * vy) / lenSq;
+      t = Math.max(0, Math.min(1, t));
+
+      const closestX = ax + t * vx;
+      const closestY = ay + t * vy;
+
+      const dx = px - closestX;
+      const dy = py - closestY;
+
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function distanceToFunctionPolyline(px, py) {
+      let best = Infinity;
+
+      for (let i = 0; i < curveSamples.length - 1; i++) {
+        const p1 = curveSamples[i];
+        const p2 = curveSamples[i + 1];
+
+        const d = distancePointToSegment(px, py, p1.x, p1.y, p2.x, p2.y);
+
+        if (d < best) {
+          best = d;
+        }
+      }
+
+      return best;
+    }
+
+    function drawGrid() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "#e4e4e4";
+
+      for (let x = X_MIN; x <= X_MAX; x++) {
+        ctx.beginPath();
+        ctx.moveTo(toCanvasX(x), toCanvasY(Y_MIN));
+        ctx.lineTo(toCanvasX(x), toCanvasY(Y_MAX));
+        ctx.stroke();
+      }
+
+      for (let y = Y_MIN; y <= Y_MAX; y++) {
+        ctx.beginPath();
+        ctx.moveTo(toCanvasX(X_MIN), toCanvasY(y));
+        ctx.lineTo(toCanvasX(X_MAX), toCanvasY(y));
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = "#777";
+      ctx.lineWidth = 1.5;
+
+      ctx.beginPath();
+      ctx.moveTo(toCanvasX(X_MIN), toCanvasY(0));
+      ctx.lineTo(toCanvasX(X_MAX), toCanvasY(0));
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(toCanvasX(0), toCanvasY(Y_MIN));
+      ctx.lineTo(toCanvasX(0), toCanvasY(Y_MAX));
+      ctx.stroke();
+
+      ctx.fillStyle = "#777";
+      ctx.font = "12px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+
+      [-10, -5, 0, 5, 10].forEach(x => {
+        ctx.fillText(String(x), toCanvasX(x), toCanvasY(0) + 5);
+      });
+
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+
+      [-10, -5, 0, 5, 10].forEach(y => {
+        if (y !== 0) {
+          ctx.fillText(String(y), toCanvasX(0) - 6, toCanvasY(y));
+        }
+      });
+
+      ctx.textAlign = "left";
+      ctx.textBaseline = "bottom";
+      ctx.fillText("x", toCanvasX(X_MAX) - 10, toCanvasY(0) - 6);
+
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
+      ctx.fillText("y", toCanvasX(0) + 6, toCanvasY(Y_MAX) + 4);
+
+      ctx.restore();
+    }
+
+    function clipToGraphArea() {
+      ctx.beginPath();
+      ctx.rect(
+        toCanvasX(X_MIN),
+        toCanvasY(Y_MAX),
+        plot.size,
+        plot.size
+      );
+      ctx.clip();
+    }
+
+    function drawShadedRegion() {
+      ctx.save();
+      clipToGraphArea();
+
+      ctx.strokeStyle = "rgba(78, 157, 255, 0.28)";
+      ctx.lineWidth = 2 * currentPerpendicularBandRadius * unitPx;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+
+      ctx.beginPath();
+
+      for (let i = 0; i <= CURVE_DRAW_SAMPLES; i++) {
+        const x = X_MIN + i * (X_MAX - X_MIN) / CURVE_DRAW_SAMPLES;
+        const y = fAt(x);
+
+        if (i === 0) {
+          ctx.moveTo(toCanvasX(x), toCanvasY(y));
+        } else {
+          ctx.lineTo(toCanvasX(x), toCanvasY(y));
+        }
+      }
+
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawFunctionCurve() {
+      ctx.save();
+      clipToGraphArea();
+
+      ctx.strokeStyle = "#0b3d91";
+      ctx.lineWidth = 3;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+
+      ctx.beginPath();
+
+      for (let i = 0; i <= CURVE_DRAW_SAMPLES; i++) {
+        const x = X_MIN + i * (X_MAX - X_MIN) / CURVE_DRAW_SAMPLES;
+        const y = fAt(x);
+
+        if (i === 0) {
+          ctx.moveTo(toCanvasX(x), toCanvasY(y));
+        } else {
+          ctx.lineTo(toCanvasX(x), toCanvasY(y));
+        }
+      }
+
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawCircle() {
+      ctx.save();
+
+      let color = circleColor;
+
+      if (mode === "won") {
+        const flashOn = Math.floor(Date.now() / 150) % 2 === 0;
+        color = flashOn ? "#00b050" : "#9be59b";
+      }
+
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(
+        toCanvasX(circleX),
+        toCanvasY(circleY),
+        CIRCLE_RADIUS_UNITS * unitPx,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function draw() {
+      drawGrid();
+      drawShadedRegion();
+      drawFunctionCurve();
+      drawCircle();
+    }
+
+    function makeButtons() {
+      buttonArea.innerHTML = "";
+
+      SLOPE_BUTTON_VALUES.forEach((label, index) => {
+        const button = document.createElement("button");
+        button.className = "slope-button";
+        button.type = "button";
+        button.textContent = label;
+        button.setAttribute("aria-label", `Use slope ${label}`);
+
+        button.addEventListener("click", () => {
+          if (mode === "lost" || mode === "won" || mode === "complete") {
+            return;
+          }
+
+          activeButtonIndex = index;
+          activeSlope = parseSlope(SLOPE_BUTTON_VALUES[index]);
+          mode = "moving";
+          circleColor = "black";
+          updateButtons();
+
+          statusEl.textContent = `Active slope: ${label}`;
+        });
+
+        buttonArea.appendChild(button);
+      });
+
+      updateButtons();
+    }
+
+    function updateButtons() {
+      const buttons = buttonArea.querySelectorAll(".slope-button");
+
+      buttons.forEach((button, index) => {
+        button.classList.toggle("active", index === activeButtonIndex);
+        button.disabled = mode === "lost" || mode === "won" || mode === "complete";
+      });
+    }
+
+    function updateProgress() {
+      const percent = 100 * completedQuestions / QUESTIONS_TO_COMPLETE;
+      progressFill.style.width = `${percent}%`;
+    }
+
+    function startNewQuestion() {
+      const questionSettings = QUESTION_SETTINGS[completedQuestions];
+
+      currentQuestionUsesSmoothFunction = questionSettings[0];
+      currentPerpendicularBandRadius = questionSettings[1];
+      currentAbsoluteSpeed = questionSettings[2];
+
+      functionData = generateRandomFunction();
+      rebuildCurveSamples();
+
+      circleX = X_MIN;
+      circleY = fAt(X_MIN);
+      circleColor = "black";
+
+      activeButtonIndex = null;
+      activeSlope = null;
+      mode = "waiting";
+
+      const functionStyle = currentQuestionUsesSmoothFunction
+        ? "smooth"
+        : "non-smooth";
+
+      statusEl.textContent =
+        `Question ${completedQuestions + 1} of ${QUESTIONS_TO_COMPLETE}: ` +
+        `choose a slope to begin. ` +
+        `Function style: ${functionStyle}. ` +
+        `Band radius: ${currentPerpendicularBandRadius}. ` +
+        `Speed: ${currentAbsoluteSpeed} units/sec.`;
+
+      updateButtons();
+      draw();
+    }
+
+    function loseQuestion() {
+      mode = "lost";
+      circleColor = "red";
+      activeButtonIndex = null;
+      activeSlope = null;
+      statusEl.textContent = "The circle left the blue band. Resetting...";
+      updateButtons();
+
+      setTimeout(() => {
+        if (mode !== "lost") return;
+
+        circleX = X_MIN;
+        circleY = fAt(X_MIN);
+        circleColor = "black";
+        mode = "waiting";
+        statusEl.textContent = "Try again: choose a slope to begin.";
+        updateButtons();
+      }, 1000);
+    }
+
+    function winQuestion() {
+      mode = "won";
+      activeButtonIndex = null;
+      activeSlope = null;
+      completedQuestions++;
+      updateProgress();
+
+      statusEl.textContent = "Nice! You made it to x = 10.";
+
+      updateButtons();
+
+      setTimeout(() => {
+        if (completedQuestions >= QUESTIONS_TO_COMPLETE) {
+          mode = "complete";
+          statusEl.textContent = "Activity complete!";
+          updateButtons();
+
+          if (!completionCalled) {
+            completionCalled = true;
+            activityComplete();
+          }
+        } else {
+          startNewQuestion();
+        }
+      }, 1200);
+    }
+
+    function update(dt) {
+      if (mode !== "moving" || activeSlope === null || !Number.isFinite(activeSlope)) {
+        return;
+      }
+
+      const directionLength = Math.sqrt(1 + activeSlope * activeSlope);
+
+      const dx = currentAbsoluteSpeed * dt / directionLength;
+      const dy = activeSlope * dx;
+
+      circleX += dx;
+      circleY += dy;
+
+      if (circleX > X_MAX) {
+        circleX = X_MAX;
+      }
+
+      /*
+        The light blue band is a perpendicular-distance band of radius 1.
+
+        "Completely exits" means the circle no longer overlaps the band.
+        Since the circle radius is 0.25 coordinate units, loss occurs only when
+        the distance from the circle center to the function is greater than 1.25.
+      */
+      const distanceToCurve = distanceToFunctionPolyline(circleX, circleY);
+
+      if (distanceToCurve > currentPerpendicularBandRadius + CIRCLE_RADIUS_UNITS) {
+        loseQuestion();
+        return;
+      }
+
+      if (circleX >= X_MAX) {
+        winQuestion();
+      }
+    }
+
+    function animationLoop(timestamp) {
+      if (lastTime === null) {
+        lastTime = timestamp;
+      }
+
+      let dt = (timestamp - lastTime) / 1000;
+      lastTime = timestamp;
+
+      // Prevent giant jumps if the tab was inactive.
+      dt = Math.min(dt, 0.05);
+
+      update(dt);
+      draw();
+
+      requestAnimationFrame(animationLoop);
+    }
+
+    makeButtons();
+    updateProgress();
+    startNewQuestion();
+    requestAnimationFrame(animationLoop);
+  </script>
+  <script src="/static/puzzle/js/activity.js"></script>
+  <script>autoZoom();</script>
+</body>
+</html>

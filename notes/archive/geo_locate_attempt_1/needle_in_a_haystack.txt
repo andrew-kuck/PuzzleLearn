@@ -1,0 +1,1222 @@
+create an activity using html, css, and javascript. using a freely available maps api, select a random address from anywhere in the world. display the address in a banner at the top of the screen, so that it goes from general/large location (continent) to specific/small location (street address). fill the rest of the page with a map of the world without any words or political markings. have the continent part of the address in the top banner bolded. the user must click on the correct continent. after their selection, change the map to display only the correct continent, with only the lines that separate countries. now the country part of the address is bolded and the user must select the correct country. after selecting a country, the correct country fills the screen and the province/state part of the address at the top is highlighted. after selecting a province/state, the correct province/state fills the screen and the city part of the address is highlighted. omit this province/state step if the country does not have provinces or states. if the user guesses wrong at any of these stages, draw a line from the center of the region of their guess to the center of the correct region. indicate the real-world distance between the two centers and add this to a running error total that is shown in the top banner. next the user must guess where the city is located. after guessing, draw a line from their guess to the actual city location. indicate the real-world distance between the two locations and add this to a running error total that is shown in the top banner. then zoom into the city and highlight the street part of the address. at this point the user must select where in the city they think the address is. after guessing, draw a line from the user's guessed location to the actual address location, and indicate the real-world distance between the two points. this distance is added to the running error total, which is then shown to the user as their final score. they are at the same time instructed to refresh the screen if they want to play again.
+
+if there is not a region/state that is distinct from the city or country, then do not include that in the address at the top at all. also, after guessing the location of a city, the screen should not initially zoom in. it should show the line from the user guess to the actual location of the city, indicating the distance between the two. then after a brief pause, this line and the user guess should disappear and the screen should zoom to show the only the city. the entire city should be shown on the screen, even if this removes most of the detail. thus, when the user clicks their guess for the street address location, the user guess and actual street location will already be on the map, so the error line can be drawn between the two without any map adjustment.
+
+for errors at the continent level, country level, and state/territory level, show the error distance line before zooming in, then pause for a moment, then remove the error distance line, then and only then change the map to go to the next level of detail. also, except when it is connected to a distance error line, there does not need to be a labeled dot at the center of a geographical area, such as a dot labeled Tokyo at the center of Tokyo
+
+when selecting a continent, have the entire continent highlighted when hovering over any part of the continent. for oceania, allow the user to click on any of the ocean in between countries of oceania. instead of using global sample places, is there a way to pick random latitude and longitude and then selecting the nearest country and then the nearest city and then a random address in that city or area.
+
+create a file (in javascript or python) that loops over this most recent process of finding a random address, and therefore accumulates a list of addresses that can be added to the cache of fallback addresses
+
+Below is a complete single-file activity. Save it as `index.html` and open it in a browser.
+
+It uses:
+
+- **Leaflet** for interactive maps
+- **Natural Earth GeoJSON** for wordless continent/country shapes
+- **geoBoundaries** for province/state boundaries
+- **OpenStreetMap Overpass + Nominatim** for a random real-world street address, with a built-in fallback list if public APIs are slow/rate-limited
+- **Turf.js** for distance and geometry calculations
+
+> Note: Public map/geocoding APIs have rate limits. For a production classroom app, cache results or use your own API key/proxy.
+Absolutely — here is an updated version with those changes included.
+
+Key updates:
+
+1. **Province/state is omitted entirely** if it is not meaningfully distinct from the country or city.
+   - Example: `Asia › Singapore › Singapore › 1 Bayfront Avenue`
+   - Example: `Asia › Japan › Tokyo › 1-1 Chiyoda`
+   - Not: `Asia › Japan › Tokyo › Tokyo › 1-1 Chiyoda`
+
+2. **After the city-location guess**, the map:
+   - draws the error line from the user’s guess to the actual city location,
+   - shows the distance,
+   - briefly pauses,
+   - removes that temporary city-guess line/marker,
+   - then zooms to show the whole city.
+
+3. **Street-address guessing happens after the city is already fully visible.**
+   - The map does not move after the street guess.
+   - It simply draws the error line between the guessed location and the actual address.
+
+Save this as `index.html`.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>World Address Guessing Activity</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <style>
+    :root {
+      --blue: #00274c;
+      --maize: #ffcb05;
+      --ink: #111827;
+      --wrong: #e11d48;
+    }
+
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+      background: #eef2ff;
+      color: var(--ink);
+    }
+
+    #app {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #banner {
+      z-index: 1000;
+      background: var(--blue);
+      color: white;
+      padding: 12px 16px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+      line-height: 1.35;
+    }
+
+    #addressLine {
+      font-size: clamp(16px, 2vw, 22px);
+      margin-bottom: 4px;
+    }
+
+    #addressLine .part {
+      opacity: 0.72;
+    }
+
+    #addressLine .active {
+      opacity: 1;
+      font-weight: 800;
+      color: var(--maize);
+      text-decoration: underline;
+      text-underline-offset: 4px;
+    }
+
+    #statusLine {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 14px;
+      color: #e5e7eb;
+    }
+
+    #map {
+      flex: 1;
+      width: 100%;
+      background: #eff6ff;
+    }
+
+    .leaflet-container {
+      cursor: crosshair;
+    }
+
+    .distance-label {
+      background: rgba(255, 255, 255, 0.96);
+      color: var(--wrong);
+      border: 2px solid var(--wrong);
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-weight: 800;
+      font-size: 12px;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+    }
+
+    .loading {
+      position: absolute;
+      z-index: 1500;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border-radius: 16px;
+      padding: 18px 22px;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.22);
+      max-width: 430px;
+      text-align: center;
+    }
+
+    .loading strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--blue);
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <header id="banner">
+      <div id="addressLine">Loading a random address…</div>
+      <div id="statusLine">
+        <span id="instruction">Please wait.</span>
+        <span id="score">Running error: 0 km</span>
+      </div>
+    </header>
+
+    <div id="map"></div>
+  </div>
+
+  <div id="loading" class="loading">
+    <strong>Finding a random address…</strong>
+    Public map APIs can be slow or rate-limited. If needed, the game will use a
+    built-in global fallback address.
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+
+  <script>
+    /************************************************************
+     * CONFIG
+     ************************************************************/
+
+    const COUNTRY_GEOJSON_URL =
+      "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson";
+
+    const CARTO_NO_LABELS =
+      "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png";
+
+    const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
+
+    const NOMINATIM_REVERSE =
+      "https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1";
+
+    const NOMINATIM_SEARCH =
+      "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1";
+
+    const REST_COUNTRIES = "https://restcountries.com/v3.1/alpha/";
+
+    const GEOBOUNDARIES_API = "https://www.geoboundaries.org/api/current/gbOpen";
+
+    const CITY_GUESS_PAUSE_MS = 2300;
+
+    const GLOBAL_SAMPLE_PLACES = [
+      { name: "Ann Arbor", lat: 42.2808, lng: -83.7430, radius: 8000 },
+      { name: "Mexico City", lat: 19.4326, lng: -99.1332, radius: 12000 },
+      { name: "Buenos Aires", lat: -34.6037, lng: -58.3816, radius: 12000 },
+      { name: "London", lat: 51.5072, lng: -0.1276, radius: 10000 },
+      { name: "Paris", lat: 48.8566, lng: 2.3522, radius: 10000 },
+      { name: "Cairo", lat: 30.0444, lng: 31.2357, radius: 12000 },
+      { name: "Cape Town", lat: -33.9249, lng: 18.4241, radius: 12000 },
+      { name: "Tokyo", lat: 35.6762, lng: 139.6503, radius: 10000 },
+      { name: "Seoul", lat: 37.5665, lng: 126.9780, radius: 10000 },
+      { name: "Singapore", lat: 1.3521, lng: 103.8198, radius: 9000 },
+      { name: "Sydney", lat: -33.8688, lng: 151.2093, radius: 12000 },
+      { name: "Auckland", lat: -36.8509, lng: 174.7645, radius: 9000 },
+      { name: "Rio de Janeiro", lat: -22.9068, lng: -43.1729, radius: 12000 }
+    ];
+
+    const FALLBACK_ADDRESSES = [
+      {
+        continent: "North America",
+        country: "United States of America",
+        iso3: "USA",
+        state: "Michigan",
+        city: "Ann Arbor",
+        street: "500 S State St",
+        lat: 42.27699,
+        lng: -83.73816,
+        cityLat: 42.2808,
+        cityLng: -83.7430,
+        cityBbox: [42.222668, 42.323972, -83.799572, -83.675807]
+      },
+      {
+        continent: "Europe",
+        country: "France",
+        iso3: "FRA",
+        state: "Île-de-France",
+        city: "Paris",
+        street: "5 Avenue Anatole France",
+        lat: 48.85837,
+        lng: 2.294481,
+        cityLat: 48.8566,
+        cityLng: 2.3522,
+        cityBbox: [48.815575, 48.902156, 2.224122, 2.469761]
+      },
+      {
+        continent: "Asia",
+        country: "Japan",
+        iso3: "JPN",
+        state: "Tokyo",
+        city: "Tokyo",
+        street: "1-1 Chiyoda",
+        lat: 35.685175,
+        lng: 139.7528,
+        cityLat: 35.6762,
+        cityLng: 139.6503,
+        cityBbox: [35.519042, 35.817813, 139.562861, 139.910202]
+      },
+      {
+        continent: "South America",
+        country: "Brazil",
+        iso3: "BRA",
+        state: "Rio de Janeiro",
+        city: "Rio de Janeiro",
+        street: "Avenida Atlântica",
+        lat: -22.9711,
+        lng: -43.1822,
+        cityLat: -22.9068,
+        cityLng: -43.1729,
+        cityBbox: [-23.08302, -22.74602, -43.79545, -43.09981]
+      },
+      {
+        continent: "Africa",
+        country: "South Africa",
+        iso3: "ZAF",
+        state: "Western Cape",
+        city: "Cape Town",
+        street: "Government Avenue",
+        lat: -33.9253,
+        lng: 18.4239,
+        cityLat: -33.9249,
+        cityLng: 18.4241,
+        cityBbox: [-34.358333, -33.471667, 18.307222, 19.004444]
+      },
+      {
+        continent: "Oceania",
+        country: "Australia",
+        iso3: "AUS",
+        state: "New South Wales",
+        city: "Sydney",
+        street: "Bennelong Point",
+        lat: -33.8568,
+        lng: 151.2153,
+        cityLat: -33.8688,
+        cityLng: 151.2093,
+        cityBbox: [-34.118347, -33.578141, 150.520929, 151.343021]
+      },
+      {
+        continent: "Asia",
+        country: "Singapore",
+        iso3: "SGP",
+        state: null,
+        city: "Singapore",
+        street: "1 Bayfront Avenue",
+        lat: 1.2834,
+        lng: 103.8607,
+        cityLat: 1.3521,
+        cityLng: 103.8198,
+        cityBbox: [1.130475, 1.450475, 103.692035, 104.012035]
+      }
+    ];
+
+    /************************************************************
+     * STATE
+     ************************************************************/
+
+    let map;
+    let countries;
+    let target;
+
+    let regionLayer = null;
+    let tileLayer = null;
+    let drawingLayer = null;
+    let temporaryLayer = null;
+
+    let totalErrorKm = 0;
+    let activePart = "continent";
+    let finalMode = false;
+
+    let correctCountryFeature = null;
+    let adm1FeatureCollection = null;
+    let correctStateFeature = null;
+    let stateAvailable = false;
+
+    const adm1Cache = new Map();
+
+    /************************************************************
+     * INIT
+     ************************************************************/
+
+    init();
+
+    async function init() {
+      map = L.map("map", {
+        zoomControl: true,
+        worldCopyJump: true,
+        attributionControl: true
+      }).setView([20, 0], 2);
+
+      drawingLayer = L.layerGroup().addTo(map);
+      temporaryLayer = L.layerGroup().addTo(map);
+
+      try {
+        const [countryData, randomTarget] = await Promise.all([
+          fetchJson(COUNTRY_GEOJSON_URL),
+          getRandomAddress()
+        ]);
+
+        countries = countryData;
+        target = normalizeTargetAddress(randomTarget);
+
+        stateAvailable = isMeaningfulRegion(
+          target.state,
+          target.city,
+          target.country
+        );
+
+        if (!stateAvailable) {
+          target.state = null;
+        }
+
+        correctCountryFeature = findCountryFeature(target.iso3, target.country);
+
+        if (!correctCountryFeature) {
+          throw new Error("Could not match country in Natural Earth dataset.");
+        }
+
+        document.getElementById("loading").classList.add("hidden");
+        renderWorld();
+      } catch (err) {
+        console.error(err);
+        document.getElementById("loading").classList.add("hidden");
+        alert("The activity could not load the map data. Try refreshing.");
+      }
+    }
+
+    /************************************************************
+     * RANDOM ADDRESS LOGIC
+     ************************************************************/
+
+    async function getRandomAddress() {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const place =
+            GLOBAL_SAMPLE_PLACES[
+              Math.floor(Math.random() * GLOBAL_SAMPLE_PLACES.length)
+            ];
+
+          const osmAddress = await randomAddressFromOverpass(place);
+          const reverse = await reverseGeocode(osmAddress.lat, osmAddress.lng);
+          const addr = reverse.address || {};
+
+          const countryCode = (addr.country_code || "").toUpperCase();
+          if (!countryCode || !addr.country) continue;
+
+          const countryInfo = await getCountryInfo(countryCode);
+          const continent = continentFromCountryInfo(countryInfo);
+
+          const city =
+            addr.city ||
+            addr.town ||
+            addr.village ||
+            addr.municipality ||
+            addr.suburb ||
+            addr.county;
+
+          let state =
+            addr.state ||
+            addr.province ||
+            addr.region ||
+            addr.state_district ||
+            null;
+
+          const road = addr.road || addr.pedestrian || addr.footway;
+          const house = addr.house_number;
+
+          if (!continent || !city || !road) continue;
+
+          if (!isMeaningfulRegion(state, city, addr.country)) {
+            state = null;
+          }
+
+          const street = house ? `${house} ${road}` : road;
+
+          const cityInfo = await geocodeCity(city, state, addr.country);
+
+          return {
+            continent,
+            country: addr.country,
+            iso3: countryInfo.cca3,
+            state,
+            city,
+            street,
+            lat: Number(osmAddress.lat),
+            lng: Number(osmAddress.lng),
+            cityLat: cityInfo?.lat ?? Number(osmAddress.lat),
+            cityLng: cityInfo?.lng ?? Number(osmAddress.lng),
+            cityBbox: cityInfo?.bbox ?? null,
+            cityGeojson: cityInfo?.geojson ?? null
+          };
+        } catch (err) {
+          console.warn("Random OSM address attempt failed:", err);
+        }
+      }
+
+      return FALLBACK_ADDRESSES[
+        Math.floor(Math.random() * FALLBACK_ADDRESSES.length)
+      ];
+    }
+
+    async function randomAddressFromOverpass(place) {
+      const query = `
+        [out:json][timeout:20];
+        (
+          node["addr:housenumber"]["addr:street"](around:${place.radius},${place.lat},${place.lng});
+          way["addr:housenumber"]["addr:street"](around:${place.radius},${place.lat},${place.lng});
+        );
+        out center 80;
+      `;
+
+      const url = `${OVERPASS_URL}?data=${encodeURIComponent(query)}`;
+      const data = await fetchJson(url);
+
+      if (!data.elements || data.elements.length === 0) {
+        throw new Error("No OSM address elements found.");
+      }
+
+      const element =
+        data.elements[Math.floor(Math.random() * data.elements.length)];
+
+      const lat = element.lat ?? element.center?.lat;
+      const lng = element.lon ?? element.center?.lon;
+
+      if (lat == null || lng == null) {
+        throw new Error("OSM element has no usable coordinate.");
+      }
+
+      return { lat, lng };
+    }
+
+    async function reverseGeocode(lat, lng) {
+      return fetchJson(`${NOMINATIM_REVERSE}&lat=${lat}&lon=${lng}`);
+    }
+
+    async function geocodeCity(city, state, country) {
+      try {
+        const parts = new URLSearchParams();
+        parts.set("city", city);
+        if (state) parts.set("state", state);
+        parts.set("country", country);
+        parts.set("polygon_geojson", "1");
+
+        const data = await fetchJson(`${NOMINATIM_SEARCH}&${parts.toString()}`);
+
+        if (!Array.isArray(data) || !data[0]) return null;
+
+        const item = data[0];
+
+        return {
+          lat: Number(item.lat),
+          lng: Number(item.lon),
+          bbox: item.boundingbox
+            ? item.boundingbox.map(Number)
+            : null,
+          geojson: item.geojson || null
+        };
+      } catch {
+        return null;
+      }
+    }
+
+    async function getCountryInfo(alpha2) {
+      const data = await fetchJson(
+        `${REST_COUNTRIES}${alpha2}?fields=cca3,region,subregion,name`
+      );
+      return Array.isArray(data) ? data[0] : data;
+    }
+
+    function continentFromCountryInfo(info) {
+      if (!info) return null;
+
+      if (info.region === "Europe") return "Europe";
+      if (info.region === "Asia") return "Asia";
+      if (info.region === "Africa") return "Africa";
+      if (info.region === "Oceania") return "Oceania";
+      if (info.region === "Antarctic") return "Antarctica";
+
+      if (info.region === "Americas") {
+        if ((info.subregion || "").includes("South")) return "South America";
+        return "North America";
+      }
+
+      return info.region || null;
+    }
+
+    function normalizeTargetAddress(address) {
+      const copy = { ...address };
+
+      if (!isMeaningfulRegion(copy.state, copy.city, copy.country)) {
+        copy.state = null;
+      }
+
+      return copy;
+    }
+
+    function isMeaningfulRegion(region, city, country) {
+      if (!region) return false;
+
+      const r = normalizeName(region);
+      const c = normalizeName(city);
+      const countryNorm = normalizeName(country);
+
+      if (!r) return false;
+      if (r === c) return false;
+      if (r === countryNorm) return false;
+
+      return true;
+    }
+
+    /************************************************************
+     * RENDERING
+     ************************************************************/
+
+    function renderWorld() {
+      activePart = "continent";
+      finalMode = false;
+      clearInteractiveMap();
+
+      regionLayer = L.geoJSON(countries, {
+        style: {
+          fillColor: "#dbeafe",
+          fillOpacity: 1,
+          color: "transparent",
+          weight: 0
+        },
+        onEachFeature(feature, layer) {
+          layer.on("click", () => handleContinentGuess(feature));
+          layer.on("mouseover", () => layer.setStyle({ fillColor: "#bfdbfe" }));
+          layer.on("mouseout", () => layer.setStyle({ fillColor: "#dbeafe" }));
+        }
+      }).addTo(map);
+
+      map.setView([20, 0], 2);
+      updateBanner("Click the correct continent.", false);
+    }
+
+    function renderContinent() {
+      activePart = "country";
+      clearInteractiveMap();
+
+      const continentFeatures = getFeaturesByContinent(target.continent);
+
+      regionLayer = L.geoJSON(
+        {
+          type: "FeatureCollection",
+          features: continentFeatures
+        },
+        {
+          style: {
+            fillColor: "#dbeafe",
+            fillOpacity: 0.95,
+            color: "#1e3a8a",
+            weight: 1
+          },
+          onEachFeature(feature, layer) {
+            layer.on("click", () => handleCountryGuess(feature));
+            layer.on("mouseover", () => layer.setStyle({ fillColor: "#bfdbfe" }));
+            layer.on("mouseout", () => layer.setStyle({ fillColor: "#dbeafe" }));
+          }
+        }
+      ).addTo(map);
+
+      fitFeatures(continentFeatures);
+      updateBanner("Correct continent shown. Click the correct country.", false);
+    }
+
+    async function renderCountryOrProvinceStep() {
+      activePart = stateAvailable ? "state" : "city";
+      clearInteractiveMap();
+
+      if (stateAvailable) {
+        adm1FeatureCollection = await loadAdm1(target.iso3);
+
+        correctStateFeature = findContainingAdminFeature(
+          adm1FeatureCollection,
+          target.lat,
+          target.lng
+        );
+
+        if (!correctStateFeature && target.state) {
+          correctStateFeature = findAdminFeatureByName(
+            adm1FeatureCollection,
+            target.state
+          );
+        }
+
+        if (!adm1FeatureCollection || !correctStateFeature) {
+          stateAvailable = false;
+          target.state = null;
+          activePart = "city";
+          updateBanner(
+            "Province/state data was unavailable, so that step is skipped.",
+            false
+          );
+          renderCityGuess();
+          return;
+        }
+
+        regionLayer = L.geoJSON(adm1FeatureCollection, {
+          style: {
+            fillColor: "#dbeafe",
+            fillOpacity: 0.92,
+            color: "#1e3a8a",
+            weight: 1
+          },
+          onEachFeature(feature, layer) {
+            layer.on("click", () => handleStateGuess(feature));
+            layer.on("mouseover", () => layer.setStyle({ fillColor: "#bfdbfe" }));
+            layer.on("mouseout", () => layer.setStyle({ fillColor: "#dbeafe" }));
+          }
+        }).addTo(map);
+
+        fitFeature(correctCountryFeature);
+        updateBanner(
+          "Correct country shown. Click the correct province/state.",
+          false
+        );
+      } else {
+        renderCityGuess();
+      }
+    }
+
+    function renderCityGuess() {
+      activePart = "city";
+      clearInteractiveMap();
+      temporaryLayer.clearLayers();
+
+      const featureToShow = correctStateFeature || correctCountryFeature;
+
+      regionLayer = L.geoJSON(featureToShow, {
+        style: {
+          fillColor: "#dbeafe",
+          fillOpacity: 0.88,
+          color: "#1e3a8a",
+          weight: 2
+        }
+      }).addTo(map);
+
+      fitFeature(featureToShow);
+
+      map.once("click", handleCityPointGuess);
+
+      updateBanner(`Click where you think ${target.city} is located.`, false);
+    }
+
+    function renderStreetGuess() {
+      activePart = "street";
+      clearInteractiveMap();
+      temporaryLayer.clearLayers();
+
+      tileLayer = L.tileLayer(CARTO_NO_LABELS, {
+        maxZoom: 20,
+        subdomains: "abcd",
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
+      }).addTo(map);
+
+      if (target.cityGeojson) {
+        regionLayer = L.geoJSON(target.cityGeojson, {
+          style: {
+            fillColor: "#dbeafe",
+            fillOpacity: 0.18,
+            color: "#00274c",
+            weight: 3
+          }
+        }).addTo(map);
+
+        const bounds = regionLayer.getBounds();
+        if (bounds.isValid()) {
+          map.fitBounds(bounds.pad(0.05));
+        } else {
+          fitCityBoundingBox();
+        }
+      } else {
+        fitCityBoundingBox();
+      }
+
+      L.circleMarker([target.cityLat, target.cityLng], {
+        radius: 6,
+        color: "#00274c",
+        fillColor: "#ffcb05",
+        fillOpacity: 1,
+        weight: 2
+      })
+        .addTo(drawingLayer)
+        .bindTooltip(target.city, { permanent: false });
+
+      map.once("click", handleStreetPointGuess);
+
+      updateBanner(
+        `Now click where you think the street address is within ${target.city}.`,
+        false
+      );
+    }
+
+    function fitCityBoundingBox() {
+      if (target.cityBbox && target.cityBbox.length === 4) {
+        const south = target.cityBbox[0];
+        const north = target.cityBbox[1];
+        const west = target.cityBbox[2];
+        const east = target.cityBbox[3];
+
+        map.fitBounds(
+          [
+            [south, west],
+            [north, east]
+          ],
+          { padding: [20, 20] }
+        );
+      } else {
+        map.setView([target.cityLat, target.cityLng], 12);
+      }
+    }
+
+    /************************************************************
+     * GUESS HANDLERS
+     ************************************************************/
+
+    function handleContinentGuess(clickedCountryFeature) {
+      const guessedContinent = clickedCountryFeature.properties.CONTINENT;
+
+      if (guessedContinent !== target.continent) {
+        const guessedCenter = centerOfFeatures(
+          getFeaturesByContinent(guessedContinent)
+        );
+
+        const correctCenter = centerOfFeatures(
+          getFeaturesByContinent(target.continent)
+        );
+
+        addErrorLine(
+          guessedCenter,
+          correctCenter,
+          `${guessedContinent} → ${target.continent}`,
+          drawingLayer
+        );
+      }
+
+      renderContinent();
+    }
+
+    function handleCountryGuess(clickedCountryFeature) {
+      if (!sameCountry(clickedCountryFeature, correctCountryFeature)) {
+        addErrorLine(
+          centerOfFeature(clickedCountryFeature),
+          centerOfFeature(correctCountryFeature),
+          `${countryName(clickedCountryFeature)} → ${target.country}`,
+          drawingLayer
+        );
+      }
+
+      renderCountryOrProvinceStep();
+    }
+
+    function handleStateGuess(clickedStateFeature) {
+      if (!sameAdminFeature(clickedStateFeature, correctStateFeature)) {
+        addErrorLine(
+          centerOfFeature(clickedStateFeature),
+          centerOfFeature(correctStateFeature),
+          `${adminName(clickedStateFeature)} → ${adminName(correctStateFeature)}`,
+          drawingLayer
+        );
+      }
+
+      renderCityGuess();
+    }
+
+    async function handleCityPointGuess(e) {
+      const guess = { lat: e.latlng.lat, lng: e.latlng.lng };
+      const actual = { lat: target.cityLat, lng: target.cityLng };
+
+      addGuessMarker(guess, temporaryLayer, "Your city guess");
+
+      L.circleMarker([actual.lat, actual.lng], {
+        radius: 7,
+        color: "#00274c",
+        fillColor: "#ffcb05",
+        fillOpacity: 1,
+        weight: 3
+      })
+        .addTo(temporaryLayer)
+        .bindTooltip(target.city, { permanent: true, direction: "top" });
+
+      addErrorLine(
+        guess,
+        actual,
+        `Your city guess → ${target.city}`,
+        temporaryLayer
+      );
+
+      updateBanner(
+        `City error added. Zooming to ${target.city} in a moment…`,
+        false
+      );
+
+      await sleep(CITY_GUESS_PAUSE_MS);
+
+      temporaryLayer.clearLayers();
+      renderStreetGuess();
+    }
+
+    function handleStreetPointGuess(e) {
+      const guess = { lat: e.latlng.lat, lng: e.latlng.lng };
+      const actual = { lat: target.lat, lng: target.lng };
+
+      addGuessMarker(guess, drawingLayer, "Your address guess");
+
+      L.circleMarker([actual.lat, actual.lng], {
+        radius: 7,
+        color: "#00274c",
+        fillColor: "#ffcb05",
+        fillOpacity: 1,
+        weight: 3
+      })
+        .addTo(drawingLayer)
+        .bindTooltip("Actual address", { permanent: true, direction: "top" });
+
+      addErrorLine(
+        guess,
+        actual,
+        "Your address guess → actual address",
+        drawingLayer
+      );
+
+      activePart = null;
+      finalMode = true;
+
+      updateBanner(
+        `Final score: ${formatKm(totalErrorKm)} total error. Refresh the page to play again.`,
+        true
+      );
+
+      /*
+        Important: no map movement here.
+        The city was already fitted to the screen before this guess.
+      */
+    }
+
+    /************************************************************
+     * GEOMETRY, DISTANCE, AND DATA HELPERS
+     ************************************************************/
+
+    function addErrorLine(from, to, label, layerGroup) {
+      const a = normalizeLatLng(from);
+      const b = normalizeLatLng(to);
+
+      const km = turf.distance(
+        turf.point([a.lng, a.lat]),
+        turf.point([b.lng, b.lat]),
+        { units: "kilometers" }
+      );
+
+      totalErrorKm += km;
+
+      L.polyline(
+        [
+          [a.lat, a.lng],
+          [b.lat, b.lng]
+        ],
+        {
+          color: "#e11d48",
+          weight: 4,
+          opacity: 0.9,
+          dashArray: "8 8"
+        }
+      ).addTo(layerGroup);
+
+      const mid = {
+        lat: (a.lat + b.lat) / 2,
+        lng: midpointLng(a.lng, b.lng)
+      };
+
+      L.marker([mid.lat, mid.lng], {
+        icon: L.divIcon({
+          className: "",
+          html: `<div class="distance-label">${formatKm(km)}</div>`,
+          iconSize: null
+        })
+      })
+        .addTo(layerGroup)
+        .bindTooltip(label);
+
+      updateBanner(null, finalMode);
+
+      return km;
+    }
+
+    function addGuessMarker(point, layerGroup, label) {
+      L.circleMarker([point.lat, point.lng], {
+        radius: 6,
+        color: "#e11d48",
+        fillColor: "#e11d48",
+        fillOpacity: 0.9,
+        weight: 2
+      })
+        .addTo(layerGroup)
+        .bindTooltip(label, { permanent: false });
+    }
+
+    function midpointLng(lng1, lng2) {
+      let diff = lng2 - lng1;
+
+      if (Math.abs(diff) > 180) {
+        if (diff > 0) lng1 += 360;
+        else lng2 += 360;
+      }
+
+      let mid = (lng1 + lng2) / 2;
+
+      if (mid > 180) mid -= 360;
+      if (mid < -180) mid += 360;
+
+      return mid;
+    }
+
+    function normalizeLatLng(value) {
+      if (Array.isArray(value)) return { lat: value[0], lng: value[1] };
+      return value;
+    }
+
+    function centerOfFeature(feature) {
+      const c = turf.centroid(feature).geometry.coordinates;
+      return { lat: c[1], lng: c[0] };
+    }
+
+    function centerOfFeatures(features) {
+      const collection = {
+        type: "FeatureCollection",
+        features
+      };
+
+      const c = turf.centroid(collection).geometry.coordinates;
+      return { lat: c[1], lng: c[0] };
+    }
+
+    function findCountryFeature(iso3, country) {
+      return countries.features.find((f) => {
+        const p = f.properties || {};
+
+        return (
+          p.ISO_A3 === iso3 ||
+          p.ADM0_A3 === iso3 ||
+          p.SOV_A3 === iso3 ||
+          normalizeName(p.ADMIN) === normalizeName(country) ||
+          normalizeName(p.NAME) === normalizeName(country)
+        );
+      });
+    }
+
+    function getFeaturesByContinent(continent) {
+      return countries.features.filter(
+        (f) => f.properties && f.properties.CONTINENT === continent
+      );
+    }
+
+    async function loadAdm1(iso3) {
+      if (adm1Cache.has(iso3)) return adm1Cache.get(iso3);
+
+      try {
+        const meta = await fetchJson(`${GEOBOUNDARIES_API}/${iso3}/ADM1/`);
+        const geojsonUrl =
+          meta.simplifiedGeometryGeoJSON || meta.geometryGeoJSON;
+
+        if (!geojsonUrl) throw new Error("No ADM1 GeoJSON URL.");
+
+        const fc = await fetchJson(geojsonUrl);
+        adm1Cache.set(iso3, fc);
+        return fc;
+      } catch (err) {
+        console.warn("ADM1 boundary load failed:", err);
+        adm1Cache.set(iso3, null);
+        return null;
+      }
+    }
+
+    function findContainingAdminFeature(fc, lat, lng) {
+      if (!fc || !fc.features) return null;
+
+      const pt = turf.point([lng, lat]);
+
+      return (
+        fc.features.find((feature) => {
+          try {
+            return turf.booleanPointInPolygon(pt, feature);
+          } catch {
+            return false;
+          }
+        }) || null
+      );
+    }
+
+    function findAdminFeatureByName(fc, name) {
+      if (!fc || !fc.features || !name) return null;
+
+      const needle = normalizeName(name);
+
+      return (
+        fc.features.find((feature) => {
+          const n = normalizeName(adminName(feature));
+          return n === needle || n.includes(needle) || needle.includes(n);
+        }) || null
+      );
+    }
+
+    function sameCountry(a, b) {
+      const ap = a.properties || {};
+      const bp = b.properties || {};
+
+      const aIso = ap.ISO_A3 || ap.ADM0_A3 || ap.SOV_A3;
+      const bIso = bp.ISO_A3 || bp.ADM0_A3 || bp.SOV_A3;
+
+      if (aIso && bIso && aIso === bIso) return true;
+
+      return normalizeName(countryName(a)) === normalizeName(countryName(b));
+    }
+
+    function sameAdminFeature(a, b) {
+      if (!a || !b) return false;
+
+      const ap = a.properties || {};
+      const bp = b.properties || {};
+
+      if (ap.shapeID && bp.shapeID) return ap.shapeID === bp.shapeID;
+      if (ap.shapeISO && bp.shapeISO) return ap.shapeISO === bp.shapeISO;
+
+      return normalizeName(adminName(a)) === normalizeName(adminName(b));
+    }
+
+    function countryName(feature) {
+      const p = feature.properties || {};
+      return p.ADMIN || p.NAME || p.NAME_EN || "Unknown country";
+    }
+
+    function adminName(feature) {
+      const p = feature.properties || {};
+
+      return (
+        p.shapeName ||
+        p.name ||
+        p.NAME_1 ||
+        p.NAME ||
+        p.admin1Name ||
+        "Unknown region"
+      );
+    }
+
+    function normalizeName(s) {
+      return String(s || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/\p{Diacritic}/gu, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+    }
+
+    function fitFeature(feature) {
+      const temp = L.geoJSON(feature);
+      const bounds = temp.getBounds();
+      if (bounds.isValid()) map.fitBounds(bounds.pad(0.08));
+    }
+
+    function fitFeatures(features) {
+      const temp = L.geoJSON({
+        type: "FeatureCollection",
+        features
+      });
+
+      const bounds = temp.getBounds();
+      if (bounds.isValid()) map.fitBounds(bounds.pad(0.08));
+    }
+
+    /************************************************************
+     * UI HELPERS
+     ************************************************************/
+
+    function updateBanner(instructionText, isFinal) {
+      const parts = [
+        { key: "continent", value: target?.continent },
+        { key: "country", value: target?.country }
+      ];
+
+      if (stateAvailable && target?.state) {
+        parts.push({ key: "state", value: target.state });
+      }
+
+      parts.push(
+        { key: "city", value: target?.city },
+        { key: "street", value: target?.street }
+      );
+
+      document.getElementById("addressLine").innerHTML = parts
+        .filter((p) => p.value)
+        .map((p) => {
+          const cls = p.key === activePart ? "part active" : "part";
+          return `<span class="${cls}">${escapeHtml(p.value)}</span>`;
+        })
+        .join(" &nbsp;›&nbsp; ");
+
+      if (instructionText) {
+        document.getElementById("instruction").textContent = instructionText;
+      }
+
+      document.getElementById("score").textContent = isFinal
+        ? `Final score: ${formatKm(totalErrorKm)}`
+        : `Running error: ${formatKm(totalErrorKm)}`;
+    }
+
+    function formatKm(km) {
+      if (km >= 100) return `${Math.round(km).toLocaleString()} km`;
+      if (km >= 10) return `${km.toFixed(1)} km`;
+      return `${km.toFixed(2)} km`;
+    }
+
+    function clearInteractiveMap() {
+      map.off("click");
+
+      if (regionLayer) {
+        map.removeLayer(regionLayer);
+        regionLayer = null;
+      }
+
+      if (tileLayer) {
+        map.removeLayer(tileLayer);
+        tileLayer = null;
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function sleep(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    async function fetchJson(url) {
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`${response.status} ${response.statusText}: ${url}`);
+      }
+
+      return response.json();
+    }
+  </script>
+</body>
+</html>
+```
+
+One small implementation note: the “whole city” view depends on whether Nominatim returns a city boundary polygon or bounding box. If it returns a polygon, the activity fits the city boundary. If not, it falls back to the city bounding box, and then to a default city-level zoom.

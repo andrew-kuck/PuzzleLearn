@@ -1,0 +1,23 @@
+Ray notation does not display correctly for geo construction activity
+
+Decrease waittime for globe locate, before drawing from the cache
+
+Do basic testing of the new geo constructions activity
+
+Have way to click back to the homepage from the subject page or maybe from any page
+
+Have a button on activity cards that describes the rationale for the activity
+
+Improve the UI
+Add and display metadata / pictures for subjects and puzzles
+Maybe have the tiles labeled and colored based on the subsubject (ie ratios)
+
+Make sure that everything is safely deployed:
+https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
+https://docs.djangoproject.com/en/6.0/howto/deployment/
+
+Improve load time of the website
+Use Google lighthouse
+
+Have a user login
+Users would see what activities they have completed and what their high score / lowest time was

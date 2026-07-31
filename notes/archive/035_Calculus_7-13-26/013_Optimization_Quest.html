@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Optimization Quest</title>
+<style>
+body{margin:0;background:#111827;color:white;font-family:system-ui;display:flex;justify-content:center}
+.app{max-width:900px;padding:20px}
+canvas{background:#fff;border-radius:16px;width:100%;max-width:850px}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:10px 0}
+button,input{font-size:17px;border:0;border-radius:10px;padding:10px}
+button{background:#ffcb05;color:#00274c;font-weight:800}
+.pill{background:#243b55;border-radius:999px;padding:8px 13px}
+</style>
+</head>
+<body>
+<div class="app">
+<h1>Optimization Quest</h1>
+<p>Move the design slider to maximize the displayed quantity. The crown appears only near the true optimum.</p>
+<canvas id="cv" width="850" height="430"></canvas>
+<div class="row">
+<span id="lvl" class="pill"></span>
+<label id="lab">x <input id="x" type="range" step=".01"></label>
+<button onclick="tryIt()">Claim Maximum</button>
+<span id="msg" class="pill"></span>
+</div>
+</div>
+<script>
+const cv=document.getElementById("cv"),g=cv.getContext("2d");
+const L=[
+ {name:"Rectangle with perimeter 40: maximize area",lo:.5,hi:19.5,val:w=>w*(20-w),draw:w=>`width ${w.toFixed(2)}, height ${(20-w).toFixed(2)}, area ${(w*(20-w)).toFixed(2)}`},
+ {name:"Open box from 20×14 sheet: maximize volume",lo:.2,hi:6.9,val:t=>t*(20-2*t)*(14-2*t),draw:t=>`cut ${t.toFixed(2)}, volume ${(t*(20-2*t)*(14-2*t)).toFixed(2)}`},
+ {name:"Can with surface area 100π: maximize volume",lo:.5,hi:6.5,val:r=>Math.PI*r*r*((100*Math.PI-2*Math.PI*r*r)/(2*Math.PI*r)),draw:r=>`radius ${r.toFixed(2)}, volume ${L[2].val(r).toFixed(2)}`},
+ {name:"Fence along river, 60 m fencing: maximize area",lo:.5,hi:29.5,val:w=>w*(60-2*w),draw:w=>`side ${w.toFixed(2)}, length ${(60-2*w).toFixed(2)}, area ${L[3].val(w).toFixed(2)}`}
+];
+let i=0,opt=0;
+function best(o){let a=o.lo,b=o.hi;for(let k=0;k<80;k++){let m1=a+(b-a)/3,m2=b-(b-a)/3;o.val(m1)<o.val(m2)?a=m1:b=m2}return(a+b)/2}
+function load(){let o=L[i];opt=best(o);x.min=o.lo;x.max=o.hi;x.value=(o.lo+o.hi)/3;lvl.textContent=`Level ${i+1}/${L.length}: ${o.name}`;msg.textContent="";draw()}
+function draw(){
+ let o=L[i],v=+x.value,gain=o.val(v),max=o.val(opt);
+ g.clearRect(0,0,850,430);g.fillStyle="#fff";g.fillRect(0,0,850,430);
+ g.fillStyle="#111";g.font="22px system-ui";g.fillText(o.draw(v),30,35);
+ g.strokeStyle="#ddd";for(let j=0;j<=10;j++){g.beginPath();g.moveTo(60+j*70,70);g.lineTo(60+j*70,360);g.stroke()}
+ let w=500,h=220,px=175,py=110;
+ g.strokeStyle="#00274c";g.lineWidth=4;g.strokeRect(px,py,w*(v/x.max),h*(gain/max));
+ g.fillStyle="#2f80ed55";g.fillRect(px,py,w*(v/x.max),h*(gain/max));
+ g.fillStyle="#111";g.fillText(`Current ${(100*gain/max).toFixed(1)}% of possible maximum`,30,400);
+ if(Math.abs(v-opt)<.08){g.font="60px serif";g.fillText("👑",720,120)}
+}
+function tryIt(){
+ if(Math.abs(+x.value-opt)<.08){msg.textContent="Optimal!";i=(i+1)%L.length;setTimeout(load,700)}
+ else msg.textContent=+x.value<opt?"Increase the design variable.":"Decrease the design variable.";
+}
+x.oninput=draw;load();
+</script>
+  <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#e1e1e1"
+    }
+  </script>
+</body>
+</html>

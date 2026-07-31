@@ -1,0 +1,848 @@
+create an activity using html, css, and javascript. there is a javascript constant that is an object with the following form and initially set to these values: {'continent': 'NA', 'country': 'United States', 'state': 'Florida', 'city': 'Palm Harbor', 'address': '1710 Delaware Avenue', 'addressLat': 28.0837137, 'addressLon': -82.7669778, 'cityBbox': [28.0837, 28.0838, -82.7671, -82.7668]}. at the top of the screen, show the address in the form "continent, country, state, city, address". the geography data could be from anywhere in the world. if "state" is blank, simply omit this from the shown address. initially the continent part of the location at the top is highlighted. the user is shown a map of the entire world and asked to click the correct continent. if they guess correctly, the banner flashes green and they advance to the next stage. if they guess incorrectly, a red error line is drawn from the center of the continent they guessed to the center of the correct continent. the line is labeled with the distance it represents. that distance is also added to a running error total displayed in the top banner. the line and distance label then disappear and the user is advanced to the next stage. in the next stage, the country part of the address is highlighted. the user is shown a map of the continent and asked to click the correct country. if they guess correctly, the banner flashes green and they advance to the next stage. if they guess incorrectly, a red error line is drawn from the center of the country they guessed to the center of the correct country. the line is labeled with the distance it represents. that distance is also added to a running error total displayed in the top banner. the line and distance label then disappear and the user is advanced to the next stage. in the next stage, the state part of the address is highlighted (if there is no state part, then advance immediately to the subsequent stage). the user is shown a map of the country and asked to click the correct state. if they guess correctly, the banner flashes green and they advance to the next stage. if they guess incorrectly, a red error line is drawn from the center of the state they guessed to the center of the correct state. the line is labeled with the distance it represents. that distance is also added to a running error total displayed in the top banner. the line and distance label then disappear and the user is advanced to the next stage. in the next stage, the city part of the address is highlighted. the user is shown a map of the state (or country if there was not a state) and asked to click the location of the city. a red error line is drawn from location they guessed to the location that is the center of the city. the line is labeled with the distance it represents. that distance is also added to a running error total displayed in the top banner. the line and distance label then disappear and the user is advanced to the next stage. in the next and final stage, the street part of the address is highlighted. the user is shown a map of the city and asked to click the location of the street address. a red error line is drawn from location they guessed to the exact address location (indicated by addressLat and addressLon). the line is labeled with the distance it represents. that distance is also added to a running error total displayed in the top banner. the user's total running error is prominently displayed and the user is told to refresh the screen if they want to play again.
+
+all labels should be omitted from the maps, since it is the user who must figure out what region to click on from the boundaries. also make the cursor a normal cursor with a sharp point (not a hand) so that the exact point clicked on is obvious. when moving to the level where the user must select the state, the map zooms out, when it should in fact be zooming in
+
+the continent name displayed to the user should always be the continent label (ie "North America") and not the code such as NA
+
+Below is a complete single-file HTML activity using **HTML, CSS, JavaScript, Leaflet, OpenStreetMap tiles, and Nominatim geocoding**.
+
+make sure that after every automatic zoom or repositioning of the map, the point the user is supposed to click on next is visible on the screen
+
+Save it as `geography-activity.html` and open it in a browser.
+
+> Note: This uses the public Nominatim service for reverse-geocoding clicked countries/states. For classroom/demo use it should be fine, but for heavy or production use, use your own geocoding service.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Geography Error Distance Activity</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <style>
+    :root {
+      --banner-bg: #182033;
+      --banner-text: #ffffff;
+      --highlight: #ffe16a;
+      --green: #1f9d55;
+      --red: #d62828;
+      --blue: #2b6cb0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f4f6f8;
+      color: #111827;
+    }
+
+    #topBanner {
+      position: relative;
+      z-index: 1000;
+      background: var(--banner-bg);
+      color: var(--banner-text);
+      padding: 14px 18px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+      transition: background-color 0.25s ease;
+    }
+
+    #topBanner.correctFlash {
+      background: var(--green);
+    }
+
+    #addressLine {
+      font-size: clamp(16px, 2vw, 24px);
+      font-weight: 700;
+      line-height: 1.4;
+    }
+
+    .addressPart {
+      padding: 2px 6px;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .addressPart.active {
+      background: var(--highlight);
+      color: #111827;
+      box-shadow: 0 0 0 2px rgba(255, 225, 106, 0.35);
+    }
+
+    #scoreBox {
+      text-align: right;
+      white-space: nowrap;
+      font-weight: 700;
+      font-size: clamp(15px, 1.7vw, 22px);
+    }
+
+    #scoreValue {
+      color: #ffd166;
+    }
+
+    #instruction {
+      position: relative;
+      z-index: 900;
+      background: #ffffff;
+      padding: 12px 18px;
+      border-bottom: 1px solid #d7dee8;
+      font-size: 17px;
+      font-weight: 600;
+      color: #243044;
+    }
+
+    #map {
+      height: calc(100vh - 112px);
+      width: 100%;
+    }
+
+    .distance-label {
+      background: rgba(214, 40, 40, 0.95);
+      color: white;
+      padding: 5px 9px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 14px;
+      border: 2px solid white;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+      white-space: nowrap;
+    }
+
+    .finalPanel {
+      position: absolute;
+      left: 50%;
+      top: 55%;
+      transform: translate(-50%, -50%);
+      z-index: 1200;
+      width: min(92vw, 560px);
+      background: white;
+      color: #111827;
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: 0 15px 45px rgba(0, 0, 0, 0.35);
+      text-align: center;
+      display: none;
+    }
+
+    .finalPanel.show {
+      display: block;
+    }
+
+    .finalPanel h1 {
+      margin-top: 0;
+      font-size: 34px;
+    }
+
+    .finalScore {
+      font-size: 42px;
+      font-weight: 900;
+      color: var(--red);
+      margin: 12px 0;
+    }
+
+    .muted {
+      color: #5b6472;
+      font-size: 15px;
+    }
+
+    .loading {
+      opacity: 0.75;
+      pointer-events: none;
+    }
+
+    @media (max-width: 700px) {
+      #topBanner {
+        grid-template-columns: 1fr;
+      }
+
+      #scoreBox {
+        text-align: left;
+      }
+
+      #map {
+        height: calc(100vh - 155px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="topBanner">
+    <div id="addressLine"></div>
+    <div id="scoreBox">
+      Total error:
+      <span id="scoreValue">0 km</span>
+    </div>
+  </div>
+
+  <div id="instruction">Loading map data...</div>
+
+  <div id="map"></div>
+
+  <div id="finalPanel" class="finalPanel">
+    <h1>Finished!</h1>
+    <div>Your total running error is:</div>
+    <div id="finalScore" class="finalScore">0 km</div>
+    <p>Refresh the screen if you want to play again.</p>
+    <p class="muted">Lower is better. Perfect geography wizardry is optional, but encouraged.</p>
+  </div>
+
+  <!-- Leaflet -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    /********************************************************************
+     * Geography data for the activity.
+     * Replace this object with any other location using the same form.
+     ********************************************************************/
+    const LOCATION = {
+      continent: "NA",
+      country: "United States",
+      state: "Florida",
+      city: "Palm Harbor",
+      address: "1710 Delaware Avenue",
+      addressLat: 28.0837137,
+      addressLon: -82.7669778,
+      cityBbox: [28.0837, 28.0838, -82.7671, -82.7668]
+    };
+
+    /********************************************************************
+     * Approximate continent data.
+     * Continent click detection is intentionally lightweight.
+     ********************************************************************/
+    const CONTINENTS = {
+      NA: {
+        label: "North America",
+        aliases: ["NA", "North America", "N. America"],
+        center: [54, -105],
+        bounds: [[5, -170], [83, -52]]
+      },
+      SA: {
+        label: "South America",
+        aliases: ["SA", "South America", "S. America"],
+        center: [-15, -60],
+        bounds: [[-56, -82], [13, -34]]
+      },
+      EU: {
+        label: "Europe",
+        aliases: ["EU", "Europe"],
+        center: [54, 15],
+        bounds: [[35, -25], [72, 45]]
+      },
+      AF: {
+        label: "Africa",
+        aliases: ["AF", "Africa"],
+        center: [1, 20],
+        bounds: [[-35, -20], [38, 55]]
+      },
+      AS: {
+        label: "Asia",
+        aliases: ["AS", "Asia"],
+        center: [34, 100],
+        bounds: [[-12, 45], [82, 180]]
+      },
+      OC: {
+        label: "Oceania",
+        aliases: ["OC", "Oceania", "Australia"],
+        center: [-22, 140],
+        bounds: [[-50, 110], [10, 180]]
+      },
+      AN: {
+        label: "Antarctica",
+        aliases: ["AN", "Antarctica"],
+        center: [-82, 0],
+        bounds: [[-90, -180], [-60, 180]]
+      }
+    };
+
+    let map;
+    let currentStageIndex = 0;
+    let errorTotalKm = 0;
+    let isBusy = false;
+
+    const geocodeCache = new Map();
+
+    const stageOrder = [
+      "continent",
+      "country",
+      ...(LOCATION.state && LOCATION.state.trim() ? ["state"] : []),
+      "city",
+      "address"
+    ];
+
+    const reference = {
+      targetContinentCode: null,
+      country: null,
+      state: null,
+      cityCenter: null,
+      addressCenter: null
+    };
+
+    const topBanner = document.getElementById("topBanner");
+    const addressLine = document.getElementById("addressLine");
+    const scoreValue = document.getElementById("scoreValue");
+    const instruction = document.getElementById("instruction");
+    const finalPanel = document.getElementById("finalPanel");
+    const finalScore = document.getElementById("finalScore");
+
+    init();
+
+    async function init() {
+      buildAddressLine();
+
+      map = L.map("map", {
+        worldCopyJump: true,
+        zoomControl: true
+      });
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map);
+
+      map.setView([20, 0], 2);
+
+      map.on("click", onMapClick);
+
+      document.body.classList.add("loading");
+
+      try {
+        reference.targetContinentCode = normalizeContinentCode(LOCATION.continent);
+
+        reference.country = await geocodePlace(LOCATION.country);
+
+        if (LOCATION.state && LOCATION.state.trim()) {
+          reference.state = await geocodePlace(`${LOCATION.state}, ${LOCATION.country}`);
+        }
+
+        reference.cityCenter = cityCenterFromBbox(LOCATION.cityBbox);
+
+        reference.addressCenter = [
+          Number(LOCATION.addressLat),
+          Number(LOCATION.addressLon)
+        ];
+      } catch (err) {
+        console.error(err);
+        instruction.textContent =
+          "Some map lookup data could not be loaded. The activity will still try to continue.";
+      } finally {
+        document.body.classList.remove("loading");
+        startCurrentStage();
+      }
+    }
+
+    function buildAddressLine() {
+      const parts = [
+        { key: "continent", text: LOCATION.continent },
+        { key: "country", text: LOCATION.country },
+        ...(LOCATION.state && LOCATION.state.trim()
+          ? [{ key: "state", text: LOCATION.state }]
+          : []),
+        { key: "city", text: LOCATION.city },
+        { key: "address", text: LOCATION.address }
+      ];
+
+      addressLine.innerHTML = parts
+        .map((part, index) => {
+          const comma = index < parts.length - 1 ? "," : "";
+          return `<span class="addressPart" data-part="${part.key}">${escapeHtml(part.text)}</span>${comma}`;
+        })
+        .join(" ");
+    }
+
+    function highlightAddressPart(stage) {
+      document.querySelectorAll(".addressPart").forEach(el => {
+        el.classList.toggle("active", el.dataset.part === stage);
+      });
+    }
+
+    function startCurrentStage() {
+      if (currentStageIndex >= stageOrder.length) {
+        finishGame();
+        return;
+      }
+
+      const stage = stageOrder[currentStageIndex];
+      highlightAddressPart(stage);
+      isBusy = false;
+
+      if (stage === "continent") {
+        instruction.textContent = `Click the correct continent for ${LOCATION.continent}.`;
+        map.setView([20, 0], 2);
+      }
+
+      if (stage === "country") {
+        instruction.textContent = `Click the correct country: ${LOCATION.country}.`;
+        const continent = CONTINENTS[reference.targetContinentCode];
+        if (continent) {
+          map.fitBounds(continent.bounds, { padding: [20, 20] });
+        } else {
+          map.setView([20, 0], 2);
+        }
+      }
+
+      if (stage === "state") {
+        instruction.textContent = `Click the correct state/province/region: ${LOCATION.state}.`;
+        if (reference.country?.bbox) {
+          map.fitBounds(reference.country.bbox, { padding: [20, 20] });
+        }
+      }
+
+      if (stage === "city") {
+        instruction.textContent = `Click where you think the city is: ${LOCATION.city}.`;
+        if (reference.state?.bbox) {
+          map.fitBounds(reference.state.bbox, { padding: [20, 20] });
+        } else if (reference.country?.bbox) {
+          map.fitBounds(reference.country.bbox, { padding: [20, 20] });
+        }
+      }
+
+      if (stage === "address") {
+        instruction.textContent = `Click where you think the street address is: ${LOCATION.address}.`;
+        const cityBounds = bboxToLeafletBounds(LOCATION.cityBbox);
+        map.fitBounds(cityBounds, {
+          padding: [50, 50],
+          maxZoom: 16
+        });
+      }
+    }
+
+    async function onMapClick(e) {
+      if (isBusy) return;
+
+      const stage = stageOrder[currentStageIndex];
+      isBusy = true;
+
+      try {
+        if (stage === "continent") {
+          await handleContinentGuess(e.latlng);
+        } else if (stage === "country") {
+          await handleCountryGuess(e.latlng);
+        } else if (stage === "state") {
+          await handleStateGuess(e.latlng);
+        } else if (stage === "city") {
+          await handlePointGuess(
+            [e.latlng.lat, e.latlng.lng],
+            reference.cityCenter,
+            "City location checked."
+          );
+        } else if (stage === "address") {
+          await handlePointGuess(
+            [e.latlng.lat, e.latlng.lng],
+            reference.addressCenter,
+            "Address location checked.",
+            true
+          );
+        }
+      } catch (err) {
+        console.error(err);
+        instruction.textContent = "Something went wrong with that guess. Try again.";
+        isBusy = false;
+      }
+    }
+
+    async function handleContinentGuess(latlng) {
+      const guessedCode = getContinentAtLatLng(latlng);
+      const correctCode = reference.targetContinentCode;
+
+      if (guessedCode && guessedCode === correctCode) {
+        flashCorrectAndAdvance();
+        return;
+      }
+
+      const guessedCenter = guessedCode
+        ? CONTINENTS[guessedCode].center
+        : [latlng.lat, latlng.lng];
+
+      const correctCenter = CONTINENTS[correctCode]?.center;
+
+      if (!correctCenter) {
+        advanceStage();
+        return;
+      }
+
+      const km = haversineKm(guessedCenter, correctCenter);
+      addError(km);
+
+      await showTemporaryErrorLine(
+        guessedCenter,
+        correctCenter,
+        km,
+        guessedCode
+          ? `${CONTINENTS[guessedCode].label} → ${CONTINENTS[correctCode].label}`
+          : `Unknown area → ${CONTINENTS[correctCode].label}`
+      );
+
+      advanceStage();
+    }
+
+    async function handleCountryGuess(latlng) {
+      const reverse = await reverseGeocode(latlng.lat, latlng.lng);
+      const guessedCountry = reverse?.address?.country || "";
+      const correctCountry = LOCATION.country;
+
+      if (sameName(guessedCountry, correctCountry)) {
+        flashCorrectAndAdvance();
+        return;
+      }
+
+      let guessedCenter = [latlng.lat, latlng.lng];
+
+      if (guessedCountry) {
+        try {
+          const guessedGeo = await geocodePlace(guessedCountry);
+          guessedCenter = guessedGeo.center;
+        } catch {
+          // Fallback to clicked point.
+        }
+      }
+
+      const correctCenter = reference.country?.center || [
+        LOCATION.addressLat,
+        LOCATION.addressLon
+      ];
+
+      const km = haversineKm(guessedCenter, correctCenter);
+      addError(km);
+
+      await showTemporaryErrorLine(
+        guessedCenter,
+        correctCenter,
+        km,
+        guessedCountry
+          ? `${guessedCountry} → ${correctCountry}`
+          : `Unknown country → ${correctCountry}`
+      );
+
+      advanceStage();
+    }
+
+    async function handleStateGuess(latlng) {
+      const reverse = await reverseGeocode(latlng.lat, latlng.lng);
+      const guessedState = extractAdminRegion(reverse?.address || {});
+      const correctState = LOCATION.state;
+
+      if (sameName(guessedState, correctState)) {
+        flashCorrectAndAdvance();
+        return;
+      }
+
+      let guessedCenter = [latlng.lat, latlng.lng];
+
+      if (guessedState) {
+        try {
+          const guessedCountry = reverse?.address?.country || LOCATION.country;
+          const guessedGeo = await geocodePlace(`${guessedState}, ${guessedCountry}`);
+          guessedCenter = guessedGeo.center;
+        } catch {
+          // Fallback to clicked point.
+        }
+      }
+
+      const correctCenter = reference.state?.center || reference.country?.center || [
+        LOCATION.addressLat,
+        LOCATION.addressLon
+      ];
+
+      const km = haversineKm(guessedCenter, correctCenter);
+      addError(km);
+
+      await showTemporaryErrorLine(
+        guessedCenter,
+        correctCenter,
+        km,
+        guessedState
+          ? `${guessedState} → ${correctState}`
+          : `Unknown region → ${correctState}`
+      );
+
+      advanceStage();
+    }
+
+    async function handlePointGuess(guessedPoint, correctPoint, message, isFinal = false) {
+      const km = haversineKm(guessedPoint, correctPoint);
+      addError(km);
+
+      await showTemporaryErrorLine(
+        guessedPoint,
+        correctPoint,
+        km,
+        message
+      );
+
+      if (isFinal) {
+        finishGame();
+      } else {
+        advanceStage();
+      }
+    }
+
+    function flashCorrectAndAdvance() {
+      topBanner.classList.add("correctFlash");
+      instruction.textContent = "Correct!";
+      setTimeout(() => {
+        topBanner.classList.remove("correctFlash");
+        advanceStage();
+      }, 750);
+    }
+
+    function advanceStage() {
+      currentStageIndex += 1;
+      startCurrentStage();
+    }
+
+    function finishGame() {
+      isBusy = true;
+      highlightAddressPart("address");
+      instruction.textContent =
+        "Finished! Your total running error is displayed below. Refresh the screen to play again.";
+      scoreValue.textContent = formatDistance(errorTotalKm);
+      finalScore.textContent = formatDistance(errorTotalKm);
+      finalPanel.classList.add("show");
+    }
+
+    function addError(km) {
+      errorTotalKm += km;
+      scoreValue.textContent = formatDistance(errorTotalKm);
+    }
+
+    async function showTemporaryErrorLine(from, to, km, labelText) {
+      const line = L.polyline([from, to], {
+        color: "#d62828",
+        weight: 5,
+        opacity: 0.9
+      }).addTo(map);
+
+      const mid = midpoint(from, to);
+
+      const label = L.marker(mid, {
+        interactive: false,
+        icon: L.divIcon({
+          className: "distance-label",
+          html: `${formatDistance(km)}`,
+          iconSize: null
+        })
+      }).addTo(map);
+
+      instruction.textContent = `${labelText} — error: ${formatDistance(km)}`;
+
+      return new Promise(resolve => {
+        setTimeout(() => {
+          map.removeLayer(line);
+          map.removeLayer(label);
+          resolve();
+        }, 1900);
+      });
+    }
+
+    async function geocodePlace(query) {
+      const key = `search:${query.toLowerCase()}`;
+      if (geocodeCache.has(key)) return geocodeCache.get(key);
+
+      const url =
+        "https://nominatim.openstreetmap.org/search?" +
+        new URLSearchParams({
+          q: query,
+          format: "jsonv2",
+          limit: "1",
+          addressdetails: "1"
+        });
+
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Geocoding failed for ${query}`);
+
+      const data = await res.json();
+      if (!data.length) throw new Error(`No geocoding result for ${query}`);
+
+      const item = data[0];
+
+      const result = {
+        name: item.display_name,
+        center: [Number(item.lat), Number(item.lon)],
+        bbox: item.boundingbox
+          ? bboxToLeafletBounds(item.boundingbox.map(Number))
+          : null
+      };
+
+      geocodeCache.set(key, result);
+      return result;
+    }
+
+    async function reverseGeocode(lat, lon) {
+      const url =
+        "https://nominatim.openstreetmap.org/reverse?" +
+        new URLSearchParams({
+          lat,
+          lon,
+          format: "jsonv2",
+          addressdetails: "1",
+          zoom: "10"
+        });
+
+      const res = await fetch(url);
+      if (!res.ok) return null;
+
+      return await res.json();
+    }
+
+    function extractAdminRegion(address) {
+      return (
+        address.state ||
+        address.province ||
+        address.region ||
+        address.state_district ||
+        address.county ||
+        ""
+      );
+    }
+
+    function normalizeContinentCode(value) {
+      const raw = String(value || "").trim().toLowerCase();
+
+      for (const [code, data] of Object.entries(CONTINENTS)) {
+        if (code.toLowerCase() === raw) return code;
+
+        if (data.aliases.some(alias => alias.toLowerCase() === raw)) {
+          return code;
+        }
+
+        if (data.label.toLowerCase() === raw) return code;
+      }
+
+      return value;
+    }
+
+    function getContinentAtLatLng(latlng) {
+      const lat = latlng.lat;
+      let lon = latlng.lng;
+
+      while (lon < -180) lon += 360;
+      while (lon > 180) lon -= 360;
+
+      if (lat < -60) return "AN";
+
+      // North America, including Central America and much of the Caribbean.
+      if (lat >= 5 && lat <= 83 && lon >= -170 && lon <= -50) return "NA";
+
+      // South America.
+      if (lat >= -56 && lat <= 13 && lon >= -82 && lon <= -34) return "SA";
+
+      // Africa.
+      if (lat >= -35 && lat <= 38 && lon >= -20 && lon <= 55) return "AF";
+
+      // Europe.
+      if (lat >= 35 && lat <= 72 && lon >= -25 && lon <= 45) return "EU";
+
+      // Asia.
+      if (lat >= -12 && lat <= 82 && lon >= 45 && lon <= 180) return "AS";
+
+      // Oceania.
+      if (lat >= -50 && lat <= 10 && lon >= 110 && lon <= 180) return "OC";
+
+      return null;
+    }
+
+    function bboxToLeafletBounds(bbox) {
+      // bbox form: [south, north, west, east]
+      const south = Number(bbox[0]);
+      const north = Number(bbox[1]);
+      const west = Number(bbox[2]);
+      const east = Number(bbox[3]);
+
+      return [
+        [south, west],
+        [north, east]
+      ];
+    }
+
+    function cityCenterFromBbox(bbox) {
+      const south = Number(bbox[0]);
+      const north = Number(bbox[1]);
+      const west = Number(bbox[2]);
+      const east = Number(bbox[3]);
+
+      return [
+        (south + north) / 2,
+        (west + east) / 2
+      ];
+    }
+
+    function haversineKm(a, b) {
+      const lat1 = Number(a[0]);
+      const lon1 = Number(a[1]);
+      const lat2 = Number(b[0]);
+      const lon2 = Number(b[1]);
+
+      const R = 6371.0088;
+      const toRad = deg => deg * Math.PI / 180;
+
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+
+      const p1 = toRad(lat1);
+      const p2 = toRad(lat2);
+
+      const h =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(p1) * Math.cos(p2) * Math.sin(dLon / 2) ** 2;
+
+      return 2 * R * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+    }
+
+    function midpoint(a, b) {
+      return [
+        (Number(a[0]) + Number(b[0])) / 2,
+        (Number(a[1]) + Number(b[1])) / 2
+      ];
+    }
+
+    function formatDistance(km) {
+      if (km < 1) {
+        return `${Math.round(km * 1000)} m`;
+      }
+
+      if (km < 100) {
+        return `${km.toFixed(1)} km`;
+      }
+
+      return `${Math.round(km).toLocaleString()} km`;
+    }
+
+    function sameName(a, b) {
+      return normalizeName(a) === normalizeName(b);
+    }
+
+    function normalizeName(value) {
+      return String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+  </script>
+</body>
+</html>
+```

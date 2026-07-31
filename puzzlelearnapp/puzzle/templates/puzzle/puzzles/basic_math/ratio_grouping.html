@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ puzzle_name }}</title>
+  <style>
+    :root {
+      --blue: #1f6feb;
+      --green: #24a148;
+      --red: #da1e28;
+      --yellow: #f1c21b;
+      --gray: #6f6f6f;
+      --light: #f7f9fc;
+      --dark: #1f2937;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      /* background: linear-gradient(135deg, #f5fbff, #fff8e6); */
+      color: var(--dark);
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .activity {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 18px;
+      padding: 24px;
+      padding-top: 16px;
+      padding-bottom: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+      position: relative;
+      overflow: hidden;
+    }
+
+    h1 {
+      margin-top: 0;
+      text-align: center;
+      font-size: 2rem;
+    }
+
+    .instructions {
+      text-align: center;
+      font-size: 1.05rem;
+      margin-bottom: 18px;
+    }
+
+    .progress-wrapper {
+      margin: 12px 0 12px;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 22px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      overflow: hidden;
+      border: 2px solid #d1d5db;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #2ea043, #7ee787);
+      transition: width 0.4s ease;
+    }
+
+    .summary-panel {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin: 12px 0 18px;
+    }
+
+    .summary-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #f8fafc;
+      border: 1px solid #d1d5db;
+      border-radius: 14px;
+      padding: 12px 16px;
+      min-width: 160px;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
+    }
+
+    .summary-icon {
+      font-size: 1.7rem;
+      line-height: 1;
+    }
+
+    .summary-label {
+      font-size: 0.85rem;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 2px;
+    }
+
+    .summary-value {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--dark);
+    }
+
+    .question-panel {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+
+    .fruit-area {
+      min-height: 330px;
+      border: 3px dashed #cbd5e1;
+      border-radius: 16px;
+      background: #fbfdff;
+      position: relative;
+      overflow: hidden;
+      padding: 12px;
+    }
+
+    .fruit-area.scattered {
+      height: 360px;
+    }
+
+    .fruit {
+      position: absolute;
+      font-size: 2rem;
+      user-select: none;
+      transform: translate(-50%, -50%);
+      filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.15));
+    }
+
+    .grouped-layout {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .group-card {
+      border: 2px solid #94a3b8;
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 10px;
+      min-width: 120px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    }
+
+    .group-title {
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 8px;
+      color: #334155;
+    }
+
+    .group-fruits {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 4px;
+      font-size: 1.6rem;
+      line-height: 1.2;
+    }
+
+    .leftovers {
+      border: 2px dashed var(--red);
+      background: #fff5f5;
+    }
+
+    .leftovers .group-title {
+      color: var(--red);
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: end;
+      gap: 18px;
+      background: #f8fafc;
+      border-radius: 16px;
+      padding: 18px;
+      border: 1px solid #e2e8f0;
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-weight: bold;
+    }
+
+    input {
+      width: 170px;
+      font-size: 1.1rem;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 2px solid #cbd5e1;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.15);
+    }
+
+    button {
+      cursor: pointer;
+      font-size: 1.05rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 18px;
+      background: var(--blue);
+      color: white;
+      transition: transform 0.1s ease, background 0.2s ease;
+    }
+
+    button:hover {
+      background: #0f56c7;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .feedback {
+      min-height: 44px;
+      text-align: center;
+      font-size: 1.1rem;
+      font-weight: bold;
+      padding: 10px;
+      border-radius: 12px;
+    }
+
+    .feedback.neutral {
+      color: var(--gray);
+    }
+
+    .feedback.error {
+      color: var(--red);
+      background: #fff1f1;
+    }
+
+    .feedback.warning {
+      color: #8a5a00;
+      background: #fff7db;
+    }
+
+    .feedback.success {
+      color: var(--green);
+      background: #e9fbe9;
+    }
+
+    .check-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      pointer-events: none;
+    }
+
+    .check-overlay.show {
+      display: flex;
+      animation: fadeIn 0.15s ease;
+    }
+
+    .big-check {
+      font-size: 11rem;
+      color: var(--green);
+      text-shadow: 0 8px 20px rgba(36, 161, 72, 0.35);
+      animation: pop 0.35s ease;
+    }
+
+    .complete-message {
+      display: none;
+      text-align: center;
+      padding: 30px;
+      background: #ecfdf5;
+      border: 3px solid var(--green);
+      border-radius: 16px;
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: var(--green);
+    }
+
+    @keyframes pop {
+      0% {
+        transform: scale(0.4);
+        opacity: 0;
+      }
+      70% {
+        transform: scale(1.15);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    @media (max-width: 650px) {
+      body {
+        padding: 12px;
+      }
+
+      .activity {
+        padding: 16px;
+      }
+
+      input {
+        width: 140px;
+      }
+
+      .fruit {
+        font-size: 1.7rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="activity">
+    <!-- <h1>Apple : Banana Ratio Groups</h1>
+
+    <p class="instructions">
+      Look at the fruits. Enter how many apples and bananas should be in each equal-ratio group.
+      Use the smallest possible whole-number ratio.
+    </p> -->
+
+    <section class="progress-wrapper" aria-label="Progress">
+      <div class="progress-label" style="display: none;">
+        <span>Progress</span>
+        <span id="progressText">0 / 10</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </section>
+
+    <section class="summary-panel" aria-label="Fruit totals">
+      <div class="summary-card">
+        <div class="summary-icon">🍎</div>
+        <div>
+          <div class="summary-label">Total Apples</div>
+          <div id="totalApplesValue" class="summary-value">0</div>
+        </div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-icon">🍌</div>
+        <div>
+          <div class="summary-label">Total Bananas</div>
+          <div id="totalBananasValue" class="summary-value">0</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="completeMessage" class="complete-message">
+      Activity complete! Great ratio reasoning.
+    </section>
+
+    <section id="questionPanel" class="question-panel">
+      <div id="fruitArea" class="fruit-area scattered" aria-label="Fruit display"></div>
+
+      <div class="controls">
+        <label>
+          Apples per group
+          <input
+            id="appleInput"
+            type="number"
+            min="1"
+            step="1"
+            inputmode="numeric"
+            autocomplete="off"
+          />
+        </label>
+
+        <label>
+          Bananas per group
+          <input
+            id="bananaInput"
+            type="number"
+            min="1"
+            step="1"
+            inputmode="numeric"
+            autocomplete="off"
+          />
+        </label>
+      </div>
+
+      <div id="feedback" class="feedback neutral">
+        Enter numbers for both boxes.
+      </div>
+    </section>
+  </main>
+
+  <div id="checkOverlay" class="check-overlay" aria-hidden="true">
+    <div class="big-check">✓</div>
+  </div>
+
+  <script>
+    const fruitArea = document.getElementById("fruitArea");
+    const appleInput = document.getElementById("appleInput");
+    const bananaInput = document.getElementById("bananaInput");
+    const feedback = document.getElementById("feedback");
+    const progressFill = document.getElementById("progressFill");
+    const progressText = document.getElementById("progressText");
+    const totalApplesValue = document.getElementById("totalApplesValue");
+    const totalBananasValue = document.getElementById("totalBananasValue");
+    const checkOverlay = document.getElementById("checkOverlay");
+    const questionPanel = document.getElementById("questionPanel");
+    const completeMessage = document.getElementById("completeMessage");
+
+    const TOTAL_QUESTIONS = 8;
+
+    let correctCount = 0;
+
+    let current = {
+      a: 1,
+      b: 1,
+      c: 1,
+      totalApples: 1,
+      totalBananas: 1
+    };
+
+    function activityComplete() {
+      console.log("activityComplete() called");
+      completeMessage.style.display = "block";
+      questionPanel.style.display = "none";
+    }
+
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function gcd(x, y) {
+      x = Math.abs(x);
+      y = Math.abs(y);
+
+      while (y !== 0) {
+        const temp = y;
+        y = x % y;
+        x = temp;
+      }
+
+      return x;
+    }
+
+    function setFeedback(message, type = "neutral") {
+      feedback.textContent = message;
+      feedback.className = `feedback ${type}`;
+    }
+
+    function updateProgress() {
+      const percent = (correctCount / TOTAL_QUESTIONS) * 100;
+      progressFill.style.width = `${percent}%`;
+      progressText.textContent = `${correctCount} / ${TOTAL_QUESTIONS}`;
+    }
+
+    function chooseQuestion() {
+      let a;
+      let b;
+
+      do {
+        a = randomInt(1, 10);
+        b = randomInt(1, 10);
+      } while (gcd(a, b) !== 1);
+
+      const c = randomInt(1, 5);
+
+      current = {
+        a,
+        b,
+        c,
+        totalApples: a * c,
+        totalBananas: b * c
+      };
+    }
+
+    function scatterFruits() {
+      fruitArea.innerHTML = "";
+      fruitArea.className = "fruit-area scattered";
+
+      const fruits = [];
+
+      for (let i = 0; i < current.totalApples; i++) {
+        fruits.push("🍎");
+      }
+
+      for (let i = 0; i < current.totalBananas; i++) {
+        fruits.push("🍌");
+      }
+
+      shuffleArray(fruits);
+
+      fruits.forEach(symbol => {
+        const fruit = document.createElement("div");
+        fruit.className = "fruit";
+        fruit.textContent = symbol;
+
+        const x = randomInt(6, 94);
+        const y = randomInt(8, 92);
+
+        fruit.style.left = `${x}%`;
+        fruit.style.top = `${y}%`;
+
+        fruitArea.appendChild(fruit);
+      });
+    }
+
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = randomInt(0, i);
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    function startNewQuestion() {
+      chooseQuestion();
+      appleInput.value = "";
+      bananaInput.value = "";
+      appleInput.disabled = false;
+      bananaInput.disabled = false;
+      setFeedback("Enter numbers for both boxes.", "neutral");
+      updateFruitTotals();
+      scatterFruits();
+      // appleInput.focus();
+    }
+
+    function updateFruitTotals() {
+      totalApplesValue.textContent = current.totalApples;
+      totalBananasValue.textContent = current.totalBananas;
+    }
+
+    function makeFruitSpan(symbol) {
+      const span = document.createElement("span");
+      span.textContent = symbol;
+      return span;
+    }
+
+    function renderGroupedFruits(applesPerGroup, bananasPerGroup) {
+      fruitArea.innerHTML = "";
+      fruitArea.className = "fruit-area grouped-layout";
+
+      const possibleAppleGroups = Math.floor(current.totalApples / applesPerGroup);
+      const possibleBananaGroups = Math.floor(current.totalBananas / bananasPerGroup);
+      const groupCount = Math.min(possibleAppleGroups, possibleBananaGroups);
+
+      const usedApples = groupCount * applesPerGroup;
+      const usedBananas = groupCount * bananasPerGroup;
+
+      const leftoverApples = current.totalApples - usedApples;
+      const leftoverBananas = current.totalBananas - usedBananas;
+
+      for (let groupNumber = 1; groupNumber <= groupCount; groupNumber++) {
+        const card = document.createElement("div");
+        card.className = "group-card";
+
+        const title = document.createElement("div");
+        title.className = "group-title";
+        title.textContent = `Group ${groupNumber}`;
+
+        const fruitBox = document.createElement("div");
+        fruitBox.className = "group-fruits";
+
+        for (let i = 0; i < applesPerGroup; i++) {
+          fruitBox.appendChild(makeFruitSpan("🍎"));
+        }
+
+        for (let i = 0; i < bananasPerGroup; i++) {
+          fruitBox.appendChild(makeFruitSpan("🍌"));
+        }
+
+        card.appendChild(title);
+        card.appendChild(fruitBox);
+        fruitArea.appendChild(card);
+      }
+
+      if (leftoverApples > 0 || leftoverBananas > 0) {
+        const leftoverCard = document.createElement("div");
+        leftoverCard.className = "group-card leftovers";
+
+        const title = document.createElement("div");
+        title.className = "group-title";
+        title.textContent = "Left over";
+
+        const fruitBox = document.createElement("div");
+        fruitBox.className = "group-fruits";
+
+        for (let i = 0; i < leftoverApples; i++) {
+          fruitBox.appendChild(makeFruitSpan("🍎"));
+        }
+
+        for (let i = 0; i < leftoverBananas; i++) {
+          fruitBox.appendChild(makeFruitSpan("🍌"));
+        }
+
+        leftoverCard.appendChild(title);
+        leftoverCard.appendChild(fruitBox);
+        fruitArea.appendChild(leftoverCard);
+      }
+
+      return {
+        groupCount,
+        leftoverApples,
+        leftoverBananas
+      };
+    }
+
+    function checkAnswer() {
+      const applesPerGroup = Number(appleInput.value);
+      const bananasPerGroup = Number(bananaInput.value);
+
+      if (
+        !Number.isInteger(applesPerGroup) ||
+        !Number.isInteger(bananasPerGroup) ||
+        applesPerGroup < 1 ||
+        bananasPerGroup < 1
+      ) {
+        setFeedback("Please enter positive whole numbers for both boxes.", "error");
+        scatterFruits();
+        return;
+      }
+
+      const result = renderGroupedFruits(applesPerGroup, bananasPerGroup);
+
+      const allFruitsGrouped =
+        result.leftoverApples === 0 &&
+        result.leftoverBananas === 0 &&
+        result.groupCount > 0;
+
+      const isSmallestSolution =
+        applesPerGroup === current.a &&
+        bananasPerGroup === current.b;
+
+      if (allFruitsGrouped && isSmallestSolution) {
+        correctCount++;
+        updateProgress();
+
+        setFeedback("Correct! That is the smallest apples-to-bananas ratio.", "success");
+
+        appleInput.disabled = true;
+        bananaInput.disabled = true;
+
+        showCheckmark();
+
+        setTimeout(() => {
+          hideCheckmark();
+
+          if (correctCount >= TOTAL_QUESTIONS) {
+            activityComplete();
+          } else {
+            startNewQuestion();
+          }
+        }, 2000);
+
+        return;
+      }
+
+      if (allFruitsGrouped && !isSmallestSolution) {
+        setFeedback(
+          "All fruits are grouped, but there is a solution with smaller numbers. Try simplifying.",
+          "warning"
+        );
+        return;
+      }
+
+      setFeedback(
+        "Some fruits are left over. Try a group size that uses every apple and banana.",
+        "error"
+      );
+    }
+
+    function showCheckmark() {
+      checkOverlay.classList.add("show");
+    }
+
+    function hideCheckmark() {
+      checkOverlay.classList.remove("show");
+    }
+
+    appleInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        checkAnswer();
+      }
+    });
+
+    bananaInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        checkAnswer();
+      }
+    });
+
+    // Optional auto-grouping once both inputs contain values.
+    let autoGroupTimer;
+
+    function scheduleAutoGroup() {
+      clearTimeout(autoGroupTimer);
+
+      if (appleInput.value !== "" && bananaInput.value !== "") {
+        autoGroupTimer = setTimeout(checkAnswer, 500);
+      }
+    }
+
+    appleInput.addEventListener("input", scheduleAutoGroup);
+    bananaInput.addEventListener("input", scheduleAutoGroup);
+
+    updateProgress();
+    startNewQuestion();
+
+  </script>
+<script src="/static/puzzle/js/activity.js"></script>
+<script>autoZoom();</script>
+</body>
+</html>

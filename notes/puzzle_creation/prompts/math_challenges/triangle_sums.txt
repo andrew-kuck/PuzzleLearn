@@ -1,0 +1,627 @@
+create an activity using html, css, and javascript. the page shows a large triangle with a positive integer at each vertex. on each side of the triangle are some amount of evenly spaced inputs. the user will enter a positive integer into each of these inputs. each side must have at least one input. thus there are 3 known values (at the vertices) and from 3 to u unknown values (on the sides). the total number of values is therefore 3 + u. it must be possible for the user to fill in the unknown values such that: every integer from 1 to 3 + u is used exactly once (including the vertex integers) AND each "side sum" is the same, where a "side sum" is the sum of the integers on the side plus the values of the two corresponding vertex integers. circles should be used for the numbers along the triangle (initially empty circles along the sides and filled circles at the vertices). the circles should be evenly spread on each side of the triangle and they should centered on the line of the triangle, which should be visible. if the user fills in the inputs such that a correct solution is present, a green checkmark appears over the screen and a new question is presented. with each correct solution a progress bar is advanced, such that after 5 correct answers the progress bar is full and a function activityComplete() is called. there should be javascript constants for the min and max values of u. there should also be a javascript constant for whether the user is told the "side sum" or not. There should be no title for the activity, and only simple instructions.
+
+Save this as a single `.html` file and open it in a browser.
+
+Change the constants and title text as desired.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title></title>
+  <style>
+    :root {
+      --circle-size: clamp(40px, 8vw, 58px);
+      --line-color: #222;
+      --blue: #2f65ff;
+      --green: #16a34a;
+      --light-gray: #e5e7eb;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f8fafc;
+      color: #111827;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .activity {
+      width: min(720px, 100%);
+      text-align: center;
+    }
+
+    .instructions {
+      font-size: 1rem;
+      margin: 0 0 14px;
+      line-height: 1.4;
+    }
+
+    .progress-wrap {
+      width: min(420px, 100%);
+      height: 16px;
+      background: var(--light-gray);
+      border-radius: 999px;
+      margin: 0 auto 18px;
+      overflow: hidden;
+      border: 1px solid #d1d5db;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #22c55e, #16a34a);
+      transition: width 300ms ease;
+    }
+
+    .triangle-stage {
+      position: relative;
+      width: min(640px, 96vw);
+      aspect-ratio: 1.15 / 1;
+      margin: 0 auto;
+    }
+
+    .triangle-lines {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      z-index: 1;
+    }
+
+    .circle {
+      position: absolute;
+      width: var(--circle-size);
+      height: var(--circle-size);
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: clamp(1rem, 3vw, 1.35rem);
+      z-index: 2;
+    }
+
+    .vertex {
+      background: #111827;
+      color: white;
+      border: 3px solid #111827;
+    }
+
+    .input-circle {
+      background: white;
+      border: 3px solid var(--blue);
+      box-shadow: 0 2px 7px rgba(0, 0, 0, 0.08);
+    }
+
+    .number-input {
+      width: 100%;
+      height: 100%;
+      border: none;
+      outline: none;
+      background: transparent;
+      text-align: center;
+      font: inherit;
+      font-weight: 700;
+      color: #111827;
+      border-radius: 50%;
+      padding: 0;
+    }
+
+    .number-input::-webkit-outer-spin-button,
+    .number-input::-webkit-inner-spin-button {
+      appearance: none;
+      margin: 0;
+    }
+
+    .number-input {
+      appearance: textfield;
+      -moz-appearance: textfield;
+    }
+
+    .feedback {
+      min-height: 1.4em;
+      margin-top: 8px;
+      font-size: 0.95rem;
+      color: #374151;
+    }
+
+    .check-overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.62);
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .check-overlay.show {
+      display: flex;
+      animation: fadeIn 180ms ease;
+    }
+
+    .checkmark {
+      font-size: clamp(7rem, 24vw, 15rem);
+      color: var(--green);
+      font-weight: 900;
+      text-shadow: 0 8px 22px rgba(22, 163, 74, 0.25);
+      animation: pop 360ms ease;
+    }
+
+    @keyframes pop {
+      0% {
+        transform: scale(0.55);
+        opacity: 0;
+      }
+      80% {
+        transform: scale(1.08);
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="activity">
+    <p class="instructions" id="instructions"></p>
+
+    <div class="progress-wrap" aria-label="Progress">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <section class="triangle-stage" id="triangleStage" aria-label="Number triangle puzzle"></section>
+
+    <div class="feedback" id="feedback" aria-live="polite"></div>
+  </main>
+
+  <div class="check-overlay" id="checkOverlay" aria-hidden="true">
+    <div class="checkmark">✓</div>
+  </div>
+
+  <script>
+    /*
+      Activity settings
+      u is the total number of unknown side values.
+      Since each side must have at least one input, MIN_U should be at least 3.
+    */
+    const MIN_U = 3;
+    const MAX_U = 9;
+    const SHOW_SIDE_SUM = true;
+
+    const QUESTIONS_TO_COMPLETE = 5;
+
+    const POINTS = {
+      A: { x: 50, y: 8 },
+      B: { x: 10, y: 88 },
+      C: { x: 90, y: 88 }
+    };
+
+    const SIDE_ENDPOINTS = {
+      AB: ["A", "B"],
+      BC: ["B", "C"],
+      CA: ["C", "A"]
+    };
+
+    const stage = document.getElementById("triangleStage");
+    const instructions = document.getElementById("instructions");
+    const progressBar = document.getElementById("progressBar");
+    const feedback = document.getElementById("feedback");
+    const checkOverlay = document.getElementById("checkOverlay");
+
+    let currentPuzzle = null;
+    let correctCount = 0;
+    let locked = false;
+    let completed = false;
+
+    window.activityComplete = window.activityComplete || function () {
+      console.log("activityComplete() called");
+    };
+
+    startActivity();
+
+    function startActivity() {
+      updateProgress();
+      newQuestion();
+    }
+
+    function newQuestion() {
+      locked = false;
+      feedback.textContent = "";
+
+      try {
+        currentPuzzle = generatePuzzle();
+        renderPuzzle(currentPuzzle);
+      } catch (error) {
+        feedback.textContent = "Puzzle generation failed. Try lowering MAX_U.";
+        console.error(error);
+      }
+    }
+
+    function generatePuzzle() {
+      const minU = Math.max(3, MIN_U);
+      const maxU = Math.max(minU, MAX_U);
+
+      for (let attempt = 0; attempt < 4000; attempt++) {
+        const u = randomInt(minU, maxU);
+        const counts = randomSideCounts(u);
+        const puzzle = findSolvablePuzzle(u, counts);
+
+        if (puzzle) {
+          return puzzle;
+        }
+      }
+
+      throw new Error("Could not generate a solvable puzzle.");
+    }
+
+    function findSolvablePuzzle(u, counts) {
+      const n = 3 + u;
+      const numbers = range(1, n);
+      const totalSum = (n * (n + 1)) / 2;
+
+      const vertexOrders = [];
+
+      for (const A of numbers) {
+        for (const B of numbers) {
+          for (const C of numbers) {
+            if (A !== B && A !== C && B !== C) {
+              vertexOrders.push({ A, B, C });
+            }
+          }
+        }
+      }
+
+      shuffle(vertexOrders);
+
+      for (const vertices of vertexOrders) {
+        const vertexSum = vertices.A + vertices.B + vertices.C;
+
+        if ((totalSum + vertexSum) % 3 !== 0) continue;
+
+        const sideSum = (totalSum + vertexSum) / 3;
+
+        const targets = {
+          AB: sideSum - vertices.A - vertices.B,
+          BC: sideSum - vertices.B - vertices.C,
+          CA: sideSum - vertices.C - vertices.A
+        };
+
+        if (targets.AB <= 0 || targets.BC <= 0 || targets.CA <= 0) continue;
+
+        const remaining = numbers.filter(
+          num => num !== vertices.A && num !== vertices.B && num !== vertices.C
+        );
+
+        const firstGroups = combinationsOfSizeWithSum(
+          remaining,
+          counts.AB,
+          targets.AB
+        );
+
+        shuffle(firstGroups);
+
+        for (const groupAB of firstGroups) {
+          const usedAB = new Set(groupAB);
+          const remainingAfterAB = remaining.filter(num => !usedAB.has(num));
+
+          const secondGroups = combinationsOfSizeWithSum(
+            remainingAfterAB,
+            counts.BC,
+            targets.BC
+          );
+
+          shuffle(secondGroups);
+
+          for (const groupBC of secondGroups) {
+            const usedBC = new Set(groupBC);
+            const groupCA = remainingAfterAB.filter(num => !usedBC.has(num));
+
+            if (
+              groupCA.length === counts.CA &&
+              sum(groupCA) === targets.CA
+            ) {
+              return {
+                n,
+                u,
+                vertices,
+                counts,
+                sideSum,
+                solution: {
+                  AB: shuffle([...groupAB]),
+                  BC: shuffle([...groupBC]),
+                  CA: shuffle([...groupCA])
+                }
+              };
+            }
+          }
+        }
+      }
+
+      return null;
+    }
+
+    function renderPuzzle(puzzle) {
+      stage.innerHTML = "";
+
+      const lineSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      lineSvg.setAttribute("class", "triangle-lines");
+      lineSvg.setAttribute("viewBox", "0 0 100 100");
+      lineSvg.setAttribute("preserveAspectRatio", "none");
+
+      const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+      polygon.setAttribute(
+        "points",
+        `${POINTS.A.x},${POINTS.A.y} ${POINTS.B.x},${POINTS.B.y} ${POINTS.C.x},${POINTS.C.y}`
+      );
+      polygon.setAttribute("fill", "none");
+      polygon.setAttribute("stroke", "var(--line-color)");
+      polygon.setAttribute("stroke-width", "1.8");
+      polygon.setAttribute("stroke-linejoin", "round");
+
+      lineSvg.appendChild(polygon);
+      stage.appendChild(lineSvg);
+
+      createVertex("A", puzzle.vertices.A);
+      createVertex("B", puzzle.vertices.B);
+      createVertex("C", puzzle.vertices.C);
+
+      createSideInputs("AB", puzzle.counts.AB);
+      createSideInputs("BC", puzzle.counts.BC);
+      createSideInputs("CA", puzzle.counts.CA);
+
+      const sumText = SHOW_SIDE_SUM
+        ? ` Target side sum: ${puzzle.sideSum}.`
+        : "";
+
+      instructions.textContent =
+        `Fill the empty circles with the integers from 1 to ${puzzle.n}. ` +
+        `Use each integer exactly once, and make all three side sums equal.` +
+        sumText;
+    }
+
+    function createVertex(name, value) {
+      const point = POINTS[name];
+
+      const circle = document.createElement("div");
+      circle.className = "circle vertex";
+      circle.textContent = value;
+      circle.style.left = `${point.x}%`;
+      circle.style.top = `${point.y}%`;
+      circle.setAttribute("aria-label", `Vertex ${name}, value ${value}`);
+
+      stage.appendChild(circle);
+    }
+
+    function createSideInputs(side, count) {
+      const [startName, endName] = SIDE_ENDPOINTS[side];
+      const start = POINTS[startName];
+      const end = POINTS[endName];
+
+      for (let i = 1; i <= count; i++) {
+        const t = i / (count + 1);
+        const x = start.x + (end.x - start.x) * t;
+        const y = start.y + (end.y - start.y) * t;
+
+        const circle = document.createElement("div");
+        circle.className = "circle input-circle";
+        circle.style.left = `${x}%`;
+        circle.style.top = `${y}%`;
+
+        const input = document.createElement("input");
+        input.className = "number-input";
+        input.type = "number";
+        input.inputMode = "numeric";
+        input.min = "1";
+        input.max = String(currentPuzzle.n);
+        input.step = "1";
+        input.dataset.side = side;
+        input.setAttribute(
+          "aria-label",
+          `Input ${i} on side ${side}, enter an integer from 1 to ${currentPuzzle.n}`
+        );
+
+        input.addEventListener("input", checkAnswer);
+
+        circle.appendChild(input);
+        stage.appendChild(circle);
+      }
+    }
+
+    function checkAnswer() {
+      if (locked || completed) return;
+
+      const inputs = [...document.querySelectorAll(".number-input")];
+
+      if (inputs.some(input => input.value.trim() === "")) {
+        feedback.textContent = "";
+        return;
+      }
+
+      const enteredValues = [];
+
+      for (const input of inputs) {
+        const raw = input.value.trim();
+
+        if (!/^\d+$/.test(raw)) {
+          feedback.textContent = "Use positive integers only.";
+          return;
+        }
+
+        enteredValues.push(Number(raw));
+      }
+
+      const allValues = [
+        currentPuzzle.vertices.A,
+        currentPuzzle.vertices.B,
+        currentPuzzle.vertices.C,
+        ...enteredValues
+      ];
+
+      const requiredSet = new Set(range(1, currentPuzzle.n));
+      const userSet = new Set(allValues);
+
+      const usesEachNumberExactlyOnce =
+        allValues.length === currentPuzzle.n &&
+        userSet.size === currentPuzzle.n &&
+        allValues.every(value => requiredSet.has(value));
+
+      if (!usesEachNumberExactlyOnce) {
+        feedback.textContent = `Use each integer from 1 to ${currentPuzzle.n} exactly once.`;
+        return;
+      }
+
+      const sideSums = {
+        AB: sideTotal("AB"),
+        BC: sideTotal("BC"),
+        CA: sideTotal("CA")
+      };
+
+      const equalSideSums =
+        sideSums.AB === sideSums.BC &&
+        sideSums.BC === sideSums.CA;
+
+      if (equalSideSums) {
+        handleCorrectAnswer();
+      } else {
+        feedback.textContent = "The numbers are valid, but the side sums are not equal yet.";
+      }
+    }
+
+    function sideTotal(side) {
+      const [v1, v2] = SIDE_ENDPOINTS[side];
+      const sideInputs = [...document.querySelectorAll(`.number-input[data-side="${side}"]`)];
+
+      return (
+        currentPuzzle.vertices[v1] +
+        currentPuzzle.vertices[v2] +
+        sideInputs.reduce((total, input) => total + Number(input.value), 0)
+      );
+    }
+
+    function handleCorrectAnswer() {
+      locked = true;
+      correctCount++;
+      updateProgress();
+
+      feedback.textContent = "Correct!";
+      checkOverlay.classList.add("show");
+
+      setTimeout(() => {
+        checkOverlay.classList.remove("show");
+
+        if (correctCount >= QUESTIONS_TO_COMPLETE) {
+          completed = true;
+          feedback.textContent = "Complete!";
+          activityComplete();
+        } else {
+          newQuestion();
+        }
+      }, 900);
+    }
+
+    function updateProgress() {
+      const percent = Math.min(100, (correctCount / QUESTIONS_TO_COMPLETE) * 100);
+      progressBar.style.width = `${percent}%`;
+    }
+
+    function randomSideCounts(u) {
+      const counts = [1, 1, 1];
+
+      for (let i = 0; i < u - 3; i++) {
+        counts[randomInt(0, 2)]++;
+      }
+
+      shuffle(counts);
+
+      return {
+        AB: counts[0],
+        BC: counts[1],
+        CA: counts[2]
+      };
+    }
+
+    function combinationsOfSizeWithSum(numbers, size, target) {
+      const nums = [...numbers].sort((a, b) => a - b);
+      const results = [];
+      const combo = [];
+
+      function search(startIndex, remainingSize, currentSum) {
+        if (results.length > 5000) return;
+
+        if (remainingSize === 0) {
+          if (currentSum === target) {
+            results.push([...combo]);
+          }
+          return;
+        }
+
+        if (currentSum >= target) return;
+
+        for (
+          let i = startIndex;
+          i <= nums.length - remainingSize;
+          i++
+        ) {
+          const nextSum = currentSum + nums[i];
+
+          if (nextSum > target) break;
+
+          combo.push(nums[i]);
+          search(i + 1, remainingSize - 1, nextSum);
+          combo.pop();
+        }
+      }
+
+      search(0, size, 0);
+      return results;
+    }
+
+    function range(start, end) {
+      return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+    }
+
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = randomInt(0, i);
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+
+      return array;
+    }
+
+    function sum(array) {
+      return array.reduce((total, value) => total + value, 0);
+    }
+  </script>
+</body>
+</html>
+```

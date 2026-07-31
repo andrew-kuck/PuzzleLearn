@@ -1,0 +1,965 @@
+create an activity using html, css, and javascript. the left side (text side) of the screen is an area for importing project gutenberg texts and "reading" them with a program that tracks word frequency. at the top of the text side is user input for a search term and a button to search. there is also user input for the n of an n-gram model, with a button to train the model (the n-gram input and train button are intially grayed out). after clicking search, use the search terms to find the book on project gutenberg that most closely matches the search terms, get the plain text of that book, and then display that text on the lower part of the text side of the screen. clicking search again repeats the process and replaces the text with the new results. if there is any text being displayed, then the n-gram input and train button are not grayed out. the n-gram input accepts integers greater than 0. after entering a number and clicking the train button, the process begins to train an n-gram model on the text. for training purposes, tokens are simply whitespace-separated words, except for periods which are always treated as independent tokens. the right side of the screen shows the representation of the model growing as the text is scanned. if n=1, then the model is initially represented as a single dictionary, where the keys are words encountered and the values are the frequencies. if n>1, then the model is initially represented as a dictionary of dictionaries, where the keys are strings with n-1 words and the values are dictionaries that give the frequencies of words following the (n-1)-word strings. at the top of the right side of the screen is a button for the user to incrementally click through the scanning of the text. as they click through, the relevant words from the text on the left side of the screen are highlighted (color1 for the (n-1) context words and color2 for the subsequent word), and the model on the right side of the screen visually changes as it grows. there is also a button at the top of the right side of the screen to scan the remainder of the text. when this button is clicked, all highlighting on the left side of the screen is removed, the remainder of the text is scanned without any visualization, and the model on the right side of the screen is immediately updated. at this point, the options at the top of the right side of the screen change to allow the user only one option: convert frequencies to probabilities. when this option is clicked, the innermost values of the model are changed from frequencies to probabilities. in a model with n=1, the probability should be the probability of the word in the text. in a model with n>1, the probability should be the probability of the word in the text given the context (the keys of the outer dictionary). after the frequencies have been changed to probabilities, the user has only two options at the top of the right side of the screen: "generate word" and "clear". every time they click the option to generate a word, a word is added to a growing display for the newly generated text. each next word is generated according to the probabilities in the model. in the display, highlight the context that will be used to generate the next word (color1). when it is generated, temporarily highlight this new word in a different color (color2), then highlight the context that will be used to generate the next word. if the user clicks the clear option at the top of the right side of the screen, the generated sentence is reset and cleared but everything else remains. if the user makes any inputs on the left side of the screen, then the right side of the screen completely resets. 
+
+Cross-Origin Request Blocked
+
+can this be done in a way that doesn't need a local server, so that the code (django app) could be deployed to dev
+
+the text should be converted to all lowercase before doing anything with it (the view to the user should also be in all lowercase). the text viewing area should be scrollable, so that the user can scroll through the text. the view of the model (a dict or dict of dicts) should also be scrollable, so that the user can scroll through to see all the frequencies/probabilities. However, both of these scrollable regions should only initially show only a page or two of content, and they should only show more if the user scrolls to the bottom, at which point more content should load.
+
+periods, exclamation marks, and question marks should all be treated as separate tokens. commas can display on the page for the reader but should be ignored for all training purposes.
+
+have a javascript constant that lists all the characters that will be ignored in the same way as commas are ignored
+
+have an easy way to treat all non-alphanumeric characters like the commas, but to also go back to the current setting if desired
+
+can you instead set it up so that when IGNORED_TRAINING_CHARACTERS is set to "all-non-alphanumeric" then all non-alphanumeric characters are treated as commas and such were treated in the existing setup
+
+Below is a complete single-file HTML activity. Save it as something like `gutenberg-ngram-activity.html` and open it in a browser.
+
+It uses the public [Gutendex](https://gutendex.com/) API to search Project Gutenberg metadata, then loads the plain-text version of the best-matching result.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project Gutenberg N-Gram Activity</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --border: #d7dce6;
+      --text: #172033;
+      --muted: #657084;
+      --accent: #2f65d9;
+      --accent-dark: #234ea9;
+      --disabled: #d9dde7;
+      --context: #ffe08a;
+      --target: #93e6b5;
+      --danger: #b42318;
+      --code-bg: #101828;
+      --code-text: #e8eefc;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      height: 100vh;
+    }
+
+    .side {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      border-right: 1px solid var(--border);
+      background: var(--panel);
+    }
+
+    .side:last-child {
+      border-right: none;
+    }
+
+    header {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+      background: #fbfcff;
+    }
+
+    h1, h2 {
+      margin: 0 0 0.75rem;
+      font-size: 1.1rem;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    label {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    input {
+      padding: 0.5rem 0.6rem;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      min-width: 6rem;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      min-width: 12rem;
+    }
+
+    button {
+      border: none;
+      border-radius: 0.5rem;
+      padding: 0.55rem 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      color: white;
+      background: var(--accent);
+      transition: background 0.15s ease, transform 0.05s ease;
+    }
+
+    button:hover:not(:disabled) {
+      background: var(--accent-dark);
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    button:disabled,
+    input:disabled {
+      cursor: not-allowed;
+      background: var(--disabled);
+      color: #7d8492;
+    }
+
+    button.secondary {
+      background: #475467;
+    }
+
+    button.secondary:hover:not(:disabled) {
+      background: #344054;
+    }
+
+    button.warning {
+      background: #b54708;
+    }
+
+    button.warning:hover:not(:disabled) {
+      background: #93370d;
+    }
+
+    .status {
+      margin-top: 0.65rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.35;
+    }
+
+    .error {
+      color: var(--danger);
+      font-weight: 700;
+    }
+
+    .content {
+      flex: 1;
+      overflow: auto;
+      padding: 1rem;
+      min-height: 0;
+    }
+
+    #textDisplay {
+      line-height: 1.7;
+      font-size: 0.98rem;
+      white-space: normal;
+    }
+
+    .token {
+      border-radius: 0.25rem;
+      padding: 0.05rem 0.08rem;
+    }
+
+    .context-highlight {
+      background: var(--context);
+      outline: 1px solid rgba(150, 110, 0, 0.25);
+    }
+
+    .target-highlight {
+      background: var(--target);
+      outline: 1px solid rgba(0, 110, 50, 0.25);
+    }
+
+    .right-body {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 0.75rem;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .model-box {
+      min-height: 0;
+      overflow: auto;
+      background: var(--code-bg);
+      color: var(--code-text);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.86rem;
+      line-height: 1.45;
+      white-space: pre;
+    }
+
+    .generated-box {
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      min-height: 6rem;
+      background: #fbfcff;
+      line-height: 1.8;
+    }
+
+    .generated-title {
+      margin: 0 0 0.5rem;
+      font-weight: 800;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .gen-token {
+      border-radius: 0.25rem;
+      padding: 0.05rem 0.08rem;
+    }
+
+    .gen-context {
+      background: var(--context);
+    }
+
+    .gen-new {
+      background: var(--target);
+    }
+
+    .empty {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .book-title {
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .small-note {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 0.5rem;
+    }
+
+    @media (max-width: 850px) {
+      body {
+        overflow: auto;
+        height: auto;
+      }
+
+      .app {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+
+      .side {
+        height: 100vh;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <!-- LEFT SIDE -->
+    <section class="side" aria-label="Text side">
+      <header>
+        <h1>Project Gutenberg Text Reader</h1>
+
+        <div class="controls">
+          <label for="searchInput">Search term</label>
+          <input
+            id="searchInput"
+            type="text"
+            placeholder="e.g., Frankenstein Mary Shelley"
+            autocomplete="off"
+          />
+          <button id="searchButton">Search</button>
+        </div>
+
+        <div class="controls" style="margin-top: 0.65rem;">
+          <label for="nInput">n</label>
+          <input
+            id="nInput"
+            type="number"
+            min="1"
+            step="1"
+            value="2"
+            disabled
+          />
+          <button id="trainButton" disabled>Train n-gram model</button>
+        </div>
+
+        <div id="leftStatus" class="status">
+          Search for a Project Gutenberg book to begin.
+        </div>
+      </header>
+
+      <div class="content" id="textContainer">
+        <div id="textDisplay" class="empty">
+          No text loaded yet.
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT SIDE -->
+    <section class="side" aria-label="Model side">
+      <header>
+        <h2>N-Gram Model</h2>
+        <div id="rightControls" class="controls">
+          <button id="stepButton" disabled>Scan next token</button>
+          <button id="scanRestButton" class="secondary" disabled>Scan remainder</button>
+        </div>
+        <div id="rightStatus" class="status">
+          Train a model to see it grow here.
+        </div>
+      </header>
+
+      <div class="content">
+        <div class="right-body">
+          <pre id="modelDisplay" class="model-box">{}</pre>
+
+          <section class="generated-box" aria-label="Generated text display">
+            <p class="generated-title">Generated text</p>
+            <div id="generatedDisplay" class="empty">
+              Convert frequencies to probabilities, then generate words.
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    /***********************
+     * DOM ELEMENTS
+     ***********************/
+    const searchInput = document.getElementById("searchInput");
+    const searchButton = document.getElementById("searchButton");
+    const nInput = document.getElementById("nInput");
+    const trainButton = document.getElementById("trainButton");
+
+    const leftStatus = document.getElementById("leftStatus");
+    const rightStatus = document.getElementById("rightStatus");
+
+    const textDisplay = document.getElementById("textDisplay");
+    const textContainer = document.getElementById("textContainer");
+
+    const rightControls = document.getElementById("rightControls");
+    const stepButton = document.getElementById("stepButton");
+    const scanRestButton = document.getElementById("scanRestButton");
+
+    const modelDisplay = document.getElementById("modelDisplay");
+    const generatedDisplay = document.getElementById("generatedDisplay");
+
+    /***********************
+     * STATE
+     ***********************/
+    let rawText = "";
+    let tokens = [];
+    let tokenSpans = [];
+
+    let n = 0;
+    let model = {};
+    let scanIndex = 0;
+    let trainedThroughEnd = false;
+    let probabilitiesReady = false;
+
+    let generatedTokens = [];
+    let temporaryNewIndex = null;
+    let resetRightOnLeftInput = true;
+
+    /***********************
+     * BASIC UTILITIES
+     ***********************/
+    function escapeHTML(str) {
+      return str.replace(/[&<>"']/g, ch => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      }[ch]));
+    }
+
+    function tokenize(text) {
+      // Whitespace-separated words, except periods are always independent tokens.
+      // Examples:
+      // "Hello world." -> ["Hello", "world", "."]
+      // "Mr. Darcy"    -> ["Mr", ".", "Darcy"]
+      return text.match(/[^\s.]+|\./g) || [];
+    }
+
+    function tokenNeedsLeadingSpace(token, previousToken) {
+      if (!previousToken) return false;
+      if (token === ".") return false;
+      return true;
+    }
+
+    function formatTokensAsHTML(tokenArray, options = {}) {
+      const {
+        className = "token",
+        contextIndexes = new Set(),
+        targetIndex = null
+      } = options;
+
+      let html = "";
+
+      tokenArray.forEach((token, i) => {
+        const previous = tokenArray[i - 1];
+        const leading = tokenNeedsLeadingSpace(token, previous) ? " " : "";
+
+        let extraClass = "";
+        if (contextIndexes.has(i)) extraClass += " context-highlight";
+        if (i === targetIndex) extraClass += " target-highlight";
+
+        html += `${leading}<span class="${className}${extraClass}" data-token-index="${i}">${escapeHTML(token)}</span>`;
+      });
+
+      return html;
+    }
+
+    function updateModelDisplay() {
+      modelDisplay.textContent = JSON.stringify(model, null, 2);
+    }
+
+    function setLeftStatus(message, isError = false) {
+      leftStatus.innerHTML = isError
+        ? `<span class="error">${escapeHTML(message)}</span>`
+        : message;
+    }
+
+    function setRightStatus(message, isError = false) {
+      rightStatus.innerHTML = isError
+        ? `<span class="error">${escapeHTML(message)}</span>`
+        : message;
+    }
+
+    function clearHighlights() {
+      tokenSpans.forEach(span => {
+        span.classList.remove("context-highlight", "target-highlight");
+      });
+    }
+
+    function highlightTrainingWindow(targetIndex) {
+      clearHighlights();
+
+      if (!tokenSpans.length) return;
+
+      if (n === 1) {
+        tokenSpans[targetIndex]?.classList.add("target-highlight");
+        tokenSpans[targetIndex]?.scrollIntoView({
+          behavior: "smooth",
+          block: "center"
+        });
+        return;
+      }
+
+      const contextStart = targetIndex - (n - 1);
+      const contextEnd = targetIndex - 1;
+
+      for (let i = contextStart; i <= contextEnd; i++) {
+        tokenSpans[i]?.classList.add("context-highlight");
+      }
+
+      tokenSpans[targetIndex]?.classList.add("target-highlight");
+
+      tokenSpans[contextStart]?.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+    }
+
+    function renderText() {
+      if (!tokens.length) {
+        textDisplay.className = "empty";
+        textDisplay.textContent = "No text loaded yet.";
+        tokenSpans = [];
+        return;
+      }
+
+      textDisplay.className = "";
+      textDisplay.innerHTML = formatTokensAsHTML(tokens);
+      tokenSpans = Array.from(textDisplay.querySelectorAll(".token"));
+    }
+
+    /***********************
+     * RIGHT SIDE RESET
+     ***********************/
+    function resetRightSide() {
+      n = 0;
+      model = {};
+      scanIndex = 0;
+      trainedThroughEnd = false;
+      probabilitiesReady = false;
+      generatedTokens = [];
+      temporaryNewIndex = null;
+
+      clearHighlights();
+      updateModelDisplay();
+
+      rightControls.innerHTML = `
+        <button id="stepButton" disabled>Scan next token</button>
+        <button id="scanRestButton" class="secondary" disabled>Scan remainder</button>
+      `;
+
+      window.stepButton = document.getElementById("stepButton");
+      window.scanRestButton = document.getElementById("scanRestButton");
+
+      document.getElementById("stepButton").addEventListener("click", scanOneStep);
+      document.getElementById("scanRestButton").addEventListener("click", scanRemainder);
+
+      generatedDisplay.className = "empty";
+      generatedDisplay.textContent = "Convert frequencies to probabilities, then generate words.";
+
+      setRightStatus("Train a model to see it grow here.");
+    }
+
+    /***********************
+     * GUTENBERG SEARCH / LOAD
+     ***********************/
+    function getPlainTextUrl(book) {
+      const formats = book.formats || {};
+      const entries = Object.entries(formats);
+
+      const preferred = entries.find(([mime, url]) =>
+        mime.toLowerCase().includes("text/plain") &&
+        mime.toLowerCase().includes("utf-8") &&
+        !url.toLowerCase().endsWith(".zip")
+      );
+
+      if (preferred) return preferred[1];
+
+      const fallback = entries.find(([mime, url]) =>
+        mime.toLowerCase().includes("text/plain") &&
+        !url.toLowerCase().endsWith(".zip")
+      );
+
+      return fallback ? fallback[1] : null;
+    }
+
+    async function fetchTextWithFallback(url) {
+      // Project Gutenberg text URLs usually work directly.
+      // If a browser blocks the direct request, this attempts a public CORS proxy.
+      try {
+        const direct = await fetch(url);
+        if (!direct.ok) throw new Error(`Direct text fetch failed: ${direct.status}`);
+        return await direct.text();
+      } catch (directError) {
+        const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+        const proxied = await fetch(proxy);
+        if (!proxied.ok) {
+          throw new Error("Could not fetch text directly or through fallback proxy.");
+        }
+        return await proxied.text();
+      }
+    }
+
+    async function searchGutenberg() {
+      const query = searchInput.value.trim();
+
+      if (!query) {
+        setLeftStatus("Please enter a search term.", true);
+        return;
+      }
+
+      resetRightSide();
+
+      rawText = "";
+      tokens = [];
+      tokenSpans = [];
+      renderText();
+
+      nInput.disabled = true;
+      trainButton.disabled = true;
+
+      setLeftStatus("Searching Project Gutenberg...");
+      searchButton.disabled = true;
+
+      try {
+        const searchUrl = `https://gutendex.com/books/?search=${encodeURIComponent(query)}`;
+        const response = await fetch(searchUrl);
+
+        if (!response.ok) {
+          throw new Error(`Search failed with status ${response.status}.`);
+        }
+
+        const data = await response.json();
+
+        if (!data.results || data.results.length === 0) {
+          throw new Error("No matching Project Gutenberg book was found.");
+        }
+
+        // Gutendex returns results ranked by relevance, so the first result is the closest match.
+        const book = data.results[0];
+        const textUrl = getPlainTextUrl(book);
+
+        if (!textUrl) {
+          throw new Error("The best-matching book does not have a plain-text version available.");
+        }
+
+        setLeftStatus(`
+          Best match: <span class="book-title">${escapeHTML(book.title)}</span>
+          ${book.authors?.length ? " by " + escapeHTML(book.authors.map(a => a.name).join(", ")) : ""}
+          <br>Loading plain text...
+        `);
+
+        rawText = await fetchTextWithFallback(textUrl);
+        tokens = tokenize(rawText);
+
+        renderText();
+
+        nInput.disabled = false;
+        trainButton.disabled = false;
+
+        setLeftStatus(`
+          Loaded <span class="book-title">${escapeHTML(book.title)}</span>
+          ${book.authors?.length ? " by " + escapeHTML(book.authors.map(a => a.name).join(", ")) : ""}
+          <br>${tokens.length.toLocaleString()} tokens found.
+          <div class="small-note">
+            Tokenization rule: whitespace-separated words, with periods treated as independent tokens.
+          </div>
+        `);
+      } catch (error) {
+        rawText = "";
+        tokens = [];
+        renderText();
+        setLeftStatus(error.message, true);
+      } finally {
+        searchButton.disabled = false;
+      }
+    }
+
+    /***********************
+     * TRAINING
+     ***********************/
+    function beginTraining() {
+      if (!tokens.length) {
+        setRightStatus("Load a text before training.", true);
+        return;
+      }
+
+      const parsedN = Number(nInput.value);
+
+      if (!Number.isInteger(parsedN) || parsedN < 1) {
+        setRightStatus("n must be an integer greater than 0.", true);
+        return;
+      }
+
+      resetRightSide();
+
+      n = parsedN;
+      model = {};
+      scanIndex = n === 1 ? 0 : n - 1;
+      trainedThroughEnd = false;
+      probabilitiesReady = false;
+
+      updateModelDisplay();
+
+      const currentStepButton = document.getElementById("stepButton");
+      const currentScanRestButton = document.getElementById("scanRestButton");
+
+      currentStepButton.disabled = scanIndex >= tokens.length;
+      currentScanRestButton.disabled = scanIndex >= tokens.length;
+
+      if (scanIndex >= tokens.length) {
+        setRightStatus(
+          `This text is too short to train a ${n}-gram model. Try a smaller n.`,
+          true
+        );
+        return;
+      }
+
+      setRightStatus(
+        n === 1
+          ? "Unigram model initialized as a single frequency dictionary. Click to scan tokens."
+          : `${n}-gram model initialized as a dictionary of dictionaries. Click to scan tokens.`
+      );
+    }
+
+    function addTrainingObservation(targetIndex) {
+      const word = tokens[targetIndex];
+
+      if (n === 1) {
+        model[word] = (model[word] || 0) + 1;
+      } else {
+        const contextStart = targetIndex - (n - 1);
+        const context = tokens.slice(contextStart, targetIndex).join(" ");
+
+        if (!model[context]) model[context] = {};
+        model[context][word] = (model[context][word] || 0) + 1;
+      }
+    }
+
+    function finishScanningIfDone() {
+      if (scanIndex >= tokens.length) {
+        trainedThroughEnd = true;
+        clearHighlights();
+        showConvertOnlyControls();
+        setRightStatus("Scanning complete. Convert frequencies to probabilities.");
+      }
+    }
+
+    function scanOneStep() {
+      if (probabilitiesReady || trainedThroughEnd) return;
+      if (scanIndex >= tokens.length) {
+        finishScanningIfDone();
+        return;
+      }
+
+      highlightTrainingWindow(scanIndex);
+      addTrainingObservation(scanIndex);
+      scanIndex++;
+
+      updateModelDisplay();
+
+      if (scanIndex >= tokens.length) {
+        finishScanningIfDone();
+      } else {
+        setRightStatus(
+          `Scanned ${scanIndex.toLocaleString()} of ${tokens.length.toLocaleString()} tokens.`
+        );
+      }
+    }
+
+    function scanRemainder() {
+      if (probabilitiesReady || trainedThroughEnd) return;
+
+      clearHighlights();
+
+      while (scanIndex < tokens.length) {
+        addTrainingObservation(scanIndex);
+        scanIndex++;
+      }
+
+      trainedThroughEnd = true;
+      updateModelDisplay();
+      showConvertOnlyControls();
+      setRightStatus("Remainder scanned. Convert frequencies to probabilities.");
+    }
+
+    /***********************
+     * PROBABILITIES
+     ***********************/
+    function showConvertOnlyControls() {
+      rightControls.innerHTML = `
+        <button id="convertButton" class="warning">Convert frequencies to probabilities</button>
+      `;
+
+      document.getElementById("convertButton").addEventListener("click", convertToProbabilities);
+    }
+
+    function convertToProbabilities() {
+      if (probabilitiesReady) return;
+
+      if (n === 1) {
+        const total = Object.values(model).reduce((sum, count) => sum + count, 0);
+
+        for (const word of Object.keys(model)) {
+          model[word] = model[word] / total;
+        }
+      } else {
+        for (const context of Object.keys(model)) {
+          const inner = model[context];
+          const total = Object.values(inner).reduce((sum, count) => sum + count, 0);
+
+          for (const word of Object.keys(inner)) {
+            inner[word] = inner[word] / total;
+          }
+        }
+      }
+
+      probabilitiesReady = true;
+      updateModelDisplay();
+      prepareGeneration();
+      showGenerationControls();
+
+      setRightStatus("Probabilities ready. Generate words from the model.");
+    }
+
+    /***********************
+     * GENERATION
+     ***********************/
+    function showGenerationControls() {
+      rightControls.innerHTML = `
+        <button id="generateButton">Generate word</button>
+        <button id="clearGeneratedButton" class="secondary">Clear</button>
+      `;
+
+      document.getElementById("generateButton").addEventListener("click", generateWord);
+      document.getElementById("clearGeneratedButton").addEventListener("click", clearGenerated);
+    }
+
+    function weightedChoice(probabilityDictionary) {
+      const entries = Object.entries(probabilityDictionary);
+      let r = Math.random();
+
+      for (const [word, probability] of entries) {
+        r -= probability;
+        if (r <= 0) return word;
+      }
+
+      // Floating-point safety fallback.
+      return entries[entries.length - 1]?.[0] || "";
+    }
+
+    function randomKey(obj) {
+      const keys = Object.keys(obj);
+      return keys[Math.floor(Math.random() * keys.length)];
+    }
+
+    function prepareGeneration() {
+      generatedTokens = [];
+      temporaryNewIndex = null;
+
+      if (n > 1) {
+        const seedContext = randomKey(model);
+
+        if (seedContext) {
+          generatedTokens = seedContext.split(" ");
+        }
+      }
+
+      renderGenerated();
+    }
+
+    function currentContextString() {
+      if (n === 1) return "";
+
+      if (generatedTokens.length < n - 1) {
+        return "";
+      }
+
+      return generatedTokens.slice(-(n - 1)).join(" ");
+    }
+
+    function generateWord() {
+      if (!probabilitiesReady) return;
+
+      let nextWord = "";
+
+      if (n === 1) {
+        nextWord = weightedChoice(model);
+      } else {
+        let context = currentContextString();
+
+        // If the current generated context was never observed, restart from a random known context.
+        if (!model[context]) {
+          context = randomKey(model);
+          generatedTokens = context.split(" ");
+        }
+
+        nextWord = weightedChoice(model[context]);
+      }
+
+      if (!nextWord) return;
+
+      generatedTokens.push(nextWord);
+      temporaryNewIndex = generatedTokens.length - 1;
+
+      renderGenerated();
+
+      setTimeout(() => {
+        temporaryNewIndex = null;
+        renderGenerated();
+      }, 550);
+    }
+
+    function clearGenerated() {
+      prepareGeneration();
+      setRightStatus("Generated text cleared. The trained model remains unchanged.");
+    }
+
+    function renderGenerated() {
+      if (!generatedTokens.length) {
+        generatedDisplay.className = "empty";
+        generatedDisplay.textContent =
+          n === 1
+            ? "Click “Generate word” to begin."
+            : "No starting context is available.";
+        return;
+      }
+
+      generatedDisplay.className = "";
+
+      const contextIndexes = new Set();
+
+      if (n > 1 && temporaryNewIndex === null) {
+        const start = Math.max(0, generatedTokens.length - (n - 1));
+
+        for (let i = start; i < generatedTokens.length; i++) {
+          contextIndexes.add(i);
+        }
+      }
+
+      let html = "";
+
+      generatedTokens.forEach((token, i) => {
+        const previous = generatedTokens[i - 1];
+        const leading = tokenNeedsLeadingSpace(token, previous) ? " " : "";
+
+        let classes = "gen-token";
+
+        if (contextIndexes.has(i)) classes += " gen-context";
+        if (i === temporaryNewIndex) classes += " gen-new";
+
+        html += `${leading}<span class="${classes}">${escapeHTML(token)}</span>`;
+      });
+
+      generatedDisplay.innerHTML = html;
+    }
+
+    /***********************
+     * EVENT LISTENERS
+     ***********************/
+    searchButton.addEventListener("click", searchGutenberg);
+
+    searchInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        searchGutenberg();
+      }
+    });
+
+    trainButton.addEventListener("click", beginTraining);
+
+    nInput.addEventListener("input", () => {
+      if (resetRightOnLeftInput) {
+        resetRightSide();
+      }
+
+      const parsedN = Number(nInput.value);
+      trainButton.disabled = !tokens.length || !Number.isInteger(parsedN) || parsedN < 1;
+    });
+
+    searchInput.addEventListener("input", () => {
+      if (resetRightOnLeftInput) {
+        resetRightSide();
+      }
+    });
+
+    stepButton.addEventListener("click", scanOneStep);
+    scanRestButton.addEventListener("click", scanRemainder);
+
+    // Initial render.
+    resetRightSide();
+  </script>
+</body>
+</html>
+```

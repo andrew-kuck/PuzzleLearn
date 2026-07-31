@@ -1,0 +1,458 @@
+create an activity using html, css, and javascript. the page will show a randomly generated segment of python code. the code will consist entirely of if, elif, and else statements, within which could be other if, elif, and else statements, recursing up to a maximum of 3 levels of depth. the condition for each if and elif statement is a comparison between two random, distinct numbers between 1 and 10 - a comparison using less than (<) or greater than (>). the condition may evaluate to True or to False. at each terminal point in the branching logic is a print statement that indicates it would print an animal name. each terminal point must have a print statement that prints a different animal name. the user is asked to predict and type in what animal name the program will print. if they are correct, then a green checkmark appears over the screen, a new question is presented, and a progress bar is advanced. if they are incorrect, then a red x appears over the screen and the same question remains. the progress bar advances such that after 10 correct answers the bar is full and a function activityComplete() is called.
+
+Below is a complete self-contained `index.html` file. Save it as `index.html` and open it in a browser.
+
+It randomly generates Python-style branching code using only `if`, `elif`, and `else`, with nested branches up to 3 levels deep. The learner predicts which animal will be printed.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Python Branching Prediction Activity</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f4f7fb;
+      color: #1f2937;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 900px;
+      background: white;
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+    }
+
+    h1 {
+      margin-top: 0;
+      text-align: center;
+      color: #00274c;
+    }
+
+    .instructions {
+      font-size: 1rem;
+      line-height: 1.5;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .progress-wrapper {
+      width: 100%;
+      height: 28px;
+      background: #dbe3ef;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 24px;
+      position: relative;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #2f80ed, #00a676);
+      transition: width 0.35s ease;
+    }
+
+    .progress-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #111827;
+      font-size: 0.9rem;
+    }
+
+    pre {
+      background: #111827;
+      color: #f9fafb;
+      padding: 22px;
+      border-radius: 14px;
+      overflow-x: auto;
+      font-size: 1rem;
+      line-height: 1.45;
+      margin-bottom: 24px;
+      min-height: 260px;
+    }
+
+    code {
+      font-family: Consolas, Monaco, "Courier New", monospace;
+    }
+
+    .answer-area {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+    }
+
+    label {
+      font-weight: bold;
+    }
+
+    input {
+      padding: 12px 14px;
+      font-size: 1rem;
+      border: 2px solid #cbd5e1;
+      border-radius: 10px;
+      min-width: 240px;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #2f80ed;
+      box-shadow: 0 0 0 3px rgba(47, 128, 237, 0.18);
+    }
+
+    button {
+      padding: 12px 18px;
+      font-size: 1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      background: #00274c;
+      color: white;
+      cursor: pointer;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+
+    button:hover {
+      background: #004c8c;
+      transform: translateY(-1px);
+    }
+
+    .message {
+      text-align: center;
+      margin-top: 16px;
+      min-height: 24px;
+      font-weight: bold;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      pointer-events: none;
+      font-size: 12rem;
+      font-weight: bold;
+      color: white;
+      text-shadow: 0 8px 25px rgba(0, 0, 0, 0.35);
+    }
+
+    .overlay.correct {
+      display: flex;
+      background: rgba(0, 166, 118, 0.65);
+    }
+
+    .overlay.incorrect {
+      display: flex;
+      background: rgba(220, 38, 38, 0.65);
+    }
+
+    .completed {
+      text-align: center;
+      padding: 30px;
+      background: #ecfdf5;
+      border: 2px solid #10b981;
+      border-radius: 14px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #065f46;
+      display: none;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Python Branching Prediction</h1>
+
+    <p class="instructions">
+      Read the randomly generated Python code. Follow the logic of the
+      <code>if</code>, <code>elif</code>, and <code>else</code> statements.
+      Then type the animal name that the program would print.
+    </p>
+
+    <div class="progress-wrapper" aria-label="Activity progress">
+      <div id="progressBar" class="progress-bar"></div>
+      <div id="progressText" class="progress-text">0 / 10</div>
+    </div>
+
+    <pre><code id="codeDisplay"></code></pre>
+
+    <div class="answer-area">
+      <label for="answerInput">Animal printed:</label>
+      <input
+        id="answerInput"
+        type="text"
+        autocomplete="off"
+        placeholder="Type animal name"
+      />
+      <button id="submitButton">Submit</button>
+    </div>
+
+    <div id="message" class="message"></div>
+
+    <div id="completedMessage" class="completed">
+      Activity complete! Nice work tracing those branches.
+    </div>
+  </div>
+
+  <div id="overlay" class="overlay" aria-hidden="true"></div>
+
+  <script>
+    const MAX_DEPTH = 3;
+    const QUESTIONS_TO_COMPLETE = 10;
+
+    const animals = [
+      "antelope", "badger", "bear", "beaver", "bison", "camel", "cheetah",
+      "cougar", "coyote", "deer", "dolphin", "eagle", "elephant", "falcon",
+      "ferret", "fox", "frog", "giraffe", "goat", "gorilla", "hamster",
+      "hedgehog", "hippo", "horse", "jaguar", "kangaroo", "koala", "lemur",
+      "leopard", "lion", "llama", "lobster", "meerkat", "monkey", "moose",
+      "otter", "owl", "panda", "panther", "parrot", "penguin", "pig",
+      "platypus", "porcupine", "rabbit", "raccoon", "rhino", "seal", "shark",
+      "sheep", "skunk", "sloth", "snake", "squirrel", "tiger", "turtle",
+      "walrus", "weasel", "whale", "wolf", "wombat", "zebra", "octopus",
+      "crab", "crow", "flamingo", "iguana", "newt", "pelican", "salamander"
+    ];
+
+    let currentAnswer = "";
+    let correctCount = 0;
+    let usedAnimalsForQuestion = [];
+
+    const codeDisplay = document.getElementById("codeDisplay");
+    const answerInput = document.getElementById("answerInput");
+    const submitButton = document.getElementById("submitButton");
+    const message = document.getElementById("message");
+    const overlay = document.getElementById("overlay");
+    const progressBar = document.getElementById("progressBar");
+    const progressText = document.getElementById("progressText");
+    const completedMessage = document.getElementById("completedMessage");
+
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function randomChoice(array) {
+      return array[Math.floor(Math.random() * array.length)];
+    }
+
+    function shuffle(array) {
+      const copy = [...array];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function makeCondition() {
+      let left = randomInt(1, 10);
+      let right = randomInt(1, 10);
+
+      while (right === left) {
+        right = randomInt(1, 10);
+      }
+
+      const operator = randomChoice(["<", ">"]);
+      const result = operator === "<" ? left < right : left > right;
+
+      return {
+        text: `${left} ${operator} ${right}`,
+        value: result
+      };
+    }
+
+    function getUnusedAnimal() {
+      const available = animals.filter(animal => !usedAnimalsForQuestion.includes(animal));
+      const animal = randomChoice(available);
+      usedAnimalsForQuestion.push(animal);
+      return animal;
+    }
+
+    function makePrintNode() {
+      return {
+        type: "print",
+        animal: getUnusedAnimal()
+      };
+    }
+
+    function makeDecisionNode(depth) {
+      const branchCount = randomInt(2, 4);
+      const branches = [];
+
+      for (let i = 0; i < branchCount; i++) {
+        const isElse = i === branchCount - 1;
+
+        let child;
+
+        if (depth < MAX_DEPTH && Math.random() < 0.55) {
+          child = makeDecisionNode(depth + 1);
+        } else {
+          child = makePrintNode();
+        }
+
+        branches.push({
+          keyword: isElse ? "else" : i === 0 ? "if" : "elif",
+          condition: isElse ? null : makeCondition(),
+          child
+        });
+      }
+
+      return {
+        type: "decision",
+        branches
+      };
+    }
+
+    function renderNode(node, indentLevel = 0) {
+      const indent = "    ".repeat(indentLevel);
+
+      if (node.type === "print") {
+        return `${indent}print("${node.animal}")\n`;
+      }
+
+      let code = "";
+
+      node.branches.forEach(branch => {
+        if (branch.keyword === "else") {
+          code += `${indent}else:\n`;
+        } else {
+          code += `${indent}${branch.keyword} ${branch.condition.text}:\n`;
+        }
+
+        code += renderNode(branch.child, indentLevel + 1);
+      });
+
+      return code;
+    }
+
+    function evaluateNode(node) {
+      if (node.type === "print") {
+        return node.animal;
+      }
+
+      for (const branch of node.branches) {
+        if (branch.keyword === "else") {
+          return evaluateNode(branch.child);
+        }
+
+        if (branch.condition.value) {
+          return evaluateNode(branch.child);
+        }
+      }
+    }
+
+    function generateQuestion() {
+      usedAnimalsForQuestion = [];
+
+      const tree = makeDecisionNode(1);
+      const code = renderNode(tree).trimEnd();
+
+      currentAnswer = evaluateNode(tree);
+
+      codeDisplay.textContent = code;
+      answerInput.value = "";
+      answerInput.focus();
+      message.textContent = "";
+    }
+
+    function normalizeAnswer(text) {
+      return text.trim().toLowerCase();
+    }
+
+    function showOverlay(type) {
+      overlay.className = `overlay ${type}`;
+      overlay.textContent = type === "correct" ? "✓" : "✕";
+
+      setTimeout(() => {
+        overlay.className = "overlay";
+        overlay.textContent = "";
+      }, 650);
+    }
+
+    function updateProgress() {
+      const percent = (correctCount / QUESTIONS_TO_COMPLETE) * 100;
+      progressBar.style.width = `${percent}%`;
+      progressText.textContent = `${correctCount} / ${QUESTIONS_TO_COMPLETE}`;
+    }
+
+    function checkAnswer() {
+      const userAnswer = normalizeAnswer(answerInput.value);
+      const correctAnswer = normalizeAnswer(currentAnswer);
+
+      if (!userAnswer) {
+        message.textContent = "Type an animal name before submitting.";
+        return;
+      }
+
+      if (userAnswer === correctAnswer) {
+        correctCount++;
+        updateProgress();
+        showOverlay("correct");
+
+        message.textContent = "Correct!";
+
+        if (correctCount >= QUESTIONS_TO_COMPLETE) {
+          setTimeout(() => {
+            completedMessage.style.display = "block";
+            submitButton.disabled = true;
+            answerInput.disabled = true;
+            activityComplete();
+          }, 700);
+        } else {
+          setTimeout(() => {
+            generateQuestion();
+          }, 700);
+        }
+      } else {
+        showOverlay("incorrect");
+        message.textContent = "Not quite. Try tracing the branches again.";
+        answerInput.select();
+      }
+    }
+
+    function activityComplete() {
+      console.log("Activity complete!");
+      /*
+        If this activity is embedded in a larger platform,
+        replace or extend this function with the completion behavior you need.
+      */
+    }
+
+    submitButton.addEventListener("click", checkAnswer);
+
+    answerInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        checkAnswer();
+      }
+    });
+
+    updateProgress();
+    generateQuestion();
+  </script>
+</body>
+</html>
+```

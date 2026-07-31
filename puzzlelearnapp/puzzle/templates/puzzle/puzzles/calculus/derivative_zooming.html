@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ puzzle_name }}</title>
+
+  <style>
+    :root {
+      --red: #d62728;
+      --blue: #1f77b4;
+      --green: #2e7d32;
+      --ink: #222;
+      --muted: #666;
+      --grid: #e3e3e3;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f7f7fb;
+      color: var(--ink);
+    }
+
+    .activity {
+      max-width: 920px;
+      margin: 24px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.5rem;
+    }
+
+    .instructions {
+      color: var(--muted);
+      line-height: 1.45;
+      margin-bottom: 14px;
+    }
+
+    .top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .question {
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    .stats {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .graph-wrap {
+      position: relative;
+      width: min(100%, 720px);
+      aspect-ratio: 1 / 1;
+      margin: 0 auto;
+      border: 2px solid #333;
+      border-radius: 8px;
+      overflow: hidden;
+      background: white;
+      touch-action: none;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+    }
+
+    .delta-label {
+      position: absolute;
+      z-index: 5;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid currentColor;
+      font-size: 0.85rem;
+      font-weight: 700;
+      user-select: none;
+      cursor: pointer;
+      pointer-events: auto;
+      white-space: nowrap;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    }
+
+    #dxLabel {
+      color: var(--red);
+    }
+
+    #dyLabel {
+      color: var(--blue);
+    }
+
+    .controls {
+      width: min(100%, 720px);
+      margin: 12px auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #ececf4;
+      color: #222;
+      white-space: nowrap;
+    }
+
+    button:hover {
+      background: #dedee9;
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    button:disabled,
+    input:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .reset-btn {
+      background: #22345c;
+      color: white;
+    }
+
+    .reset-btn:hover {
+      background: #172540;
+    }
+
+    .calculator-line {
+      width: min(100%, 720px);
+      margin: 16px auto 8px;
+      display: grid;
+      grid-template-columns: auto auto minmax(120px, 1fr) auto minmax(120px, 1fr);
+      gap: 8px;
+      align-items: center;
+    }
+
+    .op-btn {
+      background: #dce9ff;
+    }
+
+    .clear-btn {
+      background: #ffe0e0;
+    }
+
+    .equals-btn {
+      background: #dff3df;
+    }
+
+    input {
+      padding: 10px 12px;
+      font-size: 1rem;
+      border-radius: 10px;
+      border: 2px solid #ccc;
+      min-width: 0;
+    }
+
+    .calc-result {
+      min-height: 41px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      background: #fafafa;
+      color: #222;
+      font-weight: 700;
+      overflow-x: auto;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .calc-result.empty {
+      color: #777;
+      font-weight: 500;
+      cursor: default;
+    }
+
+    .answer-row {
+      width: min(100%, 720px);
+      margin: 10px auto 8px;
+      display: grid;
+      grid-template-columns: auto minmax(120px, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .answer-row label {
+      font-weight: 700;
+    }
+
+    .submit-btn {
+      background: #ffecb3;
+    }
+
+    .submit-btn:hover {
+      background: #ffe082;
+    }
+
+    .feedback {
+      /* min-height: 52px; */
+      width: min(100%, 720px);
+      margin: 8px auto 0;
+      line-height: 1.45;
+      font-weight: 600;
+    }
+
+    .progress-shell {
+      width: min(100%, 720px);
+      height: 18px;
+      margin: 14px auto 0;
+      background: #eee;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid #ccc;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #2e7d32, #6abf69);
+      transition: width 0.35s ease;
+    }
+
+    .small-note {
+      width: min(100%, 720px);
+      margin: 8px auto 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .complete {
+      color: var(--green);
+      font-weight: 800;
+    }
+
+    @media (max-width: 650px) {
+      .calculator-line,
+      .answer-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .slope-input-error {
+      border-color: #d62728 !important;
+      background: #ffe6e6 !important;
+      animation: slopeShake 0.25s ease-in-out;
+    }
+
+    @keyframes slopeShake {
+      0% { transform: translateX(0); }
+      25% { transform: translateX(-4px); }
+      50% { transform: translateX(4px); }
+      75% { transform: translateX(-4px); }
+      100% { transform: translateX(0); }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="activity">
+    <!-- <h1>Slope at a Point</h1>
+
+    <p class="instructions">
+      Click near the curve and drag horizontally to create a red dotted
+      <strong>Δx</strong> segment. A blue dotted <strong>Δy</strong> segment
+      appears automatically. Click either Δ label to add its value to the calculator.
+      Use the wheel or trackpad to zoom. Drag the graph to pan after zooming.
+      Click elsewhere on the graph without dragging to clear the Δ lines.
+    </p> -->
+
+    <div class="top-row">
+      <div id="question" class="question"></div>
+      <div class="stats">
+        Running Error:
+        <span id="errorTotal">0</span>
+      </div>
+    </div>
+
+    <div class="graph-wrap" id="graphWrap">
+      <canvas id="graphCanvas" aria-label="Coordinate grid with a randomly chosen function"></canvas>
+      <div id="dxLabel" class="delta-label" hidden></div>
+      <div id="dyLabel" class="delta-label" hidden></div>
+    </div>
+
+    <div class="controls">
+      <button id="resetZoom" class="reset-btn" type="button">Reset zoom</button>
+      <div id="zoomReadout" class="stats">Window: x ∈ [-10, 10], y ∈ [-10, 10]</div>
+    </div>
+
+    <div class="calculator-line" aria-label="One-line calculator">
+      <button id="divideBtn" class="op-btn" type="button">÷</button>
+      <button id="clearCalcBtn" class="clear-btn" type="button">AC</button>
+
+      <input
+        id="calcInput"
+        type="text"
+        inputmode="decimal"
+        autocomplete="off"
+        aria-label="Calculator input"
+        placeholder="Example: 2.5÷0.5"
+      />
+
+      <button id="calcEqualsBtn" class="equals-btn" type="button">=</button>
+      <div id="calcResult" class="calc-result empty" title="Calculator result">Result</div>
+    </div>
+
+    <div class="answer-row">
+      <label for="slopeInput">Your answer for f′(n):</label>
+
+      <input
+        id="slopeInput"
+        type="text"
+        inputmode="decimal"
+        autocomplete="off"
+        aria-label="Slope answer input"
+        placeholder=""
+      />
+
+      <button id="submitAnswerBtn" class="submit-btn" type="button">Submit answer</button>
+    </div>
+
+    <div id="feedback" class="feedback"></div>
+
+    <div class="progress-shell" aria-label="Progress">
+      <div id="progressFill" class="progress-fill"></div>
+    </div>
+
+    <div style="display: none;" class="small-note">
+      Answer 10 questions to complete the activity.
+    </div>
+  </main>
+
+  <script>
+    if (typeof window.activityComplete !== "function") {
+      window.activityComplete = function () {
+        console.log("activityComplete() called");
+        alert("Activity complete!");
+      };
+    }
+
+    (() => {
+      const canvas = document.getElementById("graphCanvas");
+      const ctx = canvas.getContext("2d");
+      const graphWrap = document.getElementById("graphWrap");
+
+      const questionEl = document.getElementById("question");
+      const feedbackEl = document.getElementById("feedback");
+      const errorTotalEl = document.getElementById("errorTotal");
+      const progressFill = document.getElementById("progressFill");
+      const zoomReadout = document.getElementById("zoomReadout");
+
+      const dxLabel = document.getElementById("dxLabel");
+      const dyLabel = document.getElementById("dyLabel");
+
+      const resetZoomBtn = document.getElementById("resetZoom");
+
+      const divideBtn = document.getElementById("divideBtn");
+      const clearCalcBtn = document.getElementById("clearCalcBtn");
+      const calcInput = document.getElementById("calcInput");
+      const calcEqualsBtn = document.getElementById("calcEqualsBtn");
+      const calcResult = document.getElementById("calcResult");
+
+      const slopeInput = document.getElementById("slopeInput");
+      const submitAnswerBtn = document.getElementById("submitAnswerBtn");
+
+      const INITIAL = {
+        xmin: -10,
+        xmax: 10,
+        ymin: -10,
+        ymax: 10
+      };
+
+      let view = { ...INITIAL };
+      let W = 720;
+      let H = 720;
+
+      let currentFunction = null;
+      let targetN = 0;
+
+      let answered = 0;
+      const totalQuestions = 10;
+      let runningError = 0;
+      let completed = false;
+
+      let delta = null;
+
+      let mode = null;
+      let panStart = null;
+      let pointerStart = null;
+      let pointerMoved = false;
+
+      const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+      function randInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+
+      function choice(arr) {
+        return arr[Math.floor(Math.random() * arr.length)];
+      }
+
+      function fmt(value, digits = 5) {
+        if (!Number.isFinite(value)) return "undefined";
+        if (Math.abs(value) < 1e-12) value = 0;
+
+        const abs = Math.abs(value);
+        if (abs !== 0 && (abs >= 100000 || abs < 0.0001)) {
+          return value.toExponential(3);
+        }
+
+        return Number(value.toFixed(digits)).toString();
+      }
+
+      function fmtTick(value) {
+        if (Math.abs(value) < 1e-12) value = 0;
+
+        const span = view.xmax - view.xmin;
+
+        if (span < 0.001) return value.toExponential(2);
+        if (span < 0.05) return Number(value.toFixed(5)).toString();
+        if (span < 0.5) return Number(value.toFixed(4)).toString();
+        if (span < 2) return Number(value.toFixed(3)).toString();
+        if (span < 10) return Number(value.toFixed(2)).toString();
+
+        return Number(value.toFixed(1)).toString();
+      }
+
+      function fmtForInput(value) {
+        if (Math.abs(value) < 1e-12) value = 0;
+        return Number(value.toFixed(8)).toString();
+      }
+
+      function makeRandomFunction() {
+        const type = randInt(0, 4);
+
+        if (type === 0) {
+          const m = choice([-3, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 3]);
+          const b = randInt(-4, 4);
+
+          return {
+            f: x => m * x + b,
+            df: x => m
+          };
+        }
+
+        if (type === 1) {
+          const a = choice([-0.35, -0.25, -0.18, 0.18, 0.25, 0.35]);
+          const h = randInt(-4, 4);
+          const k = randInt(-5, 5);
+
+          return {
+            f: x => a * Math.pow(x - h, 2) + k,
+            df: x => 2 * a * (x - h)
+          };
+        }
+
+        if (type === 2) {
+          const a = choice([-0.04, -0.03, -0.02, 0.02, 0.03, 0.04]);
+          const h = randInt(-3, 3);
+          const b = choice([-0.7, -0.4, 0.4, 0.7]);
+          const k = randInt(-3, 3);
+
+          return {
+            f: x => a * Math.pow(x - h, 3) + b * (x - h) + k,
+            df: x => 3 * a * Math.pow(x - h, 2) + b
+          };
+        }
+
+        if (type === 3) {
+          const A = choice([2, 3, 4, 5]);
+          const B = choice([0.5, 0.75, 1, 1.25]);
+          const C = choice([0, Math.PI / 6, Math.PI / 4, Math.PI / 3, Math.PI / 2]);
+          const D = randInt(-3, 3);
+
+          return {
+            f: x => A * Math.sin(B * x + C) + D,
+            df: x => A * B * Math.cos(B * x + C)
+          };
+        }
+
+        const A = choice([2, 3, 4, 5]);
+        const B = choice([0.5, 0.75, 1, 1.25]);
+        const C = choice([0, Math.PI / 6, Math.PI / 4, Math.PI / 3, Math.PI / 2]);
+        const D = randInt(-3, 3);
+
+        return {
+          f: x => A * Math.cos(B * x + C) + D,
+          df: x => -A * B * Math.sin(B * x + C)
+        };
+      }
+
+      function chooseFunctionAndN() {
+        for (let attempts = 0; attempts < 200; attempts++) {
+          const fn = makeRandomFunction();
+          const possibleN = [];
+
+          for (let n = -9; n <= 9; n++) {
+            const y = fn.f(n);
+            const slope = fn.df(n);
+
+            if (
+              Number.isFinite(y) &&
+              Number.isFinite(slope) &&
+              y >= -9.25 &&
+              y <= 9.25
+            ) {
+              possibleN.push(n);
+            }
+          }
+
+          if (possibleN.length > 0) {
+            return {
+              fn,
+              n: choice(possibleN)
+            };
+          }
+        }
+
+        return {
+          fn: {
+            f: x => x,
+            df: x => 1
+          },
+          n: 0
+        };
+      }
+
+      function worldToScreen(x, y) {
+        return {
+          x: ((x - view.xmin) / (view.xmax - view.xmin)) * W,
+          y: H - ((y - view.ymin) / (view.ymax - view.ymin)) * H
+        };
+      }
+
+      function screenToWorld(sx, sy) {
+        return {
+          x: view.xmin + (sx / W) * (view.xmax - view.xmin),
+          y: view.ymin + ((H - sy) / H) * (view.ymax - view.ymin)
+        };
+      }
+
+      function getPointerPos(e) {
+        const rect = canvas.getBoundingClientRect();
+
+        return {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top
+        };
+      }
+
+      function resetView() {
+        view = { ...INITIAL };
+        render();
+      }
+
+      function clampViewToInitial() {
+        const spanX = view.xmax - view.xmin;
+        const spanY = view.ymax - view.ymin;
+
+        if (spanX >= 20) {
+          view.xmin = INITIAL.xmin;
+          view.xmax = INITIAL.xmax;
+        } else {
+          if (view.xmin < INITIAL.xmin) {
+            view.xmax += INITIAL.xmin - view.xmin;
+            view.xmin = INITIAL.xmin;
+          }
+
+          if (view.xmax > INITIAL.xmax) {
+            view.xmin -= view.xmax - INITIAL.xmax;
+            view.xmax = INITIAL.xmax;
+          }
+        }
+
+        if (spanY >= 20) {
+          view.ymin = INITIAL.ymin;
+          view.ymax = INITIAL.ymax;
+        } else {
+          if (view.ymin < INITIAL.ymin) {
+            view.ymax += INITIAL.ymin - view.ymin;
+            view.ymin = INITIAL.ymin;
+          }
+
+          if (view.ymax > INITIAL.ymax) {
+            view.ymin -= view.ymax - INITIAL.ymax;
+            view.ymax = INITIAL.ymax;
+          }
+        }
+      }
+
+      function drawGrid() {
+        ctx.clearRect(0, 0, W, H);
+
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, W, H);
+
+        const xStep = (view.xmax - view.xmin) / 20;
+        const yStep = (view.ymax - view.ymin) / 20;
+
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = "#e3e3e3";
+
+        for (let i = 0; i <= 20; i++) {
+          const xVal = view.xmin + i * xStep;
+          const sx = worldToScreen(xVal, 0).x;
+
+          ctx.beginPath();
+          ctx.moveTo(sx, 0);
+          ctx.lineTo(sx, H);
+          ctx.stroke();
+        }
+
+        for (let i = 0; i <= 20; i++) {
+          const yVal = view.ymin + i * yStep;
+          const sy = worldToScreen(0, yVal).y;
+
+          ctx.beginPath();
+          ctx.moveTo(0, sy);
+          ctx.lineTo(W, sy);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = "#555";
+        ctx.lineWidth = 2;
+
+        if (view.ymin <= 0 && view.ymax >= 0) {
+          const axisY = worldToScreen(0, 0).y;
+
+          ctx.beginPath();
+          ctx.moveTo(0, axisY);
+          ctx.lineTo(W, axisY);
+          ctx.stroke();
+        }
+
+        if (view.xmin <= 0 && view.xmax >= 0) {
+          const axisX = worldToScreen(0, 0).x;
+
+          ctx.beginPath();
+          ctx.moveTo(axisX, 0);
+          ctx.lineTo(axisX, H);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = "#333";
+        ctx.font = "11px system-ui, sans-serif";
+        ctx.textBaseline = "middle";
+
+        let xLabelY;
+
+        if (view.ymin <= 0 && view.ymax >= 0) {
+          xLabelY = clamp(worldToScreen(0, 0).y + 15, 13, H - 4);
+        } else {
+          xLabelY = H - 6;
+        }
+
+        ctx.textAlign = "center";
+
+        let lastXLabelRightEdge = -Infinity;
+        const xLabelPadding = 6;
+
+        for (let i = 0; i <= 20; i++) {
+          const xVal = view.xmin + i * xStep;
+          const sx = worldToScreen(xVal, 0).x;
+          const label = fmtTick(xVal);
+
+          const labelWidth = ctx.measureText(label).width;
+          const labelLeftEdge = sx - labelWidth / 2;
+          const labelRightEdge = sx + labelWidth / 2;
+
+          /*
+            Only draw the x-axis label if it does not run into
+            the previous visible x-axis label.
+            Grid lines still remain visible.
+          */
+          if (labelLeftEdge > lastXLabelRightEdge + xLabelPadding) {
+            ctx.fillText(label, sx, xLabelY);
+            lastXLabelRightEdge = labelRightEdge;
+          }
+        }
+
+        let yLabelX;
+        let yAlign = "left";
+
+        if (view.xmin <= 0 && view.xmax >= 0) {
+          const axisX = worldToScreen(0, 0).x;
+          yLabelX = axisX + 5;
+
+          if (yLabelX > W - 45) {
+            yLabelX = axisX - 5;
+            yAlign = "right";
+          }
+        } else {
+          yLabelX = 5;
+        }
+
+        ctx.textAlign = yAlign;
+
+        for (let i = 0; i <= 20; i++) {
+          const yVal = view.ymin + i * yStep;
+          const sy = worldToScreen(0, yVal).y;
+          ctx.fillText(fmtTick(yVal), yLabelX, sy);
+        }
+      }
+
+      function drawFunction() {
+        if (!currentFunction) return;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, W, H);
+        ctx.clip();
+
+        ctx.strokeStyle = "#111";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+
+        const samples = Math.max(900, Math.floor(W * 2));
+        let started = false;
+
+        for (let i = 0; i <= samples; i++) {
+          const x = view.xmin + (i / samples) * (view.xmax - view.xmin);
+          const y = currentFunction.f(x);
+
+          if (!Number.isFinite(y)) {
+            started = false;
+            continue;
+          }
+
+          const p = worldToScreen(x, y);
+
+          if (!started) {
+            ctx.moveTo(p.x, p.y);
+            started = true;
+          } else {
+            ctx.lineTo(p.x, p.y);
+          }
+        }
+
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawTargetPoint() {
+        if (!currentFunction) return;
+
+        const y = currentFunction.f(targetN);
+        const p = worldToScreen(targetN, y);
+
+        ctx.save();
+
+        if (targetN >= view.xmin && targetN <= view.xmax) {
+          ctx.setLineDash([6, 5]);
+          ctx.strokeStyle = "rgba(255, 152, 0, 0.75)";
+          ctx.lineWidth = 2;
+
+          ctx.beginPath();
+          ctx.moveTo(p.x, 0);
+          ctx.lineTo(p.x, H);
+          ctx.stroke();
+
+          ctx.setLineDash([]);
+        }
+
+        if (p.x >= -20 && p.x <= W + 20 && p.y >= -20 && p.y <= H + 20) {
+          ctx.fillStyle = "#ff9800";
+          ctx.strokeStyle = "#fff";
+          ctx.lineWidth = 2;
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = "#222";
+          ctx.font = "bold 13px system-ui, sans-serif";
+          ctx.textAlign = "left";
+          ctx.fillText(
+            `x = ${targetN}`,
+            clamp(p.x + 9, 5, W - 55),
+            clamp(p.y - 9, 14, H - 8)
+          );
+        }
+
+        ctx.restore();
+      }
+
+      function drawDeltaSegments() {
+        if (!delta || !currentFunction) return;
+
+        const x0 = delta.x0;
+        const y0 = delta.y0;
+        const x1 = delta.x1;
+        const y1 = currentFunction.f(x1);
+
+        if (!Number.isFinite(y1)) return;
+
+        const p0 = worldToScreen(x0, y0);
+        const pH = worldToScreen(x1, y0);
+        const p1 = worldToScreen(x1, y1);
+
+        ctx.save();
+        ctx.lineWidth = 3;
+        ctx.setLineDash([7, 6]);
+
+        ctx.strokeStyle = "#d62728";
+        ctx.beginPath();
+        ctx.moveTo(p0.x, p0.y);
+        ctx.lineTo(pH.x, pH.y);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#1f77b4";
+        ctx.beginPath();
+        ctx.moveTo(pH.x, pH.y);
+        ctx.lineTo(p1.x, p1.y);
+        ctx.stroke();
+
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = "#d62728";
+        ctx.beginPath();
+        ctx.arc(p0.x, p0.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#1f77b4";
+        ctx.beginPath();
+        ctx.arc(p1.x, p1.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      function updateDeltaLabels() {
+        if (!delta || !currentFunction) {
+          dxLabel.hidden = true;
+          dyLabel.hidden = true;
+          return;
+        }
+
+        const x0 = delta.x0;
+        const y0 = delta.y0;
+        const x1 = delta.x1;
+        const y1 = currentFunction.f(x1);
+
+        if (!Number.isFinite(y1)) {
+          dxLabel.hidden = true;
+          dyLabel.hidden = true;
+          return;
+        }
+
+        const dx = x1 - x0;
+        const dy = y1 - y0;
+
+        const dxMid = worldToScreen((x0 + x1) / 2, y0);
+        const dyMid = worldToScreen(x1, (y0 + y1) / 2);
+
+        dxLabel.textContent = `Δx = ${fmt(dx)}`;
+        dyLabel.textContent = `Δy = ${fmt(dy)}`;
+
+        dxLabel.dataset.value = fmtForInput(dx);
+        dyLabel.dataset.value = fmtForInput(dy);
+
+        dxLabel.style.left = `${clamp(dxMid.x, 45, W - 45)}px`;
+        dxLabel.style.top = `${clamp(dxMid.y - 18, 14, H - 14)}px`;
+
+        dyLabel.style.left = `${clamp(dyMid.x + 42, 45, W - 45)}px`;
+        dyLabel.style.top = `${clamp(dyMid.y, 14, H - 14)}px`;
+
+        dxLabel.hidden = false;
+        dyLabel.hidden = false;
+      }
+
+      function updateZoomReadout() {
+        zoomReadout.textContent =
+          `Window: x ∈ [${fmt(view.xmin, 4)}, ${fmt(view.xmax, 4)}], ` +
+          `y ∈ [${fmt(view.ymin, 4)}, ${fmt(view.ymax, 4)}]`;
+      }
+
+      function render() {
+        drawGrid();
+        drawFunction();
+        drawTargetPoint();
+        drawDeltaSegments();
+        updateDeltaLabels();
+        updateZoomReadout();
+      }
+
+      function resizeCanvas() {
+        const rect = graphWrap.getBoundingClientRect();
+
+        W = rect.width;
+        H = rect.height;
+
+        const dpr = window.devicePixelRatio || 1;
+
+        canvas.width = Math.round(W * dpr);
+        canvas.height = Math.round(H * dpr);
+
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        render();
+      }
+
+      function nearCurve(point) {
+        if (!currentFunction) return false;
+
+        const world = screenToWorld(point.x, point.y);
+        const y = currentFunction.f(world.x);
+
+        if (!Number.isFinite(y)) return false;
+
+        const curvePoint = worldToScreen(world.x, y);
+
+        return Math.abs(point.y - curvePoint.y) <= 12;
+      }
+
+      canvas.addEventListener("pointerdown", e => {
+        if (completed) return;
+
+        const p = getPointerPos(e);
+
+        canvas.setPointerCapture(e.pointerId);
+
+        pointerStart = p;
+        pointerMoved = false;
+
+        if (nearCurve(p)) {
+          const world = screenToWorld(p.x, p.y);
+          const y = currentFunction.f(world.x);
+
+          delta = {
+            x0: world.x,
+            y0: y,
+            x1: world.x
+          };
+
+          mode = "delta";
+          render();
+        } else {
+          mode = "pan";
+          panStart = {
+            sx: p.x,
+            sy: p.y,
+            view: { ...view }
+          };
+        }
+      });
+
+      canvas.addEventListener("pointermove", e => {
+        if (completed || !mode) return;
+
+        const p = getPointerPos(e);
+
+        if (pointerStart) {
+          const distance = Math.hypot(p.x - pointerStart.x, p.y - pointerStart.y);
+          if (distance > 3) pointerMoved = true;
+        }
+
+        if (mode === "delta" && delta) {
+          const clampedScreenX = clamp(p.x, 0, W);
+          const world = screenToWorld(clampedScreenX, p.y);
+
+          delta.x1 = clamp(world.x, INITIAL.xmin, INITIAL.xmax);
+
+          render();
+        }
+
+        if (mode === "pan" && panStart && pointerMoved) {
+          const dxPixels = p.x - panStart.sx;
+          const dyPixels = p.y - panStart.sy;
+
+          const spanX = panStart.view.xmax - panStart.view.xmin;
+          const spanY = panStart.view.ymax - panStart.view.ymin;
+
+          const dxWorld = -(dxPixels / W) * spanX;
+          const dyWorld = (dyPixels / H) * spanY;
+
+          view.xmin = panStart.view.xmin + dxWorld;
+          view.xmax = panStart.view.xmax + dxWorld;
+          view.ymin = panStart.view.ymin + dyWorld;
+          view.ymax = panStart.view.ymax + dyWorld;
+
+          clampViewToInitial();
+          render();
+        }
+      });
+
+      canvas.addEventListener("pointerup", e => {
+        /*
+          New requested behavior:
+          If the user clicks somewhere other than the curve and does not drag,
+          clear the red and blue dotted Δ lines.
+        */
+        if (mode === "pan" && !pointerMoved) {
+          delta = null;
+          render();
+        }
+
+        mode = null;
+        panStart = null;
+        pointerStart = null;
+        pointerMoved = false;
+
+        try {
+          canvas.releasePointerCapture(e.pointerId);
+        } catch {}
+      });
+
+      canvas.addEventListener("pointercancel", () => {
+        mode = null;
+        panStart = null;
+        pointerStart = null;
+        pointerMoved = false;
+      });
+
+      canvas.addEventListener("wheel", e => {
+        if (completed) return;
+
+        e.preventDefault();
+
+        const p = getPointerPos(e);
+        const focus = screenToWorld(p.x, p.y);
+
+        const oldSpanX = view.xmax - view.xmin;
+        const oldSpanY = view.ymax - view.ymin;
+
+        let factor = Math.exp(e.deltaY * 0.001);
+
+        let newSpanX = oldSpanX * factor;
+        let newSpanY = oldSpanY * factor;
+
+        const maxSpan = 20;
+        const minSpan = 1e-9;
+
+        newSpanX = clamp(newSpanX, minSpan, maxSpan);
+        newSpanY = clamp(newSpanY, minSpan, maxSpan);
+
+        const rx = (focus.x - view.xmin) / oldSpanX;
+        const ry = (focus.y - view.ymin) / oldSpanY;
+
+        view.xmin = focus.x - rx * newSpanX;
+        view.xmax = view.xmin + newSpanX;
+
+        view.ymin = focus.y - ry * newSpanY;
+        view.ymax = view.ymin + newSpanY;
+
+        clampViewToInitial();
+        render();
+      }, { passive: false });
+
+      resetZoomBtn.addEventListener("click", resetView);
+
+      function sanitizeCalculatorExpression(raw) {
+        raw = raw
+          .replace(/\//g, "÷")
+          .replace(/[−–—]/g, "-");
+
+        let beforeDivision = "";
+        let afterDivision = "";
+        let seenDivision = false;
+        let current = "";
+
+        function appendToCurrent(ch) {
+          if (/\d/.test(ch)) {
+            current += ch;
+            return;
+          }
+
+          if (ch === "." && !current.includes(".")) {
+            current += ch;
+            return;
+          }
+
+          if (ch === "-" && current.length === 0) {
+            current += ch;
+          }
+        }
+
+        for (const ch of raw) {
+          if (ch === "÷") {
+            if (!seenDivision && current !== "" && current !== "-") {
+              beforeDivision = current;
+              current = "";
+              seenDivision = true;
+            }
+            continue;
+          }
+
+          appendToCurrent(ch);
+        }
+
+        if (seenDivision) {
+          afterDivision = current;
+          return `${beforeDivision}÷${afterDivision}`;
+        }
+
+        return current;
+      }
+
+      function sanitizeNumber(raw) {
+        raw = raw.replace(/[−–—]/g, "-");
+
+        let result = "";
+
+        for (const ch of raw) {
+          if (/\d/.test(ch)) {
+            result += ch;
+          } else if (ch === "." && !result.includes(".")) {
+            result += ch;
+          } else if (ch === "-" && result.length === 0) {
+            result += ch;
+          }
+        }
+
+        return result;
+      }
+
+      function evaluateCalculatorExpression() {
+        const expr = sanitizeCalculatorExpression(calcInput.value.trim()).replace(/÷/g, "/");
+
+        const numberPattern = "-?(?:\\d+(?:\\.\\d*)?|\\.\\d+)";
+        const regex = new RegExp(`^(${numberPattern})(?:\\/(${numberPattern}))?$`);
+        const match = expr.match(regex);
+
+        if (!match) return null;
+
+        const a = Number(match[1]);
+
+        if (match[2] !== undefined) {
+          const b = Number(match[2]);
+          if (Math.abs(b) < 1e-15) return null;
+          return a / b;
+        }
+
+        return a;
+      }
+
+      function setCalcResult(value) {
+        if (value === null || !Number.isFinite(value)) {
+          calcResult.textContent = "Invalid";
+          calcResult.classList.remove("empty");
+          calcResult.dataset.value = "";
+          return;
+        }
+
+        const text = fmt(value, 8);
+
+        calcResult.textContent = text;
+        calcResult.classList.remove("empty");
+        calcResult.dataset.value = text;
+      }
+
+      function clearCalc() {
+        calcInput.value = "";
+        calcResult.textContent = "Result";
+        calcResult.classList.add("empty");
+        calcResult.dataset.value = "";
+        // calcInput.focus();
+      }
+
+      function insertIntoCalc(text) {
+        if (completed) return;
+
+        const start = calcInput.selectionStart ?? calcInput.value.length;
+        const end = calcInput.selectionEnd ?? calcInput.value.length;
+
+        const next =
+          calcInput.value.slice(0, start) +
+          text +
+          calcInput.value.slice(end);
+
+        calcInput.value = sanitizeCalculatorExpression(next);
+        // calcInput.focus();
+
+        const pos = calcInput.value.length;
+        calcInput.selectionStart = calcInput.selectionEnd = pos;
+      }
+
+      divideBtn.addEventListener("click", () => {
+        insertIntoCalc("÷");
+      });
+
+      clearCalcBtn.addEventListener("click", clearCalc);
+
+      calcEqualsBtn.addEventListener("click", () => {
+        const value = evaluateCalculatorExpression();
+        setCalcResult(value);
+      });
+
+      calcResult.addEventListener("click", () => {
+        /*
+          Convenience: click the calculator result to copy it into the
+          slope-answer field.
+        */
+        if (calcResult.dataset.value) {
+          slopeInput.value = calcResult.dataset.value;
+          // slopeInput.focus();
+        }
+      });
+
+      dxLabel.addEventListener("click", () => {
+        insertIntoCalc(dxLabel.dataset.value || "");
+      });
+
+      dyLabel.addEventListener("click", () => {
+        insertIntoCalc(dyLabel.dataset.value || "");
+      });
+
+      calcInput.addEventListener("keydown", e => {
+        const allowedControlKeys = [
+          "Backspace",
+          "Delete",
+          "ArrowLeft",
+          "ArrowRight",
+          "ArrowUp",
+          "ArrowDown",
+          "Tab",
+          "Home",
+          "End"
+        ];
+
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const value = evaluateCalculatorExpression();
+          setCalcResult(value);
+          return;
+        }
+
+        if (allowedControlKeys.includes(e.key)) return;
+
+        if (/[\d.\-/÷−]/.test(e.key)) return;
+
+        e.preventDefault();
+      });
+
+      calcInput.addEventListener("input", () => {
+        calcInput.value = sanitizeCalculatorExpression(calcInput.value);
+      });
+
+      slopeInput.addEventListener("keydown", e => {
+        const allowedControlKeys = [
+          "Backspace",
+          "Delete",
+          "ArrowLeft",
+          "ArrowRight",
+          "ArrowUp",
+          "ArrowDown",
+          "Tab",
+          "Home",
+          "End"
+        ];
+
+        if (e.key === "Enter") {
+          e.preventDefault();
+          submitAnswer();
+          return;
+        }
+
+        if (allowedControlKeys.includes(e.key)) return;
+
+        if (/[\d.\-−]/.test(e.key)) return;
+
+        e.preventDefault();
+      });
+
+      slopeInput.addEventListener("input", () => {
+        slopeInput.value = sanitizeNumber(slopeInput.value);
+      });
+
+      submitAnswerBtn.addEventListener("click", submitAnswer);
+
+      function parseSlopeAnswer() {
+        const text = sanitizeNumber(slopeInput.value.trim());
+
+        const regex = /^-?(?:\d+(?:\.\d*)?|\.\d+)$/;
+
+        if (!regex.test(text)) return null;
+
+        return Number(text);
+      }
+
+      function flashSlopeInputRed() {
+        slopeInput.classList.remove("slope-input-error");
+
+        // Force reflow so the animation can replay each time.
+        void slopeInput.offsetWidth;
+
+        slopeInput.classList.add("slope-input-error");
+
+        setTimeout(() => {
+          slopeInput.classList.remove("slope-input-error");
+        }, 700);
+      }
+
+      function submitAnswer() {
+        if (completed) return;
+
+        const answer = parseSlopeAnswer();
+
+        if (answer === null || !Number.isFinite(answer)) {
+          feedbackEl.innerHTML = "Please enter a valid numerical slope answer.";
+          flashSlopeInputRed();
+          return;
+        }
+
+        const actual = currentFunction.df(targetN);
+        const signedDifference = answer - actual;
+        const absoluteError = Math.abs(signedDifference);
+
+        /*
+          New behavior:
+          If the user's slope answer is off by more than 0.1,
+          temporarily turn the input box red and do nothing else.
+          The running error total does not change.
+          The progress bar does not advance.
+          The question does not change.
+        */
+        if (absoluteError > 0.1) {
+          flashSlopeInputRed();
+          feedbackEl.innerHTML =
+            `That estimate is more than <strong>0.1</strong> away from the actual slope. ` +
+            `Try refining your estimate.`;
+          return;
+        }
+
+        runningError += absoluteError;
+        answered += 1;
+
+        errorTotalEl.textContent = fmt(runningError, 6);
+        progressFill.style.width = `${(answered / totalQuestions) * 100}%`;
+
+        feedbackEl.innerHTML =
+          `Your answer: <strong>${fmt(answer, 6)}</strong>. ` +
+          `Actual value: <strong>${fmt(actual, 6)}</strong>. ` +
+          `Difference: <strong>${fmt(signedDifference, 6)}</strong>. ` +
+          `Error: <strong>${fmt(absoluteError, 6)}</strong>.`;
+
+        if (answered >= totalQuestions) {
+          completed = true;
+
+          questionEl.innerHTML = `<span class="complete">Activity complete!</span>`;
+
+          calcInput.disabled = true;
+          slopeInput.disabled = true;
+          divideBtn.disabled = true;
+          clearCalcBtn.disabled = true;
+          calcEqualsBtn.disabled = true;
+          submitAnswerBtn.disabled = true;
+
+          dxLabel.hidden = true;
+          dyLabel.hidden = true;
+
+          window.activityComplete();
+          return;
+        }
+
+        startNewQuestion(true);
+      }
+
+      function startNewQuestion(keepFeedback = false) {
+        const chosen = chooseFunctionAndN();
+
+        currentFunction = chosen.fn;
+        targetN = chosen.n;
+
+        view = { ...INITIAL };
+        delta = null;
+
+        slopeInput.value = "";
+        clearCalc();
+
+        questionEl.textContent =
+          `What is f′(${targetN}): the slope of the function f at x=${targetN}?`;
+
+        if (!keepFeedback) {
+          feedbackEl.textContent = "";
+        }
+
+        render();
+      }
+
+      const resizeObserver = new ResizeObserver(resizeCanvas);
+      resizeObserver.observe(graphWrap);
+
+      startNewQuestion(false);
+      resizeCanvas();
+    })();
+  </script>
+  <script src="/static/puzzle/js/activity.js"></script>
+  <script>autoZoom();</script>
+</body>
+</html>

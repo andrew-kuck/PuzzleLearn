@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Continuity Bridge</title>
+<style>
+body{margin:0;background:#111827;color:white;font-family:system-ui;display:flex;justify-content:center}
+.app{max-width:900px;padding:20px}
+canvas{background:white;border-radius:14px;width:100%;max-width:850px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:10px 0}
+input{width:180px}
+button,input{font-size:17px;padding:10px;border:0;border-radius:10px}
+button{background:#ffcb05;color:#00274c;font-weight:800}
+.pill{background:#243b55;padding:8px 13px;border-radius:999px}
+</style>
+</head>
+<body>
+<div class="app">
+<h1>Continuity Bridge</h1>
+<p>Adjust the middle bridge line <b>y = ax + b</b> so the three pieces connect with no jump.</p>
+<canvas id="cv" width="850" height="430"></canvas>
+<div class="row">
+<span id="lev" class="pill"></span>
+<label>a <input id="a" type="range" min="-5" max="5" step=".01"></label>
+<label>b <input id="b" type="range" min="-10" max="10" step=".01"></label>
+<button onclick="test()">Lock Bridge</button>
+<span id="out" class="pill"></span>
+</div>
+</div>
+<script>
+const cv=document.getElementById("cv"),g=cv.getContext("2d"),X=x=>425+x*70,Y=y=>215-y*35;
+const levels=[
+ {s1:-2,s2:2,L:x=>x+1,R:x=>-x+5},
+ {s1:-3,s2:1,L:x=>.5*x*x-1,R:x=>2*x+1},
+ {s1:-1,s2:3,L:x=>-2*x+1,R:x=>.25*x*x-2},
+ {s1:-2,s2:1,L:x=>Math.sin(x)+2,R:x=>-x*x+4},
+ {s1:-1,s2:2,L:x=>x*x+1,R:x=>Math.sqrt(x+2)+1}
+];
+let n=0;
+function draw(){
+ let L=levels[n],aa=+a.value,bb=+b.value;
+ lev.textContent=`Level ${n+1}/${levels.length}`;
+ g.clearRect(0,0,850,430);
+ g.strokeStyle="#ddd";g.lineWidth=1;
+ for(let x=-6;x<=6;x++){g.beginPath();g.moveTo(X(x),0);g.lineTo(X(x),430);g.stroke()}
+ for(let y=-5;y<=5;y++){g.beginPath();g.moveTo(0,Y(y));g.lineTo(850,Y(y));g.stroke()}
+ g.strokeStyle="#00274c";g.lineWidth=2;g.beginPath();g.moveTo(0,Y(0));g.lineTo(850,Y(0));g.moveTo(X(0),0);g.lineTo(X(0),430);g.stroke();
+ function plot(f,lo,hi,col){
+  g.strokeStyle=col;g.lineWidth=4;g.beginPath();let st=0;
+  for(let k=0;k<=300;k++){let x=lo+(hi-lo)*k/300,y=f(x);if(!st){g.moveTo(X(x),Y(y));st=1}else g.lineTo(X(x),Y(y))}
+  g.stroke();
+ }
+ plot(L.L,-6,L.s1,"#2f80ed"); plot(x=>aa*x+bb,L.s1,L.s2,"#ffcb05"); plot(L.R,L.s2,6,"#2f80ed");
+ [L.s1,L.s2].forEach(s=>{
+  let left=s==L.s1?L.L(s):aa*s+bb, mid=aa*s+bb, right=s==L.s2?L.R(s):aa*s+bb;
+  g.fillStyle="#e84a5f";g.beginPath();g.arc(X(s),Y(s==L.s1?L.L(s):L.R(s)),8,0,7);g.fill();
+  g.strokeStyle="#111";g.beginPath();g.arc(X(s),Y(mid),8,0,7);g.stroke();
+ });
+ g.fillStyle="#111";g.font="18px system-ui";g.fillText(`middle: y = ${aa.toFixed(2)}x + ${bb.toFixed(2)}`,20,30);
+}
+function test(){
+ let L=levels[n],aa=+a.value,bb=+b.value;
+ let e=Math.abs(aa*L.s1+bb-L.L(L.s1))+Math.abs(aa*L.s2+bb-L.R(L.s2));
+ if(e<.08){out.textContent="Continuous!";n=(n+1)%levels.length;setTimeout(setup,600)}
+ else out.textContent="Gap remains: match both endpoint heights.";
+}
+function setup(){let L=levels[n];a.value=0;b.value=0;out.textContent="";draw()}
+a.oninput=b.oninput=draw;setup();
+</script>
+  <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#e1e1e1"
+    }
+  </script>
+</body>
+</html>

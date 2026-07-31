@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>{{ puzzle_name }}</title>
+<style>
+  :root {
+    --blue: #1f66d1;
+    --red: #d11f1f;
+    --green: #087a2f;
+    --purple: #7137b8;
+    --grid: #d6d6d6;
+    --axis: #222;
+  }
+
+  body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    margin: 0;
+    background: #f7f7fb;
+    color: #222;
+  }
+
+  .container {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 16px 16px 10px;
+  }
+
+  h1 {
+    margin: 0 0 10px;
+    font-size: 1.6rem;
+  }
+
+  .topbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+    padding: 12px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  }
+
+  .running-error {
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+
+  .running-error.red {
+    color: var(--red);
+  }
+
+  .progress-wrap {
+    flex: 1;
+    min-width: 220px;
+  }
+
+  .progress-label {
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+  }
+
+  .progress-bar {
+    height: 16px;
+    background: #e6e6e6;
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid #c9c9c9;
+  }
+
+  .progress-fill {
+    width: 0%;
+    height: 100%;
+    background: green;
+    transition: width 600ms ease;
+  }
+
+  .instructions {
+    background: #fff;
+    padding: 12px 14px;
+    border-radius: 12px;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    line-height: 1.45;
+  }
+
+  .probe {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    padding: 12px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    font-size: 1.3rem;
+  }
+
+  .probe input {
+    width: 50px;
+    padding: 3px 3px;
+    font-size: 1rem;
+    border: 1px solid #aaa;
+    border-radius: 6px;
+    margin-top: 4px;
+  }
+
+  .probe-output {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-weight: 700;
+  }
+
+  .graph-block {
+    background: white;
+    border-radius: 12px;
+    padding: 10px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  }
+
+  .graph-title {
+    font-weight: 700;
+    margin: 0 0 6px 4px;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    max-width: 860px;
+    height: auto;
+    border: 1px solid #bbb;
+    border-radius: 8px;
+    background: #fff;
+    cursor: crosshair;
+    touch-action: none;
+  }
+
+  .error-readout {
+    /* min-height: 24px; */
+    margin: 6px 0 0 4px;
+    font-weight: 700;
+  }
+
+  .error-readout .red-number {
+    color: var(--red);
+    font-size: 1.1rem;
+  }
+
+  .formula-box {
+    display: none;
+    background: #fff;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    line-height: 1.5;
+  }
+
+  .formula {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    overflow-wrap: anywhere;
+  }
+
+  .status {
+    min-height: 26px;
+    margin: 8px 0;
+    font-weight: 600;
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  button {
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    background: #00274c;
+    color: white;
+  }
+
+  button:disabled {
+    background: #aaa;
+    cursor: not-allowed;
+  }
+
+  .small-note {
+    color: #555;
+    font-size: 0.92rem;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- <h1>Guess the Function and Its Derivative</h1> -->
+
+  <div class="topbar">
+    <div id="runningError" class="running-error">
+      Running Error Total: <span id="runningErrorValue">0.000</span>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-label" style="display: none;">
+        Progress: <span id="progressText">0 / 5</span>
+      </div>
+      <div class="progress-bar" aria-label="Activity progress">
+        <div id="progressFill" class="progress-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="instructions" style="display: none;">
+    <strong>How to draw:</strong>
+    Click a graph to add a point. Click an existing point to remove it.
+    Drag from one point to another to draw a line segment. Click an existing line segment to remove it.
+    Draw one continuous piecewise-linear function on each graph from <strong>x = -10</strong> to
+    <strong>x = 10</strong>. The submit button unlocks once both graphs define continuous functions.
+    <br />
+    <span class="small-note">
+      Tip: Points close to the left or right edge automatically snap to x = -10 or x = 10.
+    </span>
+  </div>
+
+  <div class="probe">
+    <!-- <span>Probe:</span> -->
+    <span>f(</span>
+    <input id="probeInput" type="text" inputmode="decimal" aria-label="Input x value for f of x" />
+    <span>) = </span>
+    <span id="probeOutput" class="probe-output"></span>
+  </div>
+
+  <div class="graph-block">
+    <div class="graph-title">Draw your estimate of f(x)</div>
+    <canvas id="topCanvas" width="860" height="390" aria-label="Graph for f of x"></canvas>
+    <div id="topError" class="error-readout"></div>
+  </div>
+
+  <div class="graph-block">
+    <div class="graph-title">Draw your estimate of f′(x)</div>
+    <canvas id="bottomCanvas" width="860" height="390" aria-label="Graph for derivative f prime of x"></canvas>
+    <div id="bottomError" class="error-readout"></div>
+  </div>
+
+  <div id="formulaBox" class="formula-box">
+    <div><strong>Actual function:</strong></div>
+    <div id="fFormula" class="formula"></div>
+    <div style="margin-top:8px;"><strong>Actual derivative:</strong></div>
+    <div id="fpFormula" class="formula"></div>
+  </div>
+
+  <div style="display: none;" id="status" class="status"></div>
+
+  <div class="actions">
+    <button id="submitButton" disabled>Submit answer</button>
+    <span class="small-note">Both functions will be continuous from -10 to 10.</span>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   Utility helpers
+============================================================ */
+
+const XRANGE = [-10, 10];
+const YRANGE = [-5, 5];
+const TOTAL_QUESTIONS = 5;
+
+function rand(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+function fmt(n, digits = 3) {
+  if (!Number.isFinite(n)) return "—";
+  return Number(n).toFixed(digits);
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function clamp(v, a, b) {
+  return Math.max(a, Math.min(b, v));
+}
+
+function distance(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+/* ============================================================
+   Random bounded function generator
+
+   The function has the form
+
+   f(x) = c + sum a_i sin(b_i x + p_i)
+
+   Bounds are guaranteed by triangle inequality:
+   |sum a_i sin(...)| <= sum |a_i|
+   |f'(x)| = |sum a_i b_i cos(...)| <= sum |a_i b_i|
+
+   We choose coefficients so f stays inside [-5,5]
+   and f' stays inside [-5,5] on the whole real line,
+   therefore certainly on [-10,10].
+============================================================ */
+
+function makeRandomFunction() {
+  const termCount = Math.floor(rand(3, 5));
+  const terms = [];
+
+  for (let i = 0; i < termCount; i++) {
+    terms.push({
+      a: rand(-1, 1),
+      b: rand(0.25, 1.35),
+      p: rand(0, 2 * Math.PI)
+    });
+  }
+
+  const ampRaw = terms.reduce((s, t) => s + Math.abs(t.a), 0);
+  const derRaw = terms.reduce((s, t) => s + Math.abs(t.a * t.b), 0);
+
+  const scaleLimit = Math.min(3.6 / ampRaw, 4.4 / derRaw);
+  const scale = scaleLimit * rand(0.65, 1.0);
+
+  terms.forEach(t => t.a *= scale);
+
+  const ampSum = terms.reduce((s, t) => s + Math.abs(t.a), 0);
+  const c = rand(-5 + ampSum, 5 - ampSum);
+
+  function f(x) {
+    return c + terms.reduce((s, t) => s + t.a * Math.sin(t.b * x + t.p), 0);
+  }
+
+  function fp(x) {
+    return terms.reduce((s, t) => s + t.a * t.b * Math.cos(t.b * x + t.p), 0);
+  }
+
+  const fFormula =
+    `f(x) = ${fmt(c, 3)} ` +
+    terms.map(t => {
+      const sign = t.a >= 0 ? "+ " : "- ";
+      return `${sign}${fmt(Math.abs(t.a), 3)} sin(${fmt(t.b, 3)}x ${t.p >= 0 ? "+" : "-"} ${fmt(Math.abs(t.p), 3)})`;
+    }).join(" ");
+
+  const fpFormula =
+    `f′(x) = ` +
+    terms.map((t, idx) => {
+      const coeff = t.a * t.b;
+      const sign = coeff >= 0 ? (idx === 0 ? "" : "+ ") : "- ";
+      return `${sign}${fmt(Math.abs(coeff), 3)} cos(${fmt(t.b, 3)}x ${t.p >= 0 ? "+" : "-"} ${fmt(Math.abs(t.p), 3)})`;
+    }).join(" ");
+
+  return { f, fp, fFormula, fpFormula };
+}
+
+/* ============================================================
+   Graph class
+============================================================ */
+
+class Graph {
+  constructor(canvas, label) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext("2d");
+    this.label = label;
+
+    this.margin = { left: 56, right: 24, top: 22, bottom: 42 };
+
+    this.points = [];
+    this.lines = [];
+    this.nextId = 1;
+
+    this.dragStartPoint = null;
+    this.dragging = false;
+    this.tempMouse = null;
+
+    this.actualFn = null;
+    this.actualProgress = 0;
+    this.actualColor = "#087a2f";
+
+    this.shade = null;
+
+    this.installEvents();
+    this.render();
+  }
+
+  plotWidth() {
+    return this.canvas.width - this.margin.left - this.margin.right;
+  }
+
+  plotHeight() {
+    return this.canvas.height - this.margin.top - this.margin.bottom;
+  }
+
+  xToPx(x) {
+    return this.margin.left + ((x - XRANGE[0]) / (XRANGE[1] - XRANGE[0])) * this.plotWidth();
+  }
+
+  yToPx(y) {
+    return this.margin.top + ((YRANGE[1] - y) / (YRANGE[1] - YRANGE[0])) * this.plotHeight();
+  }
+
+  pxToX(px) {
+    return XRANGE[0] + ((px - this.margin.left) / this.plotWidth()) * (XRANGE[1] - XRANGE[0]);
+  }
+
+  pxToY(py) {
+    return YRANGE[1] - ((py - this.margin.top) / this.plotHeight()) * (YRANGE[1] - YRANGE[0]);
+  }
+
+  coordToScreen(p) {
+    return { x: this.xToPx(p.x), y: this.yToPx(p.y) };
+  }
+
+  eventToCanvasPoint(evt) {
+    const rect = this.canvas.getBoundingClientRect();
+    const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+    const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+    return {
+      x: (clientX - rect.left) * (this.canvas.width / rect.width),
+      y: (clientY - rect.top) * (this.canvas.height / rect.height)
+    };
+  }
+
+  inPlot(px, py) {
+    return (
+      px >= this.margin.left &&
+      px <= this.canvas.width - this.margin.right &&
+      py >= this.margin.top &&
+      py <= this.canvas.height - this.margin.bottom
+    );
+  }
+
+  addPointFromPixel(px, py) {
+    let x = this.pxToX(px);
+    let y = this.pxToY(py);
+
+    x = clamp(x, XRANGE[0], XRANGE[1]);
+    y = clamp(y, YRANGE[0], YRANGE[1]);
+
+    // Make endpoint construction easier.
+    if (Math.abs(x - XRANGE[0]) < 0.18) x = XRANGE[0];
+    if (Math.abs(x - XRANGE[1]) < 0.18) x = XRANGE[1];
+
+    this.points.push({ id: this.nextId++, x, y });
+  }
+
+  getPointById(id) {
+    return this.points.find(p => p.id === id);
+  }
+
+  findPointNear(px, py) {
+    const tolerance = 8;
+    for (let i = this.points.length - 1; i >= 0; i--) {
+      const sp = this.coordToScreen(this.points[i]);
+      if (Math.hypot(px - sp.x, py - sp.y) <= tolerance) {
+        return this.points[i];
+      }
+    }
+    return null;
+  }
+
+  removePoint(id) {
+    this.points = this.points.filter(p => p.id !== id);
+    this.lines = this.lines.filter(line => line.a !== id && line.b !== id);
+  }
+
+  lineExists(a, b) {
+    return this.lines.some(line =>
+      (line.a === a && line.b === b) ||
+      (line.a === b && line.b === a)
+    );
+  }
+
+  addLine(a, b) {
+    if (a === b) return;
+    if (!this.lineExists(a, b)) {
+      this.lines.push({ a, b });
+    }
+  }
+
+  removeLine(index) {
+    if (index >= 0) {
+      this.lines.splice(index, 1);
+    }
+  }
+
+  pointToSegmentDistance(px, py, p1, p2) {
+    const a = this.coordToScreen(p1);
+    const b = this.coordToScreen(p2);
+
+    const vx = b.x - a.x;
+    const vy = b.y - a.y;
+    const wx = px - a.x;
+    const wy = py - a.y;
+
+    const len2 = vx * vx + vy * vy;
+    if (len2 === 0) return Math.hypot(px - a.x, py - a.y);
+
+    let t = (wx * vx + wy * vy) / len2;
+    t = clamp(t, 0, 1);
+
+    const projX = a.x + t * vx;
+    const projY = a.y + t * vy;
+
+    return Math.hypot(px - projX, py - projY);
+  }
+
+  findLineNear(px, py) {
+    const tolerance = 7;
+
+    for (let i = this.lines.length - 1; i >= 0; i--) {
+      const p1 = this.getPointById(this.lines[i].a);
+      const p2 = this.getPointById(this.lines[i].b);
+      if (!p1 || !p2) continue;
+
+      if (this.pointToSegmentDistance(px, py, p1, p2) <= tolerance) {
+        return i;
+      }
+    }
+
+    return -1;
+  }
+
+  installEvents() {
+    const onDown = evt => {
+      if (mode !== "drawing") return;
+      evt.preventDefault();
+
+      const pos = this.eventToCanvasPoint(evt);
+      if (!this.inPlot(pos.x, pos.y)) return;
+
+      this.dragStartPoint = this.findPointNear(pos.x, pos.y);
+      this.dragging = false;
+      this.tempMouse = pos;
+    };
+
+    const onMove = evt => {
+      if (mode !== "drawing") return;
+      if (!this.dragStartPoint) return;
+      evt.preventDefault();
+
+      const pos = this.eventToCanvasPoint(evt);
+      this.tempMouse = pos;
+
+      const startScreen = this.coordToScreen(this.dragStartPoint);
+      if (Math.hypot(pos.x - startScreen.x, pos.y - startScreen.y) > 5) {
+        this.dragging = true;
+      }
+
+      this.render();
+    };
+
+    const onUp = evt => {
+      if (mode !== "drawing") return;
+      evt.preventDefault();
+
+      const pos = this.eventToCanvasPoint(evt);
+
+      if (!this.inPlot(pos.x, pos.y)) {
+        this.dragStartPoint = null;
+        this.dragging = false;
+        this.tempMouse = null;
+        this.render();
+        return;
+      }
+
+      if (this.dragStartPoint) {
+        const endPoint = this.findPointNear(pos.x, pos.y);
+
+        if (this.dragging && endPoint && endPoint.id !== this.dragStartPoint.id) {
+          this.addLine(this.dragStartPoint.id, endPoint.id);
+        } else if (!this.dragging) {
+          // Click an existing point to remove it.
+          this.removePoint(this.dragStartPoint.id);
+        }
+
+        this.dragStartPoint = null;
+        this.dragging = false;
+        this.tempMouse = null;
+      } else {
+        const lineIndex = this.findLineNear(pos.x, pos.y);
+
+        if (lineIndex >= 0) {
+          // Click an existing line to remove it.
+          this.removeLine(lineIndex);
+        } else {
+          // Otherwise add a point.
+          this.addPointFromPixel(pos.x, pos.y);
+        }
+      }
+
+      this.render();
+      updateSubmitButton();
+    };
+
+    this.canvas.addEventListener("mousedown", onDown);
+    this.canvas.addEventListener("mousemove", onMove);
+    this.canvas.addEventListener("mouseup", onUp);
+    this.canvas.addEventListener("mouseleave", () => {
+      this.dragStartPoint = null;
+      this.dragging = false;
+      this.tempMouse = null;
+      this.render();
+    });
+
+    this.canvas.addEventListener("touchstart", onDown, { passive: false });
+    this.canvas.addEventListener("touchmove", onMove, { passive: false });
+    this.canvas.addEventListener("touchend", evt => {
+      if (evt.changedTouches && evt.changedTouches.length) {
+        const touch = evt.changedTouches[0];
+        onUp({
+          preventDefault: () => evt.preventDefault(),
+          clientX: touch.clientX,
+          clientY: touch.clientY
+        });
+      }
+    }, { passive: false });
+  }
+
+  clearUserWork() {
+    this.points = [];
+    this.lines = [];
+    this.nextId = 1;
+    this.dragStartPoint = null;
+    this.dragging = false;
+    this.tempMouse = null;
+  }
+
+  resetVisuals() {
+    this.actualFn = null;
+    this.actualProgress = 0;
+    this.shade = null;
+    this.render();
+  }
+
+  render() {
+    this.drawBase();
+
+    if (this.shade) {
+      this.drawShade(this.shade.actualFn, this.shade.userFn, this.shade.alpha ?? 0.22);
+    }
+
+    if (this.actualFn && this.actualProgress > 0) {
+      this.drawActualCurve(this.actualFn, this.actualColor, this.actualProgress);
+    }
+
+    this.drawUserElements();
+
+    if (this.dragStartPoint && this.dragging && this.tempMouse) {
+      this.drawTemporaryLine();
+    }
+  }
+
+  drawBase() {
+    const ctx = this.ctx;
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+    const left = this.margin.left;
+    const right = this.canvas.width - this.margin.right;
+    const top = this.margin.top;
+    const bottom = this.canvas.height - this.margin.bottom;
+
+    ctx.save();
+
+    // Gridlines.
+    ctx.strokeStyle = "#d6d6d6";
+    ctx.lineWidth = 1;
+
+    for (let x = XRANGE[0]; x <= XRANGE[1]; x++) {
+      const px = this.xToPx(x);
+      ctx.beginPath();
+      ctx.moveTo(px, top);
+      ctx.lineTo(px, bottom);
+      ctx.stroke();
+    }
+
+    for (let y = YRANGE[0]; y <= YRANGE[1]; y++) {
+      const py = this.yToPx(y);
+      ctx.beginPath();
+      ctx.moveTo(left, py);
+      ctx.lineTo(right, py);
+      ctx.stroke();
+    }
+
+    // Axes.
+    ctx.strokeStyle = "#222";
+    ctx.lineWidth = 2;
+
+    const xAxisY = this.yToPx(0);
+    ctx.beginPath();
+    ctx.moveTo(left, xAxisY);
+    ctx.lineTo(right, xAxisY);
+    ctx.stroke();
+
+    const yAxisX = this.xToPx(0);
+    ctx.beginPath();
+    ctx.moveTo(yAxisX, top);
+    ctx.lineTo(yAxisX, bottom);
+    ctx.stroke();
+
+    // Border.
+    ctx.strokeStyle = "#555";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(left, top, right - left, bottom - top);
+
+    // Labels.
+    ctx.fillStyle = "#222";
+    ctx.font = "12px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+
+    for (let x = XRANGE[0]; x <= XRANGE[1]; x++) {
+      const px = this.xToPx(x);
+      ctx.fillText(String(x), px, bottom + 6);
+    }
+
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+
+    for (let y = YRANGE[0]; y <= YRANGE[1]; y++) {
+      const py = this.yToPx(y);
+      ctx.fillText(String(y), left - 8, py);
+    }
+
+    ctx.restore();
+  }
+
+  clipToPlot() {
+    const ctx = this.ctx;
+    ctx.beginPath();
+    ctx.rect(
+      this.margin.left,
+      this.margin.top,
+      this.plotWidth(),
+      this.plotHeight()
+    );
+    ctx.clip();
+  }
+
+  drawUserElements() {
+    const ctx = this.ctx;
+
+    ctx.save();
+    this.clipToPlot();
+
+    // User lines.
+    ctx.strokeStyle = "#1f66d1";
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+
+    for (const line of this.lines) {
+      const p1 = this.getPointById(line.a);
+      const p2 = this.getPointById(line.b);
+      if (!p1 || !p2) continue;
+
+      ctx.beginPath();
+      ctx.moveTo(this.xToPx(p1.x), this.yToPx(p1.y));
+      ctx.lineTo(this.xToPx(p2.x), this.yToPx(p2.y));
+      ctx.stroke();
+    }
+
+    // User points.
+    for (const p of this.points) {
+      ctx.beginPath();
+      ctx.fillStyle = "#ffffff";
+      ctx.strokeStyle = "#1f66d1";
+      ctx.lineWidth = 2;
+      ctx.arc(this.xToPx(p.x), this.yToPx(p.y), 5.5, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  drawTemporaryLine() {
+    const ctx = this.ctx;
+    const start = this.coordToScreen(this.dragStartPoint);
+
+    ctx.save();
+    this.clipToPlot();
+
+    ctx.strokeStyle = "rgba(31,102,209,0.45)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(this.tempMouse.x, this.tempMouse.y);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  drawActualCurve(fn, color, progress = 1) {
+    const ctx = this.ctx;
+    const n = 700;
+    const maxIndex = Math.max(1, Math.floor(n * progress));
+
+    ctx.save();
+    this.clipToPlot();
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    ctx.beginPath();
+
+    for (let i = 0; i <= maxIndex; i++) {
+      const x = XRANGE[0] + (XRANGE[1] - XRANGE[0]) * (i / n);
+      const y = fn(x);
+      const px = this.xToPx(x);
+      const py = this.yToPx(y);
+
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  drawShade(actualFn, userFn, alpha) {
+    const ctx = this.ctx;
+    const n = 450;
+
+    ctx.save();
+    this.clipToPlot();
+
+    ctx.fillStyle = `rgba(209,31,31,${alpha})`;
+
+    for (let i = 0; i < n; i++) {
+      const x1 = XRANGE[0] + (XRANGE[1] - XRANGE[0]) * (i / n);
+      const x2 = XRANGE[0] + (XRANGE[1] - XRANGE[0]) * ((i + 1) / n);
+
+      const ua1 = userFn(x1);
+      const ua2 = userFn(x2);
+      if (ua1 === null || ua2 === null) continue;
+
+      const a1 = actualFn(x1);
+      const a2 = actualFn(x2);
+
+      ctx.beginPath();
+      ctx.moveTo(this.xToPx(x1), this.yToPx(a1));
+      ctx.lineTo(this.xToPx(x2), this.yToPx(a2));
+      ctx.lineTo(this.xToPx(x2), this.yToPx(ua2));
+      ctx.lineTo(this.xToPx(x1), this.yToPx(ua1));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+}
+
+/* ============================================================
+   User-drawn function validation and evaluation
+============================================================ */
+
+function getSegments(graph) {
+  return graph.lines
+    .map(line => ({
+      p1: graph.getPointById(line.a),
+      p2: graph.getPointById(line.b)
+    }))
+    .filter(s => s.p1 && s.p2);
+}
+
+function yOnSegmentAtX(seg, x) {
+  const { p1, p2 } = seg;
+  const minX = Math.min(p1.x, p2.x);
+  const maxX = Math.max(p1.x, p2.x);
+  const eps = 1e-7;
+
+  if (x < minX - eps || x > maxX + eps) return null;
+  if (Math.abs(p2.x - p1.x) < 1e-9) return null;
+
+  const t = (x - p1.x) / (p2.x - p1.x);
+  return p1.y + t * (p2.y - p1.y);
+}
+
+function userYAtX(graph, x) {
+  const segments = getSegments(graph);
+  const ys = [];
+
+  for (const seg of segments) {
+    const y = yOnSegmentAtX(seg, x);
+    if (y !== null && Number.isFinite(y)) {
+      ys.push(y);
+    }
+  }
+
+  if (ys.length === 0) return null;
+
+  // If multiple segments meet at the same vertex, their y-values should agree.
+  // Return the average of coincident values.
+  return ys.reduce((s, y) => s + y, 0) / ys.length;
+}
+
+function validateUserFunction(graph) {
+  const segments = getSegments(graph);
+  if (segments.length === 0) return false;
+
+  // No vertical segments, because those do not define y as a function of x.
+  for (const seg of segments) {
+    if (Math.abs(seg.p2.x - seg.p1.x) < 1e-5) return false;
+  }
+
+  const samples = 900;
+  const epsY = 0.035;
+
+  for (let i = 0; i <= samples; i++) {
+    const x = XRANGE[0] + (XRANGE[1] - XRANGE[0]) * (i / samples);
+    const rawYs = [];
+
+    for (const seg of segments) {
+      const y = yOnSegmentAtX(seg, x);
+      if (y !== null && Number.isFinite(y)) rawYs.push(y);
+    }
+
+    if (rawYs.length === 0) return false;
+
+    // De-duplicate values that are the same point where two segments meet.
+    const distinct = [];
+    for (const y of rawYs) {
+      if (!distinct.some(existing => Math.abs(existing - y) < epsY)) {
+        distinct.push(y);
+      }
+    }
+
+    // More than one y-value for the same x means it is not a function.
+    if (distinct.length !== 1) return false;
+  }
+
+  return true;
+}
+
+function computeAreaError(graph, actualFn) {
+  const n = 2200;
+  let area = 0;
+
+  let prevX = XRANGE[0];
+  let prevDiff = Math.abs(userYAtX(graph, prevX) - actualFn(prevX));
+
+  for (let i = 1; i <= n; i++) {
+    const x = XRANGE[0] + (XRANGE[1] - XRANGE[0]) * (i / n);
+    const uy = userYAtX(graph, x);
+    if (uy === null) return Infinity;
+
+    const diff = Math.abs(uy - actualFn(x));
+    area += 0.5 * (diff + prevDiff) * (x - prevX);
+
+    prevX = x;
+    prevDiff = diff;
+  }
+
+  return area;
+}
+
+/* ============================================================
+   Activity state
+============================================================ */
+
+const topGraph = new Graph(document.getElementById("topCanvas"), "f");
+const bottomGraph = new Graph(document.getElementById("bottomCanvas"), "f′");
+bottomGraph.actualColor = "#7137b8";
+
+const probeInput = document.getElementById("probeInput");
+const probeOutput = document.getElementById("probeOutput");
+const submitButton = document.getElementById("submitButton");
+const statusEl = document.getElementById("status");
+const formulaBox = document.getElementById("formulaBox");
+const fFormulaEl = document.getElementById("fFormula");
+const fpFormulaEl = document.getElementById("fpFormula");
+const topErrorEl = document.getElementById("topError");
+const bottomErrorEl = document.getElementById("bottomError");
+const runningErrorEl = document.getElementById("runningError");
+const runningErrorValueEl = document.getElementById("runningErrorValue");
+const progressFill = document.getElementById("progressFill");
+const progressText = document.getElementById("progressText");
+
+let current = null;
+let runningError = 0;
+let questionsAnswered = 0;
+
+// Modes:
+// "drawing" means user can edit and submit.
+// "animating" means reveal sequence is running.
+// "readyNext" means user can proceed or complete.
+let mode = "drawing";
+
+function updateProbe() {
+  if (!current) {
+    probeOutput.textContent = "";
+    return;
+  }
+
+  const value = Number(probeInput.value);
+
+  if (probeInput.value.trim() === "" || !Number.isFinite(value)) {
+    probeOutput.textContent = "";
+    return;
+  }
+
+  probeOutput.textContent = fmt(current.f(value), 5);
+}
+
+probeInput.addEventListener("input", updateProbe);
+
+function updateSubmitButton() {
+  if (mode === "drawing") {
+    const validTop = validateUserFunction(topGraph);
+    const validBottom = validateUserFunction(bottomGraph);
+
+    submitButton.textContent = "Submit answer";
+    submitButton.disabled = !(validTop && validBottom);
+  } else if (mode === "animating") {
+    submitButton.textContent = "Animating...";
+    submitButton.disabled = true;
+  } else if (mode === "readyNext") {
+    submitButton.disabled = false;
+    submitButton.textContent =
+      questionsAnswered >= TOTAL_QUESTIONS
+        ? "Complete activity"
+        : "Proceed to next question";
+  }
+}
+
+function updateProgress() {
+  progressText.textContent = `${questionsAnswered} / ${TOTAL_QUESTIONS}`;
+  progressFill.style.width = `${100 * questionsAnswered / TOTAL_QUESTIONS}%`;
+}
+
+function newQuestion() {
+  current = makeRandomFunction();
+
+  mode = "drawing";
+
+  topGraph.clearUserWork();
+  bottomGraph.clearUserWork();
+
+  topGraph.resetVisuals();
+  bottomGraph.resetVisuals();
+
+  formulaBox.style.display = "none";
+  fFormulaEl.textContent = "";
+  fpFormulaEl.textContent = "";
+
+  topErrorEl.innerHTML = "";
+  bottomErrorEl.innerHTML = "";
+
+  statusEl.textContent =
+    "New function generated. Use the probe, then draw f(x) on the top graph and f′(x) on the bottom graph.";
+
+  runningErrorEl.classList.remove("red");
+
+  updateProbe();
+  updateSubmitButton();
+}
+
+async function animateCurve(graph, fn, color, duration = 1100) {
+  graph.actualFn = fn;
+  graph.actualColor = color;
+  graph.actualProgress = 0;
+
+  const start = performance.now();
+
+  return new Promise(resolve => {
+    function frame(now) {
+      const t = clamp((now - start) / duration, 0, 1);
+      graph.actualProgress = t;
+      graph.render();
+
+      if (t < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        resolve();
+      }
+    }
+
+    requestAnimationFrame(frame);
+  });
+}
+
+async function fadeShade(graph, actualFn, userFn, duration = 850) {
+  graph.shade = { actualFn, userFn, alpha: 0 };
+
+  const start = performance.now();
+
+  return new Promise(resolve => {
+    function frame(now) {
+      const t = clamp((now - start) / duration, 0, 1);
+      graph.shade.alpha = 0.25 * t;
+      graph.render();
+
+      if (t < 1) requestAnimationFrame(frame);
+      else resolve();
+    }
+
+    requestAnimationFrame(frame);
+  });
+}
+
+async function submitAnswer() {
+  if (mode !== "drawing") return;
+  if (!validateUserFunction(topGraph) || !validateUserFunction(bottomGraph)) return;
+
+  mode = "animating";
+  updateSubmitButton();
+
+  topErrorEl.innerHTML = "";
+  bottomErrorEl.innerHTML = "";
+  formulaBox.style.display = "none";
+
+  statusEl.textContent = "1) Drawing the actual curve of f on the top graph...";
+  await animateCurve(topGraph, current.f, "#087a2f");
+  await sleep(450);
+
+  statusEl.textContent = "2) Drawing the actual curve of f′ on the bottom graph...";
+  await animateCurve(bottomGraph, current.fp, "#7137b8");
+  await sleep(450);
+
+  statusEl.textContent = "3) Revealing the formulas for f and f′...";
+  fFormulaEl.textContent = current.fFormula;
+  fpFormulaEl.textContent = current.fpFormula;
+  formulaBox.style.display = "block";
+  await sleep(900);
+
+  const topUserFn = x => userYAtX(topGraph, x);
+  const bottomUserFn = x => userYAtX(bottomGraph, x);
+
+  statusEl.textContent = "4) Shading the area between your f estimate and the actual f...";
+  await fadeShade(topGraph, current.f, topUserFn);
+  await sleep(450);
+
+  statusEl.textContent = "5) Shading the area between your f′ estimate and the actual f′...";
+  await fadeShade(bottomGraph, current.fp, bottomUserFn);
+  await sleep(450);
+
+  const topArea = computeAreaError(topGraph, current.f);
+  const bottomArea = computeAreaError(bottomGraph, current.fp);
+
+  statusEl.textContent = "6) Showing the area error for the top graph...";
+  topErrorEl.innerHTML =
+    `f(x) Error: <span class="red-number">${fmt(topArea, 3)}</span>`;
+  await sleep(700);
+
+  statusEl.textContent = "7) Showing the area error for the bottom graph...";
+  bottomErrorEl.innerHTML =
+    `f′(x) Error: <span class="red-number">${fmt(bottomArea, 3)}</span>`;
+  await sleep(700);
+
+  statusEl.textContent = "8) Adding both errors to the running total...";
+  const combined = topArea + bottomArea;
+  runningError += combined;
+  runningErrorValueEl.textContent = fmt(runningError, 3);
+  runningErrorEl.classList.add("red");
+  await sleep(700);
+
+  statusEl.textContent = "9) Advancing progress...";
+  questionsAnswered++;
+  updateProgress();
+  await sleep(700);
+
+  if (questionsAnswered >= TOTAL_QUESTIONS) {
+    statusEl.textContent =
+      "All 5 questions are complete. Click the button to complete the activity.";
+  } else {
+    statusEl.textContent =
+      "Question complete. Click the button to proceed to the next question.";
+  }
+
+  mode = "readyNext";
+  updateSubmitButton();
+}
+
+submitButton.addEventListener("click", () => {
+  if (mode === "drawing") {
+    submitAnswer();
+  } else if (mode === "readyNext") {
+    if (questionsAnswered >= TOTAL_QUESTIONS) {
+      if (typeof activityComplete === "function") {
+        activityComplete();
+      } else {
+        alert("Activity complete!");
+      }
+    } else {
+      newQuestion();
+    }
+  }
+});
+
+/* ============================================================
+   Start
+============================================================ */
+
+updateProgress();
+newQuestion();
+</script>
+<script src="/static/puzzle/js/activity.js"></script>
+  <!-- <script>autoZoom(extraVertical=100);</script> -->
+</body>
+</html>

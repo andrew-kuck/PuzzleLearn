@@ -1,0 +1,1101 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>{{ puzzle_name }}</title>
+
+  <!-- AlaSQL lets us run SQL in the browser -->
+  <script src="https://cdn.jsdelivr.net/npm/alasql@4/dist/alasql.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --border: #d9dee8;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --blue: #2563eb;
+      --blue-dark: #1d4ed8;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .app {
+      height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(520px, 1.25fr) minmax(430px, 0.85fr);
+      gap: 18px;
+      padding: 18px;
+      position: relative;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .left-panel {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .panel-header {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      background: #fbfcff;
+    }
+
+    .panel-header h1,
+    .panel-header h2 {
+      margin: 0;
+      font-size: 1.05rem;
+    }
+
+    .table-tools {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .search-input {
+      width: 230px;
+      max-width: 100%;
+      padding: 9px 11px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 0.9rem;
+    }
+
+    .row-count {
+      color: var(--muted);
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      flex: 1;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 0.86rem;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid #edf0f5;
+      border-right: 1px solid #edf0f5;
+      padding: 8px 10px;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #eef3ff;
+      font-weight: 700;
+      color: #111827;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    th:hover {
+      background: #dfe9ff;
+    }
+
+    tr:nth-child(even) td {
+      background: #fafbfe;
+    }
+
+    tr:hover td {
+      background: #fff7ed;
+    }
+
+    .right-panel {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 18px;
+      min-width: 0;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      overflow: hidden;
+    }
+
+    .question-card,
+    .results-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .question-body {
+      padding: 18px;
+    }
+
+    .question-label {
+      color: var(--muted);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .question-text {
+      font-size: 1.03rem;
+      line-height: 1.45;
+      margin-bottom: 16px;
+      padding: 14px;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+    }
+
+    .sql-help {
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.4;
+      margin-bottom: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 150px;
+      resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 0.92rem;
+      line-height: 1.45;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      outline: none;
+    }
+
+    textarea:focus,
+    .search-input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 0.92rem;
+    }
+
+    .primary-btn {
+      background: var(--blue);
+      color: white;
+    }
+
+    .primary-btn:hover {
+      background: var(--blue-dark);
+    }
+
+    .secondary-btn {
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    .secondary-btn:hover {
+      background: #d1d5db;
+    }
+
+    .status {
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .status.error {
+      color: var(--red);
+    }
+
+    .status.waiting {
+      color: var(--yellow);
+    }
+
+    .status.ok {
+      color: var(--green);
+    }
+
+    .results-card {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .results-wrap {
+      overflow: auto;
+      padding: 0;
+      flex: 1;
+    }
+
+    .empty-results {
+      padding: 18px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .check-overlay {
+      position: absolute;
+      inset: 18px 18px 18px calc(55% + 18px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(4px);
+      z-index: 20;
+      border-radius: 18px;
+    }
+
+    .check-overlay.show {
+      display: flex;
+      animation: fadeIn 150ms ease-out;
+    }
+
+    .checkmark {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      background: var(--green);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 5.5rem;
+      font-weight: 900;
+      box-shadow: 0 20px 45px rgba(34, 197, 94, 0.35);
+      animation: pop 280ms ease-out;
+    }
+
+    code {
+      background: #eef2ff;
+      padding: 2px 5px;
+      border-radius: 5px;
+      font-size: 0.85em;
+    }
+
+    .question-mode-off .question-mode-only {
+    display: none !important;
+    }
+
+    .toggle-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+    margin-left: 4px;
+    }
+
+    .toggle-control input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    }
+
+    .toggle-track {
+    width: 44px;
+    height: 24px;
+    border-radius: 999px;
+    background: #d1d5db;
+    position: relative;
+    transition: background 160ms ease;
+    flex: 0 0 auto;
+    }
+
+    .toggle-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
+    transition: transform 160ms ease;
+    }
+
+    .toggle-control input:checked + .toggle-track {
+    background: var(--blue);
+    }
+
+    .toggle-control input:checked + .toggle-track .toggle-thumb {
+    transform: translateX(20px);
+    }
+
+    .toggle-control input:focus-visible + .toggle-track {
+    outline: 3px solid rgba(37, 99, 235, 0.25);
+    outline-offset: 2px;
+    }
+
+    .toggle-label {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #374151;
+    white-space: nowrap;
+    }
+
+    @keyframes pop {
+      from {
+        transform: scale(0.65);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    @media (max-width: 950px) {
+      .app {
+        height: auto;
+        min-height: 100vh;
+        grid-template-columns: 1fr;
+      }
+
+      .left-panel {
+        min-height: 520px;
+      }
+
+      .right-panel {
+        grid-template-rows: auto auto;
+      }
+
+      .check-overlay {
+        inset: 18px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Safest way to pass Django Python data into JavaScript -->
+   <!-- put the django template brackets back to use the backend dataset -->
+  <!-- nba_data|json_script:"nba-data" -->
+
+  <main class="app question-mode-off">
+    <section class="panel left-panel" aria-label="NBA data table">
+      <div class="panel-header">
+        <h1>NBA Game Data</h1>
+
+        <div class="table-tools">
+          <input
+            id="tableSearch"
+            class="search-input"
+            type="search"
+            placeholder="Search table..."
+            aria-label="Search table"
+          />
+          <span id="rowCount" class="row-count"></span>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table id="dataTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="right-panel" aria-label="SQL activity">
+      <section class="question-card">
+        <div class="panel-header">
+        <h2>SQL Workspace</h2>
+
+        <button
+            id="newQuestionBtn"
+            class="secondary-btn question-mode-only"
+            type="button"
+        >
+            New Question
+        </button>
+        </div>
+
+        <div class="question-body">
+            <div id="questionBlock" class="question-mode-only">
+            <div class="question-label">Question</div>
+            <div id="questionText" class="question-text">
+                Loading question...
+            </div>
+            </div>
+
+          <div class="sql-help">
+            Query the table named <code>nba</code>.
+            Use square brackets for column names with numbers, for example
+            <code>[3_Pointers_Made]</code>.
+          </div>
+
+          <textarea
+            id="sqlInput"
+            spellcheck="false"
+            placeholder="Example: SELECT [Player], [Points] FROM nba WHERE [Points] > 25 ORDER BY [Points] DESC"
+          ></textarea>
+
+            <div class="button-row">
+            <button id="runBtn" class="primary-btn" type="button">
+                Run SQL
+            </button>
+
+            <button id="clearBtn" class="secondary-btn" type="button">
+                Clear
+            </button>
+
+            <label class="toggle-control">
+                <input id="questionModeToggle" type="checkbox" />
+                <span class="toggle-track">
+                <span class="toggle-thumb"></span>
+                </span>
+                <span class="toggle-label">Question Mode</span>
+            </label>
+
+            <span id="status" class="status question-mode-only"></span>
+            </div>
+
+        </div>
+      </section>
+
+      <section class="results-card" aria-label="Query results">
+        <div class="panel-header">
+          <h2>Results</h2>
+        </div>
+
+        <div id="resultsWrap" class="results-wrap">
+          <div class="empty-results">
+            Your query results will appear here.
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <!-- <div id="checkOverlay" class="check-overlay" aria-hidden="true">
+      <div class="checkmark">✓</div>
+    </div> -->
+  </main>
+
+  <script src="/static/puzzle/js/nba_data.js"></script>
+  <script>
+    // const rawNbaData = JSON.parse(
+    //   document.getElementById("nba-data").textContent
+    // );
+
+    const NON_NUMERIC_COLUMNS = new Set([
+      "Player",
+      "Team",
+      "Opponent",
+      "Result",
+      "Minutes_Played",
+      "GameDate"
+    ]);
+
+    let nbaData = [];
+    let columns = [];
+    let visibleRows = [];
+    let currentCorrectSql = "";
+    let sortState = {
+      column: null,
+      direction: 1
+    };
+
+    const dataTable = document.getElementById("dataTable");
+    const tableHead = dataTable.querySelector("thead");
+    const tableBody = dataTable.querySelector("tbody");
+    const tableSearch = document.getElementById("tableSearch");
+    const rowCount = document.getElementById("rowCount");
+
+    const questionText = document.getElementById("questionText");
+    const sqlInput = document.getElementById("sqlInput");
+    const runBtn = document.getElementById("runBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const newQuestionBtn = document.getElementById("newQuestionBtn");
+    const statusEl = document.getElementById("status");
+    const resultsWrap = document.getElementById("resultsWrap");
+    // const checkOverlay = document.getElementById("checkOverlay");
+
+    const appEl = document.querySelector(".app");
+    const questionModeToggle = document.getElementById("questionModeToggle");
+
+    let questionModeEnabled = false;
+
+    initialize();
+
+    function initialize() {
+      nbaData = normalizeRows(rawNbaData);
+      columns = getColumns(nbaData);
+      visibleRows = [...nbaData];
+
+      initializeSqlDatabase();
+      renderDataTable();
+
+      tableSearch.addEventListener("input", handleSearch);
+      runBtn.addEventListener("click", handleRunSql);
+      clearBtn.addEventListener("click", clearUserWork);
+      newQuestionBtn.addEventListener("click", loadNewQuestion);
+      questionModeToggle.addEventListener("change", handleQuestionModeToggle);
+
+      handleQuestionModeToggle();
+    }
+
+    function handleQuestionModeToggle() {
+        questionModeEnabled = questionModeToggle.checked;
+
+        appEl.classList.toggle("question-mode-off", !questionModeEnabled);
+
+        // Remove any old correct/incorrect feedback when changing modes.
+        setStatus("", "");
+
+        // If Question Mode is turned back on and no question exists yet,
+        // generate one.
+        if (questionModeEnabled && !currentCorrectSql) {
+            loadNewQuestion();
+        }
+    }
+
+    function normalizeRows(rows) {
+      return rows.map(row => {
+        const normalized = {};
+
+        Object.entries(row).forEach(([key, value]) => {
+          if (
+            value !== null &&
+            value !== undefined &&
+            value !== "" &&
+            !NON_NUMERIC_COLUMNS.has(key)
+          ) {
+            const numeric = Number(value);
+            normalized[key] = Number.isFinite(numeric) ? numeric : value;
+          } else {
+            normalized[key] = value;
+          }
+        });
+
+        return normalized;
+      });
+    }
+
+    function getColumns(rows) {
+      const seen = new Set();
+
+      rows.forEach(row => {
+        Object.keys(row).forEach(key => seen.add(key));
+      });
+
+      return Array.from(seen);
+    }
+
+    function initializeSqlDatabase() {
+      alasql("DROP TABLE IF EXISTS nba");
+      alasql("CREATE TABLE nba");
+
+      // AlaSQL can query this as: SELECT * FROM nba
+      alasql.tables.nba.data = nbaData;
+    }
+
+    function renderDataTable() {
+      tableHead.innerHTML = "";
+      tableBody.innerHTML = "";
+
+      const headerRow = document.createElement("tr");
+
+      columns.forEach(column => {
+        const th = document.createElement("th");
+        th.textContent = getHeaderLabel(column);
+        th.title = "Click to sort";
+        th.addEventListener("click", () => sortByColumn(column));
+        headerRow.appendChild(th);
+      });
+
+      tableHead.appendChild(headerRow);
+
+      const fragment = document.createDocumentFragment();
+
+      visibleRows.forEach(row => {
+        const tr = document.createElement("tr");
+
+        columns.forEach(column => {
+          const td = document.createElement("td");
+          td.textContent = row[column] ?? "";
+          tr.appendChild(td);
+        });
+
+        fragment.appendChild(tr);
+      });
+
+      tableBody.appendChild(fragment);
+      rowCount.textContent = `${visibleRows.length} row${visibleRows.length === 1 ? "" : "s"}`;
+    }
+
+    function getHeaderLabel(column) {
+      if (sortState.column !== column) {
+        return column;
+      }
+
+      return `${column} ${sortState.direction === 1 ? "▲" : "▼"}`;
+    }
+
+    function sortByColumn(column) {
+      if (sortState.column === column) {
+        sortState.direction *= -1;
+      } else {
+        sortState.column = column;
+        sortState.direction = 1;
+      }
+
+      visibleRows.sort((a, b) => {
+        const av = a[column];
+        const bv = b[column];
+
+        if (typeof av === "number" && typeof bv === "number") {
+          return (av - bv) * sortState.direction;
+        }
+
+        return String(av ?? "").localeCompare(String(bv ?? "")) * sortState.direction;
+      });
+
+      renderDataTable();
+    }
+
+    function handleSearch() {
+      const query = tableSearch.value.trim().toLowerCase();
+
+      if (!query) {
+        visibleRows = [...nbaData];
+      } else {
+        visibleRows = nbaData.filter(row =>
+          Object.values(row).some(value =>
+            String(value ?? "").toLowerCase().includes(query)
+          )
+        );
+      }
+
+      renderDataTable();
+    }
+
+    async function loadNewQuestion() {
+        if (!questionModeEnabled) {
+            return;
+        }
+
+        clearUserWork();
+        setStatus("Generating question...", "waiting");
+        questionText.textContent = "Generating question...";
+
+        try {
+            const generated = await fetchGeneratedQuestion();
+            questionText.textContent = generated.question;
+            currentCorrectSql = generated.sql;
+            setStatus("", "");
+        } catch (error) {
+            console.warn("LLM question generation failed. Using fallback.", error);
+
+            const fallback = createFallbackQuestion();
+            questionText.textContent = fallback.question;
+            currentCorrectSql = fallback.sql;
+            // setStatus("Using local fallback question.", "waiting");
+        }
+    }
+
+    async function fetchGeneratedQuestion() {
+      const response = await fetch("{% url 'generate_nba_question' %}", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCookie("csrftoken")
+        },
+        body: JSON.stringify({
+          columns,
+          sampleRows: nbaData.slice(0, 8)
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Question endpoint failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.question || !data.sql) {
+        throw new Error("Question endpoint returned invalid data.");
+      }
+
+      return data;
+    }
+
+    function createFallbackQuestion() {
+      const usableRows = nbaData.filter(row =>
+        row.Player && row.Opponent && Number.isFinite(Number(row.Points))
+      );
+
+      const row = usableRows[Math.floor(Math.random() * usableRows.length)] || nbaData[0];
+
+      const player = row.Player || "LeBron James";
+      const threshold = Math.max(5, Number(row.Points || 20) - 1);
+
+      return {
+        question: `Return the distinct opponents against which ${player} scored more than ${threshold} points.`,
+        sql: `
+          SELECT DISTINCT [Opponent]
+          FROM nba
+          WHERE [Player] = '${escapeSqlString(player)}'
+            AND [Points] > ${threshold}
+          ORDER BY [Opponent]
+        `
+      };
+    }
+
+    function handleRunSql() {
+    const userSql = sqlInput.value.trim();
+
+    if (!userSql) {
+        setStatus("Enter a SQL query first.", "error");
+        return;
+    }
+
+    try {
+        const userResults = executeSelect(userSql);
+        renderResults(userResults);
+
+        // If Question Mode is off, stop here.
+        // The user can freely run SQL without answer checking.
+        if (!questionModeEnabled) {
+        setStatus("", "");
+        return;
+        }
+
+        const correctResults = executeSelect(currentCorrectSql);
+
+        if (resultsMatch(userResults, correctResults)) {
+        setStatus("Correct!", "ok");
+        } else {
+        setStatus("Not quite. Check your result and try again.", "error");
+        }
+    } catch (error) {
+        renderError(error);
+
+        if (questionModeEnabled) {
+        setStatus("SQL error.", "error");
+        } else {
+        setStatus("", "");
+        }
+    }
+    }
+
+    function executeSelect(sql) {
+      const cleaned = sql.trim().replace(/;+$/g, "");
+
+      if (!/^(select|with)\b/i.test(cleaned)) {
+        throw new Error("Only SELECT queries are allowed in this activity.");
+      }
+
+      if (/;\s*\S/.test(cleaned)) {
+        throw new Error("Only one SQL statement is allowed.");
+      }
+
+      const bannedKeywords =
+        /\b(drop|delete|insert|update|create|alter|truncate|attach|detach|pragma|into)\b/i;
+
+      if (bannedKeywords.test(cleaned)) {
+        throw new Error("This activity only allows read-only SELECT queries.");
+      }
+
+      return alasql(cleaned);
+    }
+
+    function renderResults(rows) {
+      resultsWrap.innerHTML = "";
+
+      if (!Array.isArray(rows) || rows.length === 0) {
+        resultsWrap.innerHTML = `
+          <div class="empty-results">
+            Query ran successfully, but returned no rows.
+          </div>
+        `;
+        return;
+      }
+
+      const resultColumns = getColumns(rows);
+      const table = document.createElement("table");
+      const thead = document.createElement("thead");
+      const tbody = document.createElement("tbody");
+
+      const headerRow = document.createElement("tr");
+
+      resultColumns.forEach(column => {
+        const th = document.createElement("th");
+        th.textContent = column;
+        headerRow.appendChild(th);
+      });
+
+      thead.appendChild(headerRow);
+
+      rows.forEach(row => {
+        const tr = document.createElement("tr");
+
+        resultColumns.forEach(column => {
+          const td = document.createElement("td");
+          td.textContent = formatValue(row[column]);
+          tr.appendChild(td);
+        });
+
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(thead);
+      table.appendChild(tbody);
+      resultsWrap.appendChild(table);
+    }
+
+    function renderError(error) {
+      resultsWrap.innerHTML = `
+        <div class="empty-results" style="color: #ef4444;">
+          ${escapeHtml(error.message)}
+        </div>
+      `;
+    }
+
+    function resultsMatch(userRows, correctRows) {
+    if (!Array.isArray(userRows) || !Array.isArray(correctRows)) {
+        return false;
+    }
+
+    if (userRows.length !== correctRows.length) {
+        return false;
+    }
+
+    // If the correct result has no rows, the user result must also have no rows.
+    if (correctRows.length === 0) {
+        return userRows.length === 0;
+    }
+
+    /*
+        The idea:
+
+        The correct SQL defines the minimum required answer.
+
+        If the correct answer is:
+
+        Opponent
+        --------
+        LAL
+        BOS
+
+        then the user should be marked correct for:
+
+        Player          Opponent    Points
+        ----------------------------------
+        LeBron James    LAL         31
+        LeBron James    BOS         27
+
+        because the required Opponent values are present.
+
+        Extra columns do not matter.
+    */
+
+    const correctCanonicalRows = correctRows.map(row =>
+        Object.values(row).map(normalizeComparableValue)
+    );
+
+    const userCanonicalRows = userRows.map(row =>
+        Object.values(row).map(normalizeComparableValue)
+    );
+
+    const usedUserRowIndexes = new Set();
+
+    for (const correctValues of correctCanonicalRows) {
+        let foundMatch = false;
+
+        for (let i = 0; i < userCanonicalRows.length; i++) {
+        if (usedUserRowIndexes.has(i)) {
+            continue;
+        }
+
+        const userValues = userCanonicalRows[i];
+
+        if (rowContainsAllRequiredValues(userValues, correctValues)) {
+            usedUserRowIndexes.add(i);
+            foundMatch = true;
+            break;
+        }
+        }
+
+        if (!foundMatch) {
+        return false;
+        }
+    }
+
+    return true;
+    }
+
+    function rowContainsAllRequiredValues(userValues, correctValues) {
+    const remainingUserValues = [...userValues];
+
+    for (const correctValue of correctValues) {
+        const index = remainingUserValues.findIndex(userValue =>
+        comparableValuesEqual(userValue, correctValue)
+        );
+
+        if (index === -1) {
+        return false;
+        }
+
+        // Remove matched value so duplicate values are handled correctly.
+        remainingUserValues.splice(index, 1);
+    }
+
+    return true;
+    }
+
+    function comparableValuesEqual(a, b) {
+    if (typeof a === "number" && typeof b === "number") {
+        return Math.abs(a - b) < 1e-9;
+    }
+
+    return a === b;
+    }
+
+    function normalizeComparableValue(value) {
+      if (typeof value === "number") {
+        return Math.round(value * 1e9) / 1e9;
+      }
+
+      if (value === null || value === undefined) {
+        return null;
+      }
+
+      const numeric = Number(value);
+
+      if (Number.isFinite(numeric) && String(value).trim() !== "") {
+        return Math.round(numeric * 1e9) / 1e9;
+      }
+
+      return String(value).trim();
+    }
+
+    // function showSuccessAndContinue() {
+    //   setTimeout(() => {
+    //     checkOverlay.classList.add("show");
+    //         setTimeout(() => {
+    //             checkOverlay.classList.remove("show");
+    //             loadNewQuestion();
+    //         }, 1100);
+    //   }, 3000);
+    // }
+
+    function clearUserWork() {
+      sqlInput.value = "";
+      resultsWrap.innerHTML = `
+        <div class="empty-results">
+          Your query results will appear here.
+        </div>
+      `;
+      setStatus("", "");
+    }
+
+    function setStatus(message, type) {
+        // In non-question mode, hide all correctness/status text.
+        if (!questionModeEnabled) {
+            statusEl.textContent = "";
+            statusEl.className = "status question-mode-only";
+            return;
+        }
+
+        statusEl.textContent = message;
+        statusEl.className = `status question-mode-only ${type || ""}`;
+    }
+
+    function formatValue(value) {
+      if (typeof value === "number") {
+        return Number.isInteger(value) ? value : Number(value.toFixed(4));
+      }
+
+      return value ?? "";
+    }
+
+    function escapeSqlString(value) {
+      return String(value).replaceAll("'", "''");
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function getCookie(name) {
+      const cookies = document.cookie ? document.cookie.split(";") : [];
+
+      for (const cookie of cookies) {
+        const trimmed = cookie.trim();
+
+        if (trimmed.startsWith(name + "=")) {
+          return decodeURIComponent(trimmed.substring(name.length + 1));
+        }
+      }
+
+      return "";
+    }
+  </script>
+  <script id="_metadata" type="application/json">
+    {
+      "summary": ""
+    }
+  </script>
+<script src="/static/puzzle/js/activity.js"></script>
+</body>
+</html>

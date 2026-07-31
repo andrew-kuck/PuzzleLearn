@@ -1,0 +1,712 @@
+create an activity using html, css, and javascript. show a randomly chosen continuous function on a coordinate grid on the screen. the x axis should extend from -10 to 10 and the y axis from -10 to 10. all the values of the function between x=-10 and x=10 should fall between -9 and 9, so that the entire curve is visible from x=-10 to x=10. the axes and any labels should be a visible but not prominent shade of gray. the function curve should be dark blue. extending above and below the function line by 1 unit should be a region shaded lighter blue. initially, there should be a black circle on the curve at x=-10. the black circle should have diameter 0.5. above the graph are a number of slope value buttons for the user to click on. the slope value buttons should be just large enough to show the slope value and they should be arranged in rows above the graph in a compact layout. the number of buttons and their values is determined by a javascript constant which is an array of strings (strings so that fractional slope values can be represented as fractions). this javascript constant should intially contain the values -5, -1, 1, and 5. after a user clicks a slope value, it changes color to indicate it is active. the black circle then moves across the graph at the slope given by the active slope button at a rate of n horizontal units per second, where n is a javascript constant initially set to 0.5. if the user clicks on a different slope value button, that button becomes active and the black circle moves at that slope. if at any point the black circle completely exits the zone given by the light blue shading, then the black circle temporarily turns red and after a pause the black circle is returned to the value of the function at x=-10. if the black circle arives at x=10 and the user has not lost by having the black circle completely exit the light blue region, then the black circle flashes green and after a pause a new question is presented. with each question completed, a progress bar is advanced, so that after completing 5 questions the progress bar is full and a function activityComplete() is called.
+
+the light blue shaded region should not extend 1 unit above and below the line of f, but should instead extend 1 unit in each direction perpendicular to the tangent of the graph at each point. also, the graph's values between -10 and 10 should be limited between -8 and 8 (not -9 and 9).
+
+have a javascript constant that also determines the width of the light blue region around the line of f, and therefore the margin of error before the user loses for going to far from the line of f.
+
+instead of using the line perpendicular to the tangent of the function to determine the zone of blue shading, simply make the shaded region such that no point on f between x=-10 and x=10 is less than m units from edge of the shaded region, where m is given by PERPENDICULAR_BAND_RADIUS
+
+have a javascript constant that can toggle between smooth and non-smooth functions. if the smooth is selected, then the function f that is plotted should be smooth and differentiable from x=-10 to x=10
+
+have a javascript constant that is an array with the same length as QUESTIONS_TO_COMPLETE. the ith item in the array is an array of length 2 giving information about how to construct the ith question. the first item in the ith inner array is a boolean indicating whether the question function should be smooth (true) or not smooth (false). the second item in the ith inner array is a float that indicates what the PERPENDICULAR_BAND_RADIUS should be for that ith question.
+
+have third value for each of the i arrays in QUESTION_SETTINGS. this value gives the value previously given by HORIZONTAL_UNITS_PER_SECOND
+
+the speed set in QUESTION_SETTINGS should not be the horizontal speed but the absolute speed
+
+Here’s a complete single-file HTML activity you can copy into an `.html` file and run in a browser.
+
+It includes:
+
+- Random continuous functions on a `[-10, 10] × [-10, 10]` grid
+- Dark blue function curve
+- Light blue tolerance band extending `1` unit above/below the function
+- A movable black circle of diameter `0.5` coordinate units
+- Compact slope buttons controlled by a JavaScript string array
+- Progress bar for 5 completed questions
+- Calls `activityComplete()` after the fifth success
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Slope Tracing Activity</title>
+  <style>
+    :root {
+      --blue-dark: #0b3d91;
+      --blue-light: rgba(78, 157, 255, 0.28);
+      --gray-axis: #777;
+      --gray-grid: #e4e4e4;
+      --active: #ffd966;
+      --active-border: #8a6d00;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #fafafa;
+      color: #222;
+    }
+
+    .activity {
+      max-width: 760px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 1.25rem;
+      margin-bottom: 8px;
+    }
+
+    .instructions {
+      margin: 0 auto 12px;
+      max-width: 640px;
+      font-size: 0.95rem;
+      color: #444;
+    }
+
+    .progress-wrap {
+      width: 100%;
+      max-width: 680px;
+      height: 16px;
+      margin: 12px auto;
+      border: 1px solid #999;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #eee;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: #2f8f46;
+      transition: width 300ms ease;
+    }
+
+    .button-area {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px;
+      max-width: 680px;
+      margin: 8px auto 12px;
+    }
+
+    .slope-button {
+      font-size: 0.95rem;
+      line-height: 1;
+      padding: 6px 10px;
+      min-width: unset;
+      border: 1px solid #777;
+      border-radius: 6px;
+      background: #fff;
+      color: #111;
+      cursor: pointer;
+    }
+
+    .slope-button:hover {
+      background: #f1f1f1;
+    }
+
+    .slope-button.active {
+      background: var(--active);
+      border-color: var(--active-border);
+      box-shadow: 0 0 0 2px rgba(255, 217, 102, 0.35);
+    }
+
+    .slope-button:disabled {
+      cursor: default;
+      opacity: 0.7;
+    }
+
+    canvas {
+      display: block;
+      margin: 0 auto;
+      max-width: 100%;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
+    .status {
+      min-height: 1.4em;
+      margin-top: 10px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <main class="activity">
+    <h1>Slope Tracing Activity</h1>
+
+    <p class="instructions">
+      Choose slope buttons to guide the circle from left to right. Stay inside the light blue band.
+    </p>
+
+    <div class="progress-wrap" aria-label="Progress">
+      <div id="progressFill" class="progress-fill"></div>
+    </div>
+
+    <div id="buttonArea" class="button-area" aria-label="Slope choices"></div>
+
+    <canvas
+      id="graph"
+      width="680"
+      height="680"
+      aria-label="Coordinate graph with a function and a movable point"
+      role="img"
+    ></canvas>
+
+    <div id="status" class="status" aria-live="polite"></div>
+  </main>
+
+  <script>
+    /*
+      Edit these constants to customize the activity.
+      Slope values are strings so fractions like "1/2" or "-3/4" can be used.
+    */
+    const SLOPE_BUTTON_VALUES = ["-5", "-1", "1", "5"];
+    const HORIZONTAL_UNITS_PER_SECOND = 0.5;
+    const QUESTIONS_TO_COMPLETE = 5;
+
+    const X_MIN = -10;
+    const X_MAX = 10;
+    const Y_MIN = -10;
+    const Y_MAX = 10;
+
+    const FUNCTION_Y_BOUND = 8;
+    const SHADE_DISTANCE = 1;
+    const CIRCLE_DIAMETER_UNITS = 0.5;
+    const CIRCLE_RADIUS_UNITS = CIRCLE_DIAMETER_UNITS / 2;
+
+    const canvas = document.getElementById("graph");
+    const ctx = canvas.getContext("2d");
+
+    const buttonArea = document.getElementById("buttonArea");
+    const progressFill = document.getElementById("progressFill");
+    const statusEl = document.getElementById("status");
+
+    const plot = {
+      left: 55,
+      top: 25,
+      size: 600
+    };
+
+    const unitPx = plot.size / (X_MAX - X_MIN);
+
+    let slopeNumbers = SLOPE_BUTTON_VALUES.map(parseSlope).filter(Number.isFinite);
+
+    if (slopeNumbers.length === 0) {
+      slopeNumbers = [0];
+    }
+
+    let functionPoints = [];
+    let activeButtonIndex = null;
+    let activeSlope = null;
+
+    let circleX = X_MIN;
+    let circleY = 0;
+    let circleColor = "black";
+
+    let completedQuestions = 0;
+    let mode = "waiting"; 
+    // modes: waiting, moving, lost, won, complete
+
+    let lastTime = null;
+    let completionCalled = false;
+
+    if (typeof window.activityComplete !== "function") {
+      window.activityComplete = function () {
+        console.log("activityComplete() called");
+      };
+    }
+
+    function parseSlope(value) {
+      const text = String(value).trim().replace("−", "-");
+
+      if (text.includes("/")) {
+        const parts = text.split("/");
+        if (parts.length !== 2) return NaN;
+
+        const numerator = Number(parts[0].trim());
+        const denominator = Number(parts[1].trim());
+
+        if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0) {
+          return NaN;
+        }
+
+        return numerator / denominator;
+      }
+
+      return Number(text);
+    }
+
+    function toCanvasX(x) {
+      return plot.left + (x - X_MIN) * unitPx;
+    }
+
+    function toCanvasY(y) {
+      return plot.top + (Y_MAX - y) * unitPx;
+    }
+
+    function randomBetween(a, b) {
+      return a + Math.random() * (b - a);
+    }
+
+    function randomChoice(array) {
+      return array[Math.floor(Math.random() * array.length)];
+    }
+
+    function generateRandomFunction() {
+      /*
+        This creates a continuous piecewise-linear function.
+        Its segment slopes are chosen from the available slope-button values,
+        which makes the activity playable with the given buttons.
+      */
+
+      const maxAttempts = 500;
+
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const points = [];
+
+        let x = X_MIN;
+        let y = randomBetween(-3, 3);
+
+        points.push({ x, y });
+
+        let guard = 0;
+        let failed = false;
+
+        while (x < X_MAX - 1e-9 && guard < 200) {
+          guard++;
+
+          const remaining = X_MAX - x;
+          let dx = Math.min(randomBetween(0.75, 2.25), remaining);
+
+          let candidates = slopeNumbers.filter(m => {
+            const nextY = y + m * dx;
+            return nextY >= -FUNCTION_Y_BOUND && nextY <= FUNCTION_Y_BOUND;
+          });
+
+          if (candidates.length === 0) {
+            const trialDXs = [
+              Math.min(1.0, remaining),
+              Math.min(0.75, remaining),
+              Math.min(0.5, remaining),
+              Math.min(0.25, remaining),
+              Math.min(0.1, remaining)
+            ];
+
+            let found = false;
+
+            for (const trialDX of trialDXs) {
+              candidates = slopeNumbers.filter(m => {
+                const nextY = y + m * trialDX;
+                return nextY >= -FUNCTION_Y_BOUND && nextY <= FUNCTION_Y_BOUND;
+              });
+
+              if (candidates.length > 0) {
+                dx = trialDX;
+                found = true;
+                break;
+              }
+            }
+
+            if (!found) {
+              failed = true;
+              break;
+            }
+          }
+
+          /*
+            A small bias keeps the function from sticking near the top or bottom.
+          */
+          let preferred = candidates;
+
+          if (y > FUNCTION_Y_BOUND * 0.55) {
+            preferred = candidates.filter(m => m < 0);
+          } else if (y < -FUNCTION_Y_BOUND * 0.55) {
+            preferred = candidates.filter(m => m > 0);
+          }
+
+          if (preferred.length === 0) {
+            preferred = candidates;
+          }
+
+          const m = randomChoice(preferred);
+
+          x += dx;
+
+          if (x > X_MAX) {
+            x = X_MAX;
+          }
+
+          y = y + m * dx;
+
+          points.push({ x, y });
+        }
+
+        if (!failed && points.length > 2 && Math.abs(points[points.length - 1].x - X_MAX) < 1e-6) {
+          return points;
+        }
+      }
+
+      /*
+        Fallback continuous function, still guaranteed visible.
+        This should rarely be needed with the default slope buttons.
+      */
+      const points = [];
+      for (let i = 0; i <= 80; i++) {
+        const x = X_MIN + i * (X_MAX - X_MIN) / 80;
+        const y = 4 * Math.sin(0.55 * x + Math.random() * 0.01);
+        points.push({ x, y });
+      }
+      return points;
+    }
+
+    function fAt(x) {
+      if (x <= functionPoints[0].x) {
+        return functionPoints[0].y;
+      }
+
+      const last = functionPoints[functionPoints.length - 1];
+
+      if (x >= last.x) {
+        return last.y;
+      }
+
+      for (let i = 0; i < functionPoints.length - 1; i++) {
+        const p1 = functionPoints[i];
+        const p2 = functionPoints[i + 1];
+
+        if (x >= p1.x && x <= p2.x) {
+          const t = (x - p1.x) / (p2.x - p1.x);
+          return p1.y + t * (p2.y - p1.y);
+        }
+      }
+
+      return 0;
+    }
+
+    function drawGrid() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "#e4e4e4";
+
+      for (let x = X_MIN; x <= X_MAX; x++) {
+        ctx.beginPath();
+        ctx.moveTo(toCanvasX(x), toCanvasY(Y_MIN));
+        ctx.lineTo(toCanvasX(x), toCanvasY(Y_MAX));
+        ctx.stroke();
+      }
+
+      for (let y = Y_MIN; y <= Y_MAX; y++) {
+        ctx.beginPath();
+        ctx.moveTo(toCanvasX(X_MIN), toCanvasY(y));
+        ctx.lineTo(toCanvasX(X_MAX), toCanvasY(y));
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = "#777";
+      ctx.lineWidth = 1.5;
+
+      ctx.beginPath();
+      ctx.moveTo(toCanvasX(X_MIN), toCanvasY(0));
+      ctx.lineTo(toCanvasX(X_MAX), toCanvasY(0));
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(toCanvasX(0), toCanvasY(Y_MIN));
+      ctx.lineTo(toCanvasX(0), toCanvasY(Y_MAX));
+      ctx.stroke();
+
+      ctx.fillStyle = "#777";
+      ctx.font = "12px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+
+      [-10, -5, 0, 5, 10].forEach(x => {
+        ctx.fillText(String(x), toCanvasX(x), toCanvasY(0) + 5);
+      });
+
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+
+      [-10, -5, 0, 5, 10].forEach(y => {
+        if (y !== 0) {
+          ctx.fillText(String(y), toCanvasX(0) - 6, toCanvasY(y));
+        }
+      });
+
+      ctx.textAlign = "left";
+      ctx.textBaseline = "bottom";
+      ctx.fillText("x", toCanvasX(X_MAX) - 10, toCanvasY(0) - 6);
+
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
+      ctx.fillText("y", toCanvasX(0) + 6, toCanvasY(Y_MAX) + 4);
+
+      ctx.restore();
+    }
+
+    function drawShadedRegion() {
+      ctx.save();
+
+      ctx.fillStyle = "rgba(78, 157, 255, 0.28)";
+      ctx.beginPath();
+
+      const samples = 500;
+
+      for (let i = 0; i <= samples; i++) {
+        const x = X_MIN + i * (X_MAX - X_MIN) / samples;
+        const y = fAt(x) + SHADE_DISTANCE;
+
+        if (i === 0) {
+          ctx.moveTo(toCanvasX(x), toCanvasY(y));
+        } else {
+          ctx.lineTo(toCanvasX(x), toCanvasY(y));
+        }
+      }
+
+      for (let i = samples; i >= 0; i--) {
+        const x = X_MIN + i * (X_MAX - X_MIN) / samples;
+        const y = fAt(x) - SHADE_DISTANCE;
+
+        ctx.lineTo(toCanvasX(x), toCanvasY(y));
+      }
+
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawFunctionCurve() {
+      ctx.save();
+
+      ctx.strokeStyle = "#0b3d91";
+      ctx.lineWidth = 3;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+
+      ctx.beginPath();
+
+      const samples = 500;
+
+      for (let i = 0; i <= samples; i++) {
+        const x = X_MIN + i * (X_MAX - X_MIN) / samples;
+        const y = fAt(x);
+
+        if (i === 0) {
+          ctx.moveTo(toCanvasX(x), toCanvasY(y));
+        } else {
+          ctx.lineTo(toCanvasX(x), toCanvasY(y));
+        }
+      }
+
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawCircle() {
+      ctx.save();
+
+      let color = circleColor;
+
+      if (mode === "won") {
+        const flashOn = Math.floor(Date.now() / 150) % 2 === 0;
+        color = flashOn ? "#00b050" : "#9be59b";
+      }
+
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(
+        toCanvasX(circleX),
+        toCanvasY(circleY),
+        CIRCLE_RADIUS_UNITS * unitPx,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function draw() {
+      drawGrid();
+      drawShadedRegion();
+      drawFunctionCurve();
+      drawCircle();
+    }
+
+    function makeButtons() {
+      buttonArea.innerHTML = "";
+
+      SLOPE_BUTTON_VALUES.forEach((label, index) => {
+        const button = document.createElement("button");
+        button.className = "slope-button";
+        button.type = "button";
+        button.textContent = label;
+        button.setAttribute("aria-label", `Use slope ${label}`);
+
+        button.addEventListener("click", () => {
+          if (mode === "lost" || mode === "won" || mode === "complete") {
+            return;
+          }
+
+          activeButtonIndex = index;
+          activeSlope = parseSlope(SLOPE_BUTTON_VALUES[index]);
+          mode = "moving";
+          circleColor = "black";
+          updateButtons();
+
+          statusEl.textContent = `Active slope: ${label}`;
+        });
+
+        buttonArea.appendChild(button);
+      });
+
+      updateButtons();
+    }
+
+    function updateButtons() {
+      const buttons = buttonArea.querySelectorAll(".slope-button");
+
+      buttons.forEach((button, index) => {
+        button.classList.toggle("active", index === activeButtonIndex);
+        button.disabled = mode === "lost" || mode === "won" || mode === "complete";
+      });
+    }
+
+    function updateProgress() {
+      const percent = 100 * completedQuestions / QUESTIONS_TO_COMPLETE;
+      progressFill.style.width = `${percent}%`;
+    }
+
+    function startNewQuestion() {
+      functionPoints = generateRandomFunction();
+
+      circleX = X_MIN;
+      circleY = fAt(X_MIN);
+      circleColor = "black";
+
+      activeButtonIndex = null;
+      activeSlope = null;
+      mode = "waiting";
+
+      statusEl.textContent = `Question ${completedQuestions + 1} of ${QUESTIONS_TO_COMPLETE}: choose a slope to begin.`;
+
+      updateButtons();
+      draw();
+    }
+
+    function loseQuestion() {
+      mode = "lost";
+      circleColor = "red";
+      activeButtonIndex = null;
+      activeSlope = null;
+      statusEl.textContent = "The circle left the blue band. Resetting...";
+      updateButtons();
+
+      setTimeout(() => {
+        if (mode !== "lost") return;
+
+        circleX = X_MIN;
+        circleY = fAt(X_MIN);
+        circleColor = "black";
+        mode = "waiting";
+        statusEl.textContent = `Try again: choose a slope to begin.`;
+        updateButtons();
+      }, 1000);
+    }
+
+    function winQuestion() {
+      mode = "won";
+      activeButtonIndex = null;
+      activeSlope = null;
+      completedQuestions++;
+      updateProgress();
+
+      statusEl.textContent = "Nice! You made it to x = 10.";
+
+      updateButtons();
+
+      setTimeout(() => {
+        if (completedQuestions >= QUESTIONS_TO_COMPLETE) {
+          mode = "complete";
+          statusEl.textContent = "Activity complete!";
+          updateButtons();
+
+          if (!completionCalled) {
+            completionCalled = true;
+            activityComplete();
+          }
+        } else {
+          startNewQuestion();
+        }
+      }, 1200);
+    }
+
+    function update(dt) {
+      if (mode !== "moving" || activeSlope === null || !Number.isFinite(activeSlope)) {
+        return;
+      }
+
+      const dx = HORIZONTAL_UNITS_PER_SECOND * dt;
+      circleX += dx;
+      circleY += activeSlope * dx;
+
+      if (circleX > X_MAX) {
+        circleX = X_MAX;
+      }
+
+      const functionY = fAt(circleX);
+      const verticalDistance = Math.abs(circleY - functionY);
+
+      /*
+        "Completely exits" the shaded region means the circle no longer overlaps
+        the band. Since the circle radius is 0.25 coordinate units, loss occurs
+        only when the center is more than 1.25 units from the function.
+      */
+      if (verticalDistance > SHADE_DISTANCE + CIRCLE_RADIUS_UNITS) {
+        loseQuestion();
+        return;
+      }
+
+      if (circleX >= X_MAX) {
+        winQuestion();
+      }
+    }
+
+    function animationLoop(timestamp) {
+      if (lastTime === null) {
+        lastTime = timestamp;
+      }
+
+      let dt = (timestamp - lastTime) / 1000;
+      lastTime = timestamp;
+
+      // Prevent giant jumps if the tab was inactive.
+      dt = Math.min(dt, 0.05);
+
+      update(dt);
+      draw();
+
+      requestAnimationFrame(animationLoop);
+    }
+
+    makeButtons();
+    updateProgress();
+    startNewQuestion();
+    requestAnimationFrame(animationLoop);
+  </script>
+</body>
+</html>
+```

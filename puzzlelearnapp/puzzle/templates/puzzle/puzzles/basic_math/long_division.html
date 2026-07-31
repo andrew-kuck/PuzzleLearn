@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ puzzle_name }}</title>
+
+  <style>
+    :root {
+      --blue: #1a73e8;
+      --green: #19a64a;
+      --red: #d93025;
+      --gray: #e5e7eb;
+      --dark: #202124;
+      --light-blue: #e8f0fe;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f7f8fb;
+      color: var(--dark);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .activity {
+      width: min(1050px, 100%);
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      text-align: center;
+      font-size: 1.8rem;
+    }
+
+    .subtitle {
+      text-align: center;
+      margin: 0 0 20px;
+      color: #555;
+    }
+
+    .progress-wrap {
+      width: 100%;
+      height: 18px;
+      background: var(--gray);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: green;
+      transition: width 0.35s ease;
+    }
+
+    .problem-area {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+
+    .big-fraction {
+      font-size: 2.2rem;
+      font-weight: 700;
+      text-align: center;
+      min-width: 180px;
+    }
+
+    .fraction-line {
+      height: 4px;
+      background: var(--dark);
+      margin: 4px 0;
+      width: 100%;
+    }
+
+    .stage-label {
+      text-align: center;
+      font-weight: 700;
+      color: #333;
+      margin: 10px 0 18px;
+    }
+
+    .fractions-row {
+      --fraction-gap: 28px;
+
+      display: grid;
+      grid-template-columns: repeat(5, minmax(120px, 1fr));
+      gap: var(--fraction-gap);
+      align-items: stretch;
+      margin-bottom: 20px;
+    }
+
+    .fraction-card {
+      border: 2px solid #edf0f5;
+      border-radius: 14px;
+      padding: 14px 10px;
+      text-align: center;
+      background: #fbfcff;
+      position: relative;
+    }
+
+    .fraction-label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #555;
+      margin-bottom: 8px;
+      min-height: 18px;
+    }
+
+    .small-fraction {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 74px;
+      font-size: 1.35rem;
+      font-weight: 700;
+    }
+
+    .small-fraction input {
+      width: 72px;
+      font-size: 1.15rem;
+      padding: 6px;
+      text-align: center;
+      border: 2px solid #cfd7e6;
+      border-radius: 8px;
+    }
+
+    .small-fraction input:focus {
+      outline: none;
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.15);
+    }
+
+    .small-line {
+      height: 3px;
+      background: #111;
+      width: 90px;
+      margin: 5px 0;
+    }
+
+    .plus {
+      position: absolute;
+      left: calc(100% + var(--fraction-gap) / 2);
+      top: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.7rem;
+      font-weight: 700;
+      color: #666;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .fraction-card:last-child .plus {
+      display: none;
+    }
+
+    .num-display,
+    .den-display {
+      min-width: 90px;
+      min-height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 6px;
+      border-radius: 8px;
+    }
+
+    .num-display {
+      border: 2px dashed transparent;
+      transition: 0.15s ease;
+    }
+
+    .num-display.drop-ready {
+      border-color: var(--blue);
+      background: var(--light-blue);
+    }
+
+    .num-display.drop-hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.18);
+    }
+
+    .work-area {
+      margin-top: 12px;
+      border-top: 1px solid #e6e9ef;
+      padding-top: 12px;
+    }
+
+    .work-title {
+      font-size: 0.78rem;
+      color: #666;
+      margin-bottom: 6px;
+    }
+
+    .work-input-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 36px;
+    }
+
+    .work-input {
+      width: 82px;
+      font-size: 1rem;
+      padding: 6px;
+      text-align: center;
+      border: 2px solid #cfd7e6;
+      border-radius: 8px;
+    }
+
+    .work-input:disabled {
+      background: #f1f3f4;
+      color: #777;
+    }
+
+    .rem-chip {
+      color: var(--blue);
+      background: var(--light-blue);
+      border: 2px solid var(--blue);
+      font-weight: 800;
+      padding: 4px 8px;
+      border-radius: 999px;
+      cursor: grab;
+      user-select: none;
+      display: none;
+      min-width: 28px;
+      text-align: center;
+    }
+
+    .rem-chip:active {
+      cursor: grabbing;
+    }
+
+    .rem-chip.used {
+      display: none !important;
+    }
+
+    .controls {
+      display: none;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 2px solid #eef1f6;
+    }
+
+    .final-answer {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+
+    .final-answer input {
+      width: 92px;
+      font-size: 1.1rem;
+      padding: 8px;
+      text-align: center;
+      border: 2px solid #cfd7e6;
+      border-radius: 8px;
+    }
+
+    .fixed-r {
+      font-size: 1.35rem;
+      font-weight: 900;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    .submit-btn {
+      background: var(--green);
+      color: white;
+    }
+
+    .reset-btn {
+      background: #eef1f6;
+      color: #222;
+    }
+
+    .message {
+      text-align: center;
+      min-height: 24px;
+      font-weight: 700;
+      color: #444;
+      margin-top: 14px;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.45);
+      backdrop-filter: blur(2px);
+      font-size: min(38vw, 240px);
+      font-weight: 900;
+      pointer-events: none;
+    }
+
+    .overlay.correct {
+      color: var(--green);
+    }
+
+    .overlay.incorrect {
+      color: var(--red);
+    }
+
+    .instructions {
+      background: #f6f8fc;
+      border-left: 5px solid var(--blue);
+      padding: 12px 14px;
+      border-radius: 10px;
+      margin-bottom: 18px;
+      line-height: 1.45;
+      color: #333;
+    }
+
+    @media (max-width: 820px) {
+      .fractions-row {
+        grid-template-columns: repeat(2, minmax(130px, 1fr));
+      }
+
+      .fraction-card:last-child {
+        grid-column: span 2;
+      }
+
+      .plus {
+        display: none;
+      }
+    }
+
+    @media (max-width: 520px) {
+      body {
+        padding: 10px;
+      }
+
+      .activity {
+        padding: 18px;
+      }
+
+      .fractions-row {
+        grid-template-columns: 1fr;
+      }
+
+      .fraction-card:last-child {
+        grid-column: auto;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="activity">
+    <!-- <h1>Division by Place Value</h1>
+    <p class="subtitle">Fill in the five fractions, then use remainders to help solve.</p> -->
+
+    <div class="progress-wrap" aria-label="Progress">
+      <div id="progressBar" class="progress-bar"></div>
+    </div>
+
+    <div class="instructions" id="instructions">
+      Rewrite the division problem as addition of fractions. Account for the place value of each box.
+    </div>
+
+    <div class="problem-area">
+      <div class="big-fraction" aria-label="Original division fraction">
+        <div id="dividendDisplay"></div>
+        <div class="fraction-line"></div>
+        <div id="divisorDisplay"></div>
+      </div>
+    </div>
+
+    <div id="stageLabel" class="stage-label"></div>
+
+    <section id="fractionsRow" class="fractions-row" aria-label="Fraction decomposition"></section>
+
+    <div id="controls" class="controls">
+      <div class="final-answer" aria-label="Final answer">
+        <span>Final answer:</span>
+        <input id="quotientInput" type="number" inputmode="numeric" aria-label="Quotient" />
+        <span class="fixed-r">r</span>
+        <input id="remainderInput" type="number" inputmode="numeric" aria-label="Remainder" />
+      </div>
+
+      <button id="submitBtn" class="submit-btn">Submit</button>
+      <button id="resetBtn" class="reset-btn">Reset Stage 2</button>
+    </div>
+
+    <div id="message" class="message"></div>
+  </main>
+
+  <div id="overlay" class="overlay" aria-hidden="true"></div>
+
+  <script>
+    /************************************************************
+     * If your learning platform already defines activityComplete,
+     * this fallback will not overwrite it.
+     ************************************************************/
+    window.activityComplete = window.activityComplete || function () {
+      alert("Activity complete!");
+    };
+
+    const labels = [
+      "Ten-thousands",
+      "Thousands",
+      "Hundreds",
+      "Tens",
+      "Ones"
+    ];
+
+    const placeValues = [10000, 1000, 100, 10, 1];
+
+    const state = {
+      dividend: 0,
+      divisor: 0,
+      digits: [],
+      stage: 1,
+      score: 0,
+      maxScore: 1,
+      currentNumerators: [],
+      stage2Started: false
+    };
+
+    const dividendDisplay = document.getElementById("dividendDisplay");
+    const divisorDisplay = document.getElementById("divisorDisplay");
+    const fractionsRow = document.getElementById("fractionsRow");
+    const controls = document.getElementById("controls");
+    const message = document.getElementById("message");
+    const instructions = document.getElementById("instructions");
+    const stageLabel = document.getElementById("stageLabel");
+    const quotientInput = document.getElementById("quotientInput");
+    const remainderInput = document.getElementById("remainderInput");
+    const submitBtn = document.getElementById("submitBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const overlay = document.getElementById("overlay");
+    const progressBar = document.getElementById("progressBar");
+
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function makeProblem() {
+      state.dividend = randomInt(10000, 99999);
+      if (Math.random() < 0.4) {
+        state.divisor = randomInt(2, 9);
+      } else {
+        state.divisor = randomInt(10, 99);
+      }
+      state.digits = String(state.dividend).split("").map(Number);
+      state.stage = 1;
+      state.stage2Started = false;
+      state.currentNumerators = [...state.digits];
+
+      quotientInput.value = "";
+      remainderInput.value = "";
+
+      dividendDisplay.textContent = state.dividend;
+      divisorDisplay.textContent = state.divisor;
+
+      controls.style.display = "none";
+      instructions.textContent =
+        "Rewrite the division problem as addition of fractions. Account for the place value of each box.";
+      stageLabel.textContent = "Stage 1";
+      message.textContent = "";
+
+      renderStage1();
+      updateProgress();
+    }
+
+    function renderStage1() {
+      fractionsRow.innerHTML = "";
+
+      for (let i = 0; i < 5; i++) {
+        const card = document.createElement("div");
+        card.className = "fraction-card";
+
+        card.innerHTML = `
+          <div class="fraction-label">${labels[i]}</div>
+
+          <div class="small-fraction">
+            <input
+              class="stage1-num"
+              type="number"
+              inputmode="numeric"
+              aria-label="${labels[i]} numerator"
+              data-index="${i}"
+            />
+            <div class="small-line"></div>
+            <input
+              class="stage1-den"
+              type="number"
+              inputmode="numeric"
+              aria-label="${labels[i]} denominator"
+              data-index="${i}"
+            />
+          </div>
+
+          <div class="plus">+</div>
+        `;
+
+        fractionsRow.appendChild(card);
+      }
+
+      document.querySelectorAll(".stage1-num, .stage1-den").forEach(input => {
+        input.addEventListener("input", checkStage1);
+      });
+    }
+
+    function checkStage1() {
+      const nums = [...document.querySelectorAll(".stage1-num")];
+      const dens = [...document.querySelectorAll(".stage1-den")];
+
+      const allFilled = nums.every(input => input.value !== "") &&
+                        dens.every(input => input.value !== "");
+
+      if (!allFilled) {
+        message.textContent = "";
+        return;
+      }
+
+      const numeratorsCorrect = nums.every((input, i) => {
+        return Number(input.value) === state.digits[i];
+      });
+
+      const denominatorsCorrect = dens.every(input => {
+        return Number(input.value) === state.divisor;
+      });
+
+      if (numeratorsCorrect && denominatorsCorrect) {
+        message.textContent = "Nice! Moving to Stage 2...";
+        setTimeout(startStage2, 450);
+      } else {
+        message.textContent = "Check your fractions. The numerators should be the digits of the dividend.";
+      }
+    }
+
+    function startStage2() {
+      if (state.stage2Started) return;
+
+      state.stage = 2;
+      state.stage2Started = true;
+      state.currentNumerators = [...state.digits];
+
+      instructions.textContent =
+        "Enter work in the form 2964r7 below each fraction. The blue remainder can then be dragged to another numerator.";
+      stageLabel.textContent = "Stage 2";
+      controls.style.display = "flex";
+      quotientInput.value = "";
+      remainderInput.value = "";
+      message.textContent = "";
+
+      renderStage2();
+    }
+
+    function renderStage2() {
+      fractionsRow.innerHTML = "";
+
+      for (let i = 0; i < 5; i++) {
+        const card = document.createElement("div");
+        card.className = "fraction-card";
+
+        card.innerHTML = `
+          <div class="fraction-label">${labels[i]}</div>
+
+          <div class="small-fraction">
+            <div
+              class="num-display drop-ready"
+              data-index="${i}"
+              aria-label="${labels[i]} numerator drop target"
+            >
+              ${formatNumber(state.currentNumerators[i])}
+            </div>
+            <div class="small-line"></div>
+            <div class="den-display">${state.divisor}</div>
+          </div>
+
+          <div class="work-area">
+            <div class="work-input-wrap">
+              <input
+                class="work-input"
+                type="text"
+                placeholder="q r rem"
+                aria-label="${labels[i]} work input"
+                data-index="${i}"
+              />
+              <span
+                class="rem-chip"
+                draggable="true"
+                data-index="${i}"
+                aria-label="Draggable remainder"
+              ></span>
+            </div>
+          </div>
+
+          <div class="plus">+</div>
+        `;
+
+        fractionsRow.appendChild(card);
+      }
+
+      attachStage2Events();
+    }
+
+    function attachStage2Events() {
+      document.querySelectorAll(".work-input").forEach(input => {
+        input.addEventListener("input", handleWorkInput);
+      });
+
+      document.querySelectorAll(".rem-chip").forEach(chip => {
+        chip.addEventListener("dragstart", handleDragStart);
+      });
+
+      document.querySelectorAll(".num-display").forEach(target => {
+        target.addEventListener("dragover", handleDragOver);
+        target.addEventListener("dragleave", handleDragLeave);
+        target.addEventListener("drop", handleDrop);
+      });
+    }
+
+    function handleWorkInput(event) {
+      const input = event.target;
+      const index = Number(input.dataset.index);
+      const chip = document.querySelector(`.rem-chip[data-index="${index}"]`);
+
+      const parsed = parseWorkString(input.value);
+
+      if (parsed) {
+        chip.textContent = parsed.remainder;
+        chip.dataset.remainder = parsed.remainder;
+        chip.style.display = "inline-block";
+        chip.classList.remove("used");
+      } else {
+        chip.textContent = "";
+        chip.dataset.remainder = "";
+        chip.style.display = "none";
+      }
+    }
+
+    function parseWorkString(value) {
+      const match = String(value).trim().match(/^(-?\d+)\s*r\s*(-?\d+)$/i);
+
+      if (!match) return null;
+
+      return {
+        quotient: Number(match[1]),
+        remainder: Number(match[2])
+      };
+    }
+
+    function handleDragStart(event) {
+      const chip = event.target;
+
+      if (chip.classList.contains("used")) {
+        event.preventDefault();
+        return;
+      }
+
+      const originIndex = Number(chip.dataset.index);
+      const remainder = Number(chip.dataset.remainder);
+
+      if (!Number.isFinite(remainder)) {
+        event.preventDefault();
+        return;
+      }
+
+      const payload = {
+        originIndex,
+        remainder
+      };
+
+      event.dataTransfer.setData("application/json", JSON.stringify(payload));
+      event.dataTransfer.effectAllowed = "move";
+    }
+
+    function handleDragOver(event) {
+      event.preventDefault();
+      event.currentTarget.classList.add("drop-hover");
+      event.dataTransfer.dropEffect = "move";
+    }
+
+    function handleDragLeave(event) {
+      event.currentTarget.classList.remove("drop-hover");
+    }
+
+    function handleDrop(event) {
+      event.preventDefault();
+
+      const target = event.currentTarget;
+      target.classList.remove("drop-hover");
+
+      let payload;
+
+      try {
+        payload = JSON.parse(event.dataTransfer.getData("application/json"));
+      } catch {
+        return;
+      }
+
+      const originIndex = Number(payload.originIndex);
+      const targetIndex = Number(target.dataset.index);
+      const remainder = Number(payload.remainder);
+
+      if (
+        !Number.isFinite(originIndex) ||
+        !Number.isFinite(targetIndex) ||
+        !Number.isFinite(remainder)
+      ) {
+        return;
+      }
+
+      // The prompt says the remainder is dragged to another fraction.
+      // Dropping on the same numerator does nothing.
+      if (originIndex === targetIndex) {
+        return;
+      }
+
+      addRemainderToNumerator(originIndex, targetIndex, remainder);
+      freezeOriginWork(originIndex);
+      refreshNumeratorDisplays();
+    }
+
+    function addRemainderToNumerator(originIndex, targetIndex, remainder) {
+      /*
+        A remainder belongs to the place it came from.
+
+        Example:
+        - remainder 5 in ten-thousands represents 5 * 10000 = 50000.
+        - Dropped on thousands numerator: 50000 / 1000 = 50.
+        - Dropped on hundreds numerator: 50000 / 100 = 500.
+        - Dropped on tens numerator: 50000 / 10 = 5000.
+        - Dropped on ones numerator: 50000 / 1 = 50000.
+      */
+      const representedQuantity = remainder * placeValues[originIndex];
+      const amountToAdd = representedQuantity / placeValues[targetIndex];
+
+      state.currentNumerators[targetIndex] =
+        cleanNumber(state.currentNumerators[targetIndex] + amountToAdd);
+    }
+
+    function freezeOriginWork(originIndex) {
+      const input = document.querySelector(`.work-input[data-index="${originIndex}"]`);
+      const chip = document.querySelector(`.rem-chip[data-index="${originIndex}"]`);
+
+      if (input) {
+        input.disabled = true;
+      }
+
+      if (chip) {
+        chip.classList.add("used");
+        chip.style.display = "none";
+        chip.textContent = "";
+      }
+    }
+
+    function refreshNumeratorDisplays() {
+      document.querySelectorAll(".num-display").forEach(display => {
+        const index = Number(display.dataset.index);
+        display.textContent = formatNumber(state.currentNumerators[index]);
+      });
+    }
+
+    function resetStage2() {
+      state.currentNumerators = [...state.digits];
+
+      quotientInput.value = "";
+      remainderInput.value = "";
+
+      document.querySelectorAll(".work-input").forEach(input => {
+        input.value = "";
+        input.disabled = false;
+      });
+
+      document.querySelectorAll(".rem-chip").forEach(chip => {
+        chip.textContent = "";
+        chip.dataset.remainder = "";
+        chip.classList.remove("used");
+        chip.style.display = "none";
+      });
+
+      refreshNumeratorDisplays();
+
+      message.textContent = "Stage 2 has been reset.";
+    }
+
+    function checkFinalAnswer() {
+      const userQuotient = Number(quotientInput.value);
+      const userRemainder = Number(remainderInput.value);
+
+      const correctQuotient = Math.floor(state.dividend / state.divisor);
+      const correctRemainder = state.dividend % state.divisor;
+
+      const correct =
+        userQuotient === correctQuotient &&
+        userRemainder === correctRemainder;
+
+      if (correct) {
+        showOverlay("✓", true);
+        state.score++;
+        updateProgress();
+
+        if (state.score >= state.maxScore) {
+          message.textContent = "Excellent work — activity complete!";
+          setTimeout(() => {
+            activityComplete();
+          }, 650);
+        } else {
+          setTimeout(makeProblem, 800);
+        }
+      } else {
+        showOverlay("×", false);
+        message.textContent = "Not quite. Try again — the same problem will remain.";
+      }
+    }
+
+    function showOverlay(symbol, isCorrect) {
+      overlay.textContent = symbol;
+      overlay.className = `overlay ${isCorrect ? "correct" : "incorrect"}`;
+      overlay.style.display = "flex";
+
+      setTimeout(() => {
+        overlay.style.display = "none";
+      }, 650);
+    }
+
+    function updateProgress() {
+      const percent = Math.min(100, (state.score / state.maxScore) * 100);
+      progressBar.style.width = `${percent}%`;
+    }
+
+    function cleanNumber(value) {
+      // Avoids floating-point artifacts like 5.399999999999999.
+      return Number(Number(value).toFixed(10));
+    }
+
+    function formatNumber(value) {
+      /*
+        Displays normal decimal places without unnecessary trailing zeroes.
+        Examples:
+          5      -> "5"
+          5.4    -> "5.4"
+          5.04   -> "5.04"
+          5.4000 -> "5.4"
+      */
+      return cleanNumber(value).toString();
+    }
+
+    submitBtn.addEventListener("click", checkFinalAnswer);
+    resetBtn.addEventListener("click", resetStage2);
+
+    makeProblem();
+
+  </script>
+<script src="/static/puzzle/js/activity.js"></script>
+<script>autoZoom();</script>
+</body>
+</html>

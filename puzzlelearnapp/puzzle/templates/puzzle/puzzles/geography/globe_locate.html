@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>{{ puzzle_name }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <style>
+    :root {
+      --banner-bg: navy;
+      --banner-text: #ffffff;
+      --highlight: orange;
+      --green: #1f9d55;
+      --red: #d62828;
+      --blue: #2b6cb0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f4f6f8;
+      color: #111827;
+    }
+
+    #topBanner {
+      position: relative;
+      z-index: 1000;
+      background: var(--banner-bg);
+      color: var(--banner-text);
+      padding: 14px 18px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+      transition: background-color 0.25s ease;
+    }
+
+    #topBanner.correctFlash {
+      background: var(--green);
+    }
+
+    #addressLine {
+      font-size: clamp(16px, 2vw, 24px);
+      font-weight: 700;
+      line-height: 1.4;
+    }
+
+    .addressPart {
+      padding: 2px 6px;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .addressPart.active {
+      background: var(--highlight);
+      color: #111827;
+      box-shadow: 0 0 0 2px rgba(255, 225, 106, 0.35);
+    }
+
+    #scoreBox {
+      text-align: right;
+      white-space: nowrap;
+      font-weight: 700;
+      font-size: clamp(15px, 1.7vw, 22px);
+    }
+
+    #scoreValue {
+      color: orange;
+    }
+
+    #instruction {
+      position: relative;
+      z-index: 900;
+      background: #ffffff;
+      padding: 12px 18px;
+      border-bottom: 1px solid #d7dee8;
+      font-size: 17px;
+      font-weight: 600;
+      color: #243044;
+    }
+
+    #map {
+      height: calc(100vh - 112px);
+      width: 100%;
+    }
+
+    .distance-label {
+      background: rgba(214, 40, 40, 0.95);
+      color: white;
+      padding: 5px 9px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 14px;
+      border: 2px solid white;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+      white-space: nowrap;
+    }
+
+    .finalPanel {
+      position: absolute;
+      left: 50%;
+      top: 55%;
+      transform: translate(-50%, -50%);
+      z-index: 1200;
+      width: min(92vw, 560px);
+      background: white;
+      color: #111827;
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: 0 15px 45px rgba(0, 0, 0, 0.35);
+      text-align: center;
+      display: none;
+    }
+
+    .finalPanel.show {
+      display: block;
+    }
+
+    .finalPanel h1 {
+      margin-top: 0;
+      font-size: 34px;
+    }
+
+    .finalScore {
+      font-size: 42px;
+      font-weight: 900;
+      color: var(--red);
+      margin: 12px 0;
+    }
+
+    .muted {
+      color: #5b6472;
+      font-size: 15px;
+    }
+
+    .loading {
+      opacity: 0.75;
+      pointer-events: none;
+    }
+
+    .leaflet-container,
+    .leaflet-grab,
+    .leaflet-dragging .leaflet-grab {
+      cursor: crosshair !important;
+    }
+
+    @media (max-width: 700px) {
+      #topBanner {
+        grid-template-columns: 1fr;
+      }
+
+      #scoreBox {
+        text-align: left;
+      }
+
+      #map {
+        height: calc(100vh - 155px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="locationPickerOverlay" style="display:none;position:fixed;inset:0;z-index:2000;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);">
+    <form id="locationPickerForm" style="background:#fff;border-radius:12px;padding:18px;min-width:320px;max-width:720px;">
+      {% csrf_token %}
+      <h2 style="margin-top:0;margin-bottom:8px;font-size:20px;">Choose a location to be quizzed on</h2>
+      <div style="margin-bottom:8px;font-size:13px;color:#444;">Leave all fields blank to use the entire world.</div>
+
+      <label style="display:block;margin-top:8px;font-weight:600">Continent</label>
+      <select id="pickerContinent" name="continent" style="width:100%;padding:8px;margin-top:4px;border-radius:6px;border:1px solid #ccc;">
+        <option value="">(Any / World)</option>
+        <option value="AF">Africa</option>
+        <option value="AN">Antarctica</option>
+        <option value="AS">Asia</option>
+        <option value="EU">Europe</option>
+        <option value="NA">North America</option>
+        <option value="OC">Oceania</option>
+        <option value="SA">South America</option>
+      </select>
+
+      <label style="display:block;margin-top:8px;font-weight:600">Country (optional)</label>
+      <select id="pickerCountry" name="country" style="width:100%;padding:8px;margin-top:4px;border-radius:6px;border:1px solid #ccc;">
+        <option value="">(Any country)</option>
+      </select>
+
+      <div id="statePickerContainer" style="display:none;margin-top:8px;">
+        <label style="display:block;font-weight:600">State / Province (optional)</label>
+        <select id="pickerState" name="state" style="width:100%;padding:8px;margin-top:4px;border-radius:6px;border:1px solid #ccc;">
+          <option value="">(Any state / province)</option>
+        </select>
+      </div>
+
+      <label style="display:block;margin-top:8px;font-weight:600">City name (optional)</label>
+      <input id="pickerCity" name="city" type="text" placeholder="Type a city name" style="width:100%;padding:8px;margin-top:4px;border-radius:6px;border:1px solid #ccc;" />
+
+      <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px;">
+        <button type="button" id="pickerCancel" style="background:#eee;border-radius:8px;padding:8px 12px;border:none;">Use World</button>
+        <button type="button" id="pickerMajorCities" style="background:#f59e0b;color:#fff;border-radius:8px;padding:8px 12px;border:none;">Major World Cities</button>
+        <button type="submit" id="pickerSubmit" style="background:#0066cc;color:#fff;border-radius:8px;padding:8px 12px;border:none;">Start</button>
+      </div>
+    </form>
+  </div>
+  <div id="topBanner">
+    <div id="addressLine"></div>
+    <div id="scoreBox">
+      Total Error:
+      <span id="scoreValue">0 km</span>
+    </div>
+  </div>
+
+  <div id="instruction">Loading map data...</div>
+
+  <div id="map"></div>
+
+  <div id="finalPanel" class="finalPanel">
+    <h1>Finished!</h1>
+    <div>Your total error was:</div>
+    <div id="finalScore" class="finalScore">0 km</div>
+    <p>Refresh the screen if you want to play again.</p>
+  </div>
+
+  {{ geo_meta|json_script:"geo-meta" }}
+
+  <!-- Leaflet -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    
+    /********************************************************************
+     * Geography data for the activity.
+     * Replace this object with any other location using the same form.
+     ********************************************************************/
+    // const LOCATION = {
+    //   continent: "NA",
+    //   country: "United States",
+    //   state: "Florida",
+    //   city: "Palm Harbor",
+    //   address: "1710 Delaware Avenue",
+    //   addressLat: 28.0837137,
+    //   addressLon: -82.7669778,
+    //   cityBbox: [28.0837, 28.0838, -82.7671, -82.7668]
+    // };
+
+    let LOCATION = {};
+
+    // Geo metadata for populating dropdowns
+    const GEOMETA = (function(){
+      const el = document.getElementById('geo-meta');
+      return el ? JSON.parse(el.textContent || '{}') : {countries:[], us_states:[]};
+    })();
+
+    /********************************************************************
+     * Approximate continent data.
+     * Continent click detection is intentionally lightweight.
+     ********************************************************************/
+    const CONTINENTS = {
+      NA: {
+        label: "North America",
+        aliases: ["NA", "North America", "N. America"],
+        center: [54, -105],
+        bounds: [[5, -170], [83, -52]]
+      },
+      SA: {
+        label: "South America",
+        aliases: ["SA", "South America", "S. America"],
+        center: [-15, -60],
+        bounds: [[-56, -82], [13, -34]]
+      },
+      EU: {
+        label: "Europe",
+        aliases: ["EU", "Europe"],
+        center: [54, 15],
+        bounds: [[35, -25], [72, 45]]
+      },
+      AF: {
+        label: "Africa",
+        aliases: ["AF", "Africa"],
+        center: [1, 20],
+        bounds: [[-35, -20], [38, 55]]
+      },
+      AS: {
+        label: "Asia",
+        aliases: ["AS", "Asia"],
+        center: [34, 100],
+        bounds: [[-12, 45], [82, 180]]
+      },
+      OC: {
+        label: "Oceania",
+        aliases: ["OC", "Oceania", "Australia"],
+        center: [-22, 140],
+        bounds: [[-50, 110], [10, 180]]
+      },
+      AN: {
+        label: "Antarctica",
+        aliases: ["AN", "Antarctica"],
+        center: [-82, 0],
+        bounds: [[-90, -180], [-60, 180]]
+      }
+    };
+
+    let map;
+    let currentStageIndex = 0;
+    let errorTotalKm = 0;
+    let isBusy = false;
+    let startingStageName = "continent";
+
+    const geocodeCache = new Map();
+
+    function isUnitedStatesSelection(selection = {}) {
+      const countryCode = String(selection.countryCode || '').trim().toUpperCase();
+      if (countryCode === 'US') return true;
+
+      const countryName = String(selection.country || '').trim().toLowerCase();
+      return [
+        'united states',
+        'united states of america',
+        'usa',
+        'u.s.a.',
+        'u.s.'
+      ].includes(countryName);
+    }
+
+    function getStartingStageForSelection(selection = {}) {
+      const hasCity = Boolean(String(selection.city || '').trim());
+      const hasCountry = Boolean(String(selection.country || '').trim());
+      const hasContinent = Boolean(String(selection.continent || '').trim());
+      const hasState = Boolean(String(selection.state || '').trim());
+
+      if (hasCity) return 'address';
+      if ((hasCountry && !hasCity) || (hasState && isUnitedStatesSelection(selection))) return 'city';
+      if (hasContinent) return 'country';
+      return 'continent';
+    }
+
+    function getStageOrder(startStage = startingStageName) {
+      const stages = ["continent", "country"];
+      if (isUnitedStatesLocation(LOCATION) && LOCATION.state && LOCATION.state.trim()) {
+        stages.push("state");
+      }
+      stages.push("city", "address");
+      const startIndex = stages.indexOf(startStage);
+      return startIndex >= 0 ? stages.slice(startIndex) : stages;
+    }
+
+    let stageOrder = getStageOrder();
+
+    const reference = {
+      targetContinentCode: null,
+      country: null,
+      state: null,
+      cityCenter: null,
+      addressCenter: null
+    };
+
+    const topBanner = document.getElementById("topBanner");
+    const addressLine = document.getElementById("addressLine");
+    const scoreValue = document.getElementById("scoreValue");
+    const instruction = document.getElementById("instruction");
+    const finalPanel = document.getElementById("finalPanel");
+    const finalScore = document.getElementById("finalScore");
+
+    const overlay = document.getElementById('locationPickerOverlay');
+    const pickerForm = document.getElementById('locationPickerForm');
+    const pickerContinent = document.getElementById('pickerContinent');
+    const pickerCountry = document.getElementById('pickerCountry');
+    const pickerState = document.getElementById('pickerState');
+    const pickerCity = document.getElementById('pickerCity');
+    const pickerMajorCities = document.getElementById('pickerMajorCities');
+    const statePickerContainer = document.getElementById('statePickerContainer');
+    const pickerStorageKey = `globe-locate-picker:${window.location.pathname}`;
+
+    function isUnitedStatesLocation(location = LOCATION) {
+      const countryCode = String(location?.countryCode || location?.countryCode || '').trim().toUpperCase();
+      if (countryCode === 'US') return true;
+
+      const countryName = String(location?.country || '').trim().toLowerCase();
+      return [
+        'united states',
+        'united states of america',
+        'usa',
+        'u.s.a.',
+        'u.s.'
+      ].includes(countryName);
+    }
+
+    function getSelectedCountryIso() {
+      const selectedName = pickerCountry.value;
+      const chosen = (GEOMETA.countries || []).find(c => c.name === selectedName);
+      return chosen ? chosen.iso : '';
+    }
+
+    function setStatePickerVisibility(show) {
+      if (statePickerContainer) {
+        statePickerContainer.style.display = show ? 'block' : 'none';
+      }
+      if (!show) {
+        pickerState.innerHTML = '<option value="">(Any state / province)</option>';
+        pickerState.value = '';
+      }
+    }
+
+    function getSavedPickerState() {
+      try {
+        const raw = sessionStorage.getItem(pickerStorageKey);
+        return raw ? JSON.parse(raw) : null;
+      } catch (error) {
+        console.warn('Could not read saved picker state.', error);
+        return null;
+      }
+    }
+
+    function savePickerState() {
+      try {
+        const state = {
+          continent: pickerContinent.value || '',
+          country: pickerCountry.value || '',
+          state: pickerState.value || '',
+          city: pickerCity.value || ''
+        };
+        sessionStorage.setItem(pickerStorageKey, JSON.stringify(state));
+      } catch (error) {
+        console.warn('Could not save picker state.', error);
+      }
+    }
+
+    function clearSavedPickerState() {
+      try {
+        sessionStorage.removeItem(pickerStorageKey);
+      } catch (error) {
+        console.warn('Could not clear picker state.', error);
+      }
+    }
+
+    function restorePickerState() {
+      const saved = getSavedPickerState();
+      if (!saved) return;
+
+      pickerContinent.value = saved.continent || '';
+      populateCountries(pickerContinent.value);
+
+      pickerCountry.value = saved.country || '';
+      const countryIso = getSelectedCountryIso();
+      if (countryIso === 'US') {
+        populateStatesForCountry('US');
+        setStatePickerVisibility(true);
+        pickerState.value = saved.state || '';
+      } else {
+        setStatePickerVisibility(false);
+        pickerState.value = '';
+      }
+
+      pickerCity.value = saved.city || '';
+    }
+
+    async function postPickerData(pickerData) {
+      const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+      try {
+        const response = await fetch("{% url 'get_geo_data' %}", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json', // Tells server we are sending JSON
+            'Accept': 'application/json',        // Tells server we want JSON back
+            'X-CSRFToken': csrfToken
+          },
+          body: JSON.stringify(pickerData)      // Convert JS object to JSON string
+        });
+        const data = await response.json();
+        LOCATION = data;
+        init();
+      } catch (error) {
+        console.error('Submission failed:', error);
+      }
+    }
+
+    pickerForm.addEventListener('submit', function(event) {
+      event.preventDefault();
+      overlay.style.display = 'none';
+      const formData = new FormData(this);
+      const formObject = Object.fromEntries(formData.entries());
+      if (!isUnitedStatesSelection({ country: formObject.country, countryCode: formObject.countryCode })) {
+        formObject.state = '';
+      }
+      startingStageName = getStartingStageForSelection(formObject);
+      savePickerState();
+      postPickerData(formObject);
+    });
+
+    // Populate countries list initially (all countries)
+    function populateCountries(filterContinent) {
+      pickerCountry.innerHTML = '<option value="">(Any country)</option>';
+      const countries = GEOMETA.countries || [];
+      countries.sort((a,b)=>a.name.localeCompare(b.name));
+      countries.forEach(c => {
+        if (!filterContinent || !filterContinent.length || c.continent === filterContinent) {
+          const opt = document.createElement('option');
+          opt.value = c.name;
+          opt.textContent = c.name;
+          pickerCountry.appendChild(opt);
+        }
+      });
+    }
+
+    function populateStatesForCountry(countryIso) {
+      pickerState.innerHTML = '<option value="">(Any state / province)</option>';
+      if (!countryIso || countryIso !== 'US') return;
+      const states = GEOMETA.us_states || [];
+      states.sort((a,b)=>a.name.localeCompare(b.name));
+      states.forEach(s=>{
+        const opt = document.createElement('option');
+        opt.value = s.code;
+        opt.textContent = s.name;
+        pickerState.appendChild(opt);
+      });
+    }
+
+    // Initialize country list
+    populateCountries("");
+    restorePickerState();
+
+    // When continent changes, filter countries
+    pickerContinent.addEventListener('change', () => {
+      populateCountries(pickerContinent.value);
+      savePickerState();
+    });
+
+    // When country changes, show state picker only for the United States
+    pickerCountry.addEventListener('change', () => {
+      const iso = getSelectedCountryIso();
+      if (iso === 'US') {
+        populateStatesForCountry('US');
+        setStatePickerVisibility(true);
+      } else {
+        setStatePickerVisibility(false);
+      }
+      savePickerState();
+    });
+
+    pickerState.addEventListener('change', savePickerState);
+    pickerCity.addEventListener('input', savePickerState);
+
+    pickerMajorCities.addEventListener('click', () => {
+      overlay.style.display = 'none';
+      postPickerData({ mode: 'major_cities' });
+    });
+
+    // Cancel button submits an empty form (use world)
+    document.getElementById('pickerCancel').addEventListener('click', ()=>{
+      // clearSavedPickerState();
+      overlay.style.display = 'none';
+      postPickerData({});
+    });
+
+    // Show overlay
+    overlay.style.display = 'flex';
+
+    async function init() {
+      buildAddressLine();
+
+      map = L.map("map", {
+        worldCopyJump: true,
+        zoomControl: true
+      });
+
+      // L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      //   maxZoom: 19,
+      //   attribution:
+      //     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      // }).addTo(map);
+      // ...REPLACED WITH...
+      L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",
+        {
+          subdomains: "abcd",
+          maxZoom: 19,
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
+            '&copy; <a href="https://carto.com/attributions">CARTO</a>'
+        }
+      ).addTo(map);
+
+      map.setView([20, 0], 2);
+
+      map.on("click", onMapClick);
+
+      document.body.classList.add("loading");
+
+      try {
+        stageOrder = getStageOrder(startingStageName);
+        currentStageIndex = 0;
+        errorTotalKm = 0;
+        scoreValue.textContent = formatDistance(errorTotalKm);
+
+        reference.targetContinentCode = normalizeContinentCode(LOCATION.continent);
+
+        reference.country = await geocodePlace(LOCATION.country);
+
+        if (isUnitedStatesLocation(LOCATION) && LOCATION.state && LOCATION.state.trim()) {
+          reference.state = await geocodePlace(`${LOCATION.state}, ${LOCATION.country}`);
+        } else {
+          reference.state = null;
+        }
+
+        reference.cityCenter = cityCenterFromBbox(LOCATION.cityBbox);
+
+        reference.addressCenter = [
+          Number(LOCATION.addressLat),
+          Number(LOCATION.addressLon)
+        ];
+      } catch (err) {
+        console.error(err);
+        // instruction.textContent =
+        //   "Some map lookup data could not be loaded. The activity will still try to continue.";
+        alert("Some map lookup data could not be loaded. The activity will still try to continue.");
+      } finally {
+        document.body.classList.remove("loading");
+        startCurrentStage();
+      }
+    }
+
+    function fitCountryForStateStage(countryBounds, countryCenter) {
+      const bounds = L.latLngBounds(countryBounds);
+
+      const south = bounds.getSouth();
+      const north = bounds.getNorth();
+      const west = bounds.getWest();
+      const east = bounds.getEast();
+
+      const latSpan = Math.abs(north - south);
+      const lonSpan = Math.abs(east - west);
+
+      /*
+        Some countries geocode with enormous bounding boxes because of
+        territories or date-line-spanning geometry. If the box is too large,
+        use a sensible country-level zoom around the country's center instead.
+      */
+      const bboxIsHuge =
+        latSpan > 70 ||
+        lonSpan > 120 ||
+        Math.abs(east - west) > 180;
+
+      if (bboxIsHuge && countryCenter) {
+        map.setView(countryCenter, 4);
+      } else {
+        map.fitBounds(bounds, {
+          padding: [30, 30],
+          maxZoom: 6
+        });
+      }
+    }
+
+    function getContinentDisplayName(value) {
+      const code = normalizeContinentCode(value);
+      return CONTINENTS[code]?.label || value;
+    }
+
+    function buildAddressLine() {
+      const parts = [
+        { key: "continent", text: getContinentDisplayName(LOCATION.continent) },
+        { key: "country", text: LOCATION.country },
+        ...(isUnitedStatesLocation(LOCATION) && LOCATION.state && LOCATION.state.trim()
+          ? [{ key: "state", text: LOCATION.state }]
+          : []),
+        { key: "city", text: LOCATION.city },
+        { key: "address", text: LOCATION.address }
+      ];
+
+      addressLine.innerHTML = parts
+        .map((part, index) => {
+          const comma = index < parts.length - 1 ? "," : "";
+          return `<span class="addressPart" data-part="${part.key}">${escapeHtml(part.text)}</span>${comma}`;
+        })
+        .join(" ");
+    }
+
+    function highlightAddressPart(stage) {
+      document.querySelectorAll(".addressPart").forEach(el => {
+        el.classList.toggle("active", el.dataset.part === stage);
+      });
+    }
+
+    function startCurrentStage() {
+      if (currentStageIndex >= stageOrder.length) {
+        finishGame();
+        return;
+      }
+
+      const stage = stageOrder[currentStageIndex];
+      highlightAddressPart(stage);
+      isBusy = false;
+
+      if (stage === "continent") {
+        instruction.textContent =
+          `Click the correct continent: ${getContinentDisplayName(LOCATION.continent)}.`;
+        map.setView([20, 0], 2);
+      }
+
+      if (stage === "country") {
+        instruction.textContent = `Click the correct country: ${LOCATION.country}.`;
+        const continent = CONTINENTS[reference.targetContinentCode];
+        if (continent) {
+          map.fitBounds(continent.bounds, { padding: [20, 20] });
+        } else {
+          map.setView([20, 0], 2);
+        }
+      }
+
+      if (stage === "state") {
+        instruction.textContent = `Click the correct state/province/region: ${LOCATION.state}.`;
+
+        if (reference.country?.bbox) {
+          fitCountryForStateStage(reference.country.bbox, reference.country.center);
+        } else if (reference.country?.center) {
+          map.setView(reference.country.center, 4);
+        }
+      }
+
+      if (stage === "city") {
+        instruction.textContent = `Click where you think the city is: ${LOCATION.city}.`;
+        if (reference.state?.bbox) {
+          map.fitBounds(reference.state.bbox, { padding: [20, 20] });
+        } else if (reference.country?.bbox) {
+          map.fitBounds(reference.country.bbox, { padding: [20, 20] });
+        }
+      }
+
+      if (stage === "address") {
+        instruction.textContent = `Click where you think the street address is: ${LOCATION.address}.`;
+        const cityBounds = bboxToLeafletBounds(LOCATION.cityBbox);
+        map.fitBounds(cityBounds, {
+          padding: [50, 50],
+          maxZoom: 16
+        });
+      }
+    }
+
+    async function onMapClick(e) {
+      if (isBusy) return;
+
+      const stage = stageOrder[currentStageIndex];
+      isBusy = true;
+
+      try {
+        if (stage === "continent") {
+          await handleContinentGuess(e.latlng);
+        } else if (stage === "country") {
+          await handleCountryGuess(e.latlng);
+        } else if (stage === "state") {
+          await handleStateGuess(e.latlng);
+        } else if (stage === "city") {
+          await handlePointGuess(
+            [e.latlng.lat, e.latlng.lng],
+            reference.cityCenter,
+            "City location checked."
+          );
+        } else if (stage === "address") {
+          await handlePointGuess(
+            [e.latlng.lat, e.latlng.lng],
+            reference.addressCenter,
+            "Address location checked.",
+            true
+          );
+        }
+      } catch (err) {
+        console.error(err);
+        instruction.textContent = "Something went wrong with that guess. Try again.";
+        isBusy = false;
+      }
+    }
+
+    async function handleContinentGuess(latlng) {
+      const guessedCode = getContinentAtLatLng(latlng);
+      const correctCode = reference.targetContinentCode;
+
+      if (guessedCode && guessedCode === correctCode) {
+        flashCorrectAndAdvance();
+        return;
+      }
+
+      const guessedCenter = guessedCode
+        ? CONTINENTS[guessedCode].center
+        : [latlng.lat, latlng.lng];
+
+      const correctCenter = CONTINENTS[correctCode]?.center;
+
+      if (!correctCenter) {
+        advanceStage();
+        return;
+      }
+
+      const km = haversineKm(guessedCenter, correctCenter);
+      addError(km);
+
+      await showTemporaryErrorLine(
+        guessedCenter,
+        correctCenter,
+        km,
+        guessedCode
+          ? `${CONTINENTS[guessedCode].label} → ${CONTINENTS[correctCode].label}`
+          : `Unknown area → ${CONTINENTS[correctCode].label}`
+      );
+
+      advanceStage();
+    }
+
+    async function handleCountryGuess(latlng) {
+      const reverse = await reverseGeocode(latlng.lat, latlng.lng);
+      const guessedCountry = reverse?.address?.country || "";
+      const correctCountry = LOCATION.country;
+
+      if (sameName(guessedCountry, correctCountry)) {
+        flashCorrectAndAdvance();
+        return;
+      }
+
+      let guessedCenter = [latlng.lat, latlng.lng];
+
+      if (guessedCountry) {
+        try {
+          const guessedGeo = await geocodePlace(guessedCountry);
+          guessedCenter = guessedGeo.center;
+        } catch {
+          // Fallback to clicked point.
+        }
+      }
+
+      const correctCenter = reference.country?.center || [
+        LOCATION.addressLat,
+        LOCATION.addressLon
+      ];
+
+      const km = haversineKm(guessedCenter, correctCenter);
+      addError(km);
+
+      await showTemporaryErrorLine(
+        guessedCenter,
+        correctCenter,
+        km,
+        guessedCountry
+          ? `${guessedCountry} → ${correctCountry}`
+          : `Unknown country → ${correctCountry}`
+      );
+
+      advanceStage();
+    }
+
+    async function handleStateGuess(latlng) {
+      const reverse = await reverseGeocode(latlng.lat, latlng.lng);
+      const guessedState = extractAdminRegion(reverse?.address || {});
+      const correctState = LOCATION.state;
+
+      if (sameName(guessedState, correctState)) {
+        flashCorrectAndAdvance();
+        return;
+      }
+
+      let guessedCenter = [latlng.lat, latlng.lng];
+
+      if (guessedState) {
+        try {
+          const guessedCountry = reverse?.address?.country || LOCATION.country;
+          const guessedGeo = await geocodePlace(`${guessedState}, ${guessedCountry}`);
+          guessedCenter = guessedGeo.center;
+        } catch {
+          // Fallback to clicked point.
+        }
+      }
+
+      const correctCenter = reference.state?.center || reference.country?.center || [
+        LOCATION.addressLat,
+        LOCATION.addressLon
+      ];
+
+      const km = haversineKm(guessedCenter, correctCenter);
+      addError(km);
+
+      await showTemporaryErrorLine(
+        guessedCenter,
+        correctCenter,
+        km,
+        guessedState
+          ? `${guessedState} → ${correctState}`
+          : `Unknown region → ${correctState}`
+      );
+
+      advanceStage();
+    }
+
+    async function handlePointGuess(guessedPoint, correctPoint, message, isFinal = false) {
+      const km = haversineKm(guessedPoint, correctPoint);
+      addError(km);
+
+      await showTemporaryErrorLine(
+        guessedPoint,
+        correctPoint,
+        km,
+        message
+      );
+
+      if (isFinal) {
+        finishGame();
+      } else {
+        advanceStage();
+      }
+    }
+
+    function flashCorrectAndAdvance() {
+      topBanner.classList.add("correctFlash");
+      instruction.textContent = "Correct!";
+      setTimeout(() => {
+        topBanner.classList.remove("correctFlash");
+        advanceStage();
+      }, 750);
+    }
+
+    function advanceStage() {
+      currentStageIndex += 1;
+      startCurrentStage();
+    }
+
+    function finishGame() {
+      isBusy = true;
+      highlightAddressPart("address");
+      instruction.textContent =
+        "Finished! Your total error is displayed below. Refresh the screen to play again.";
+      scoreValue.textContent = formatDistance(errorTotalKm);
+      finalScore.textContent = formatDistance(errorTotalKm);
+      finalPanel.classList.add("show");
+    }
+
+    function addError(km) {
+      errorTotalKm += km;
+      scoreValue.textContent = formatDistance(errorTotalKm);
+    }
+
+    async function showTemporaryErrorLine(from, to, km, labelText) {
+      const line = L.polyline([from, to], {
+        color: "#d62828",
+        weight: 5,
+        opacity: 0.9
+      }).addTo(map);
+
+      const mid = midpoint(from, to);
+
+      const label = L.marker(mid, {
+        interactive: false,
+        icon: L.divIcon({
+          className: "distance-label",
+          html: `${formatDistance(km)}`,
+          iconSize: null
+        })
+      }).addTo(map);
+
+      instruction.textContent = `${labelText} — Error: ${formatDistance(km)}`;
+
+      return new Promise(resolve => {
+        setTimeout(() => {
+          map.removeLayer(line);
+          map.removeLayer(label);
+          resolve();
+        }, 1900);
+      });
+    }
+
+    async function geocodePlace(query) {
+      const key = `search:${query.toLowerCase()}`;
+      if (geocodeCache.has(key)) return geocodeCache.get(key);
+
+      const url =
+        "https://nominatim.openstreetmap.org/search?" +
+        new URLSearchParams({
+          q: query,
+          format: "jsonv2",
+          limit: "1",
+          addressdetails: "1"
+        });
+
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Geocoding failed for ${query}`);
+
+      const data = await res.json();
+      if (!data.length) throw new Error(`No geocoding result for ${query}`);
+
+      const item = data[0];
+
+      const result = {
+        name: item.display_name,
+        center: [Number(item.lat), Number(item.lon)],
+        bbox: item.boundingbox
+          ? bboxToLeafletBounds(item.boundingbox.map(Number))
+          : null
+      };
+
+      geocodeCache.set(key, result);
+      return result;
+    }
+
+    async function reverseGeocode(lat, lon) {
+      const url =
+        "https://nominatim.openstreetmap.org/reverse?" +
+        new URLSearchParams({
+          lat,
+          lon,
+          format: "jsonv2",
+          addressdetails: "1",
+          zoom: "10"
+        });
+
+      const res = await fetch(url);
+      if (!res.ok) return null;
+
+      return await res.json();
+    }
+
+    function extractAdminRegion(address) {
+      return (
+        address.state ||
+        address.province ||
+        address.region ||
+        address.state_district ||
+        address.county ||
+        ""
+      );
+    }
+
+    function normalizeContinentCode(value) {
+      const raw = String(value || "").trim().toLowerCase();
+
+      for (const [code, data] of Object.entries(CONTINENTS)) {
+        if (code.toLowerCase() === raw) return code;
+
+        if (data.aliases.some(alias => alias.toLowerCase() === raw)) {
+          return code;
+        }
+
+        if (data.label.toLowerCase() === raw) return code;
+      }
+
+      return value;
+    }
+
+    function getContinentAtLatLng(latlng) {
+      const lat = latlng.lat;
+      let lon = latlng.lng;
+
+      while (lon < -180) lon += 360;
+      while (lon > 180) lon -= 360;
+
+      if (lat < -60) return "AN";
+
+      // North America, including Central America and much of the Caribbean.
+      if (lat >= 5 && lat <= 83 && lon >= -170 && lon <= -50) return "NA";
+
+      // South America.
+      if (lat >= -56 && lat <= 13 && lon >= -82 && lon <= -34) return "SA";
+
+      // Africa.
+      if (lat >= -35 && lat <= 38 && lon >= -20 && lon <= 55) return "AF";
+
+      // Europe.
+      if (lat >= 35 && lat <= 72 && lon >= -25 && lon <= 45) return "EU";
+
+      // Asia.
+      if (lat >= -12 && lat <= 82 && lon >= 45 && lon <= 180) return "AS";
+
+      // Oceania.
+      if (lat >= -50 && lat <= 10 && lon >= 110 && lon <= 180) return "OC";
+
+      return null;
+    }
+
+    function bboxToLeafletBounds(bbox) {
+      // bbox form: [south, north, west, east]
+      const south = Number(bbox[0]);
+      const north = Number(bbox[1]);
+      const west = Number(bbox[2]);
+      const east = Number(bbox[3]);
+
+      return [
+        [south, west],
+        [north, east]
+      ];
+    }
+
+    function cityCenterFromBbox(bbox) {
+      const south = Number(bbox[0]);
+      const north = Number(bbox[1]);
+      const west = Number(bbox[2]);
+      const east = Number(bbox[3]);
+
+      return [
+        (south + north) / 2,
+        (west + east) / 2
+      ];
+    }
+
+    function haversineKm(a, b) {
+      const lat1 = Number(a[0]);
+      const lon1 = Number(a[1]);
+      const lat2 = Number(b[0]);
+      const lon2 = Number(b[1]);
+
+      const R = 6371.0088;
+      const toRad = deg => deg * Math.PI / 180;
+
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+
+      const p1 = toRad(lat1);
+      const p2 = toRad(lat2);
+
+      const h =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(p1) * Math.cos(p2) * Math.sin(dLon / 2) ** 2;
+
+      return 2 * R * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+    }
+
+    function midpoint(a, b) {
+      return [
+        (Number(a[0]) + Number(b[0])) / 2,
+        (Number(a[1]) + Number(b[1])) / 2
+      ];
+    }
+
+    function formatDistance(km) {
+      if (km < 1) {
+        return `${Math.round(km * 1000)} m`;
+      }
+
+      if (km < 100) {
+        return `${km.toFixed(1)} km`;
+      }
+
+      return `${Math.round(km).toLocaleString()} km`;
+    }
+
+    function sameName(a, b) {
+      return normalizeName(a) === normalizeName(b);
+    }
+
+    function normalizeName(value) {
+      return String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+  </script>
+<script src="/static/puzzle/js/activity.js"></script>
+</body>
+</html>

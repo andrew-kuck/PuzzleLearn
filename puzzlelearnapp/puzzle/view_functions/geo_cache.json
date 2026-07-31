@@ -1,0 +1,1652 @@
+[
+    {
+        "continent": "NA",
+        "country": "Cuba",
+        "state": "",
+        "city": "Trinidad",
+        "address": "Camino El Cubano",
+        "addressLat": 21.814647,
+        "addressLon": -79.9948281,
+        "cityBbox": [
+            21.8097,
+            21.8317,
+            -80.0018,
+            -79.9941
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Spain",
+        "state": "",
+        "city": "Alameda de Osuna",
+        "address": "M-40",
+        "addressLat": 40.4422708,
+        "addressLon": -3.5955318,
+        "cityBbox": [
+            40.4367,
+            40.4443,
+            -3.5988,
+            -3.5931
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "China",
+        "state": "",
+        "city": "Yinchuan",
+        "address": "\u6587\u5316\u897f\u8def",
+        "addressLat": 38.4698314,
+        "addressLon": 106.2717562,
+        "cityBbox": [
+            38.4695,
+            38.4702,
+            106.2715,
+            106.272
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Switzerland",
+        "state": "BE",
+        "city": "Bern",
+        "address": "41 Morillonstrasse",
+        "addressLat": 46.933993,
+        "addressLon": 7.4346026,
+        "cityBbox": [
+            46.9339,
+            46.9341,
+            7.4345,
+            7.4349
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Russia",
+        "state": "",
+        "city": "Neftekamsk",
+        "address": "\u0421\u043e\u0446\u0438\u0430\u043b\u0438\u0441\u0442\u0438\u0447\u0435\u0441\u043a\u0430\u044f \u0443\u043b\u0438\u0446\u0430",
+        "addressLat": 56.0913307,
+        "addressLon": 54.2550442,
+        "cityBbox": [
+            56.0912,
+            56.0918,
+            54.2544,
+            54.2555
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "Turkey",
+        "state": "",
+        "city": "Elaz\u0131\u011f",
+        "address": "Fevzi \u00c7akmak Mah.",
+        "addressLat": 38.6858943,
+        "addressLon": 39.2175275,
+        "cityBbox": [
+            38.6857,
+            38.6861,
+            39.2169,
+            39.2181
+        ]
+    },
+    {
+        "continent": "NA",
+        "country": "United States",
+        "state": "Michigan",
+        "city": "Novi",
+        "address": "Crescent Boulevard",
+        "addressLat": 42.485012,
+        "addressLon": -83.4733328,
+        "cityBbox": [
+            42.4848,
+            42.4851,
+            -83.4736,
+            -83.4733
+        ]
+    },
+    {
+        "continent": "SA",
+        "country": "Venezuela",
+        "state": "",
+        "city": "Higuerote",
+        "address": "Avenida Rotival",
+        "addressLat": 10.4966297,
+        "addressLon": -66.1091092,
+        "cityBbox": [
+            10.4899,
+            10.4967,
+            -66.1109,
+            -66.1055
+        ]
+    },
+    {
+        "continent": "OC",
+        "country": "Australia",
+        "state": "",
+        "city": "Calamvale",
+        "address": "Watt Court",
+        "addressLat": -27.6194881,
+        "addressLon": 153.0438467,
+        "cityBbox": [
+            -27.6195,
+            -27.6195,
+            153.0438,
+            153.0439
+        ]
+    },
+    {
+        "continent": "NA",
+        "country": "United States",
+        "state": "Michigan",
+        "city": "Garden City",
+        "address": "263 Lathers Street",
+        "addressLat": 42.3124442,
+        "addressLon": -83.3197173,
+        "cityBbox": [
+            42.3124,
+            42.3125,
+            -83.3198,
+            -83.3197
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Italy",
+        "state": "",
+        "city": "Caltagirone",
+        "address": "Via Roma",
+        "addressLat": 37.232848,
+        "addressLon": 14.5182048,
+        "cityBbox": [
+            37.2324,
+            37.2361,
+            14.5132,
+            14.5191
+        ]
+    },
+    {
+        "continent": "NA",
+        "country": "United States",
+        "state": "Ohio",
+        "city": "Brook Park",
+        "address": "West 147th Street",
+        "addressLat": 41.412402,
+        "addressLon": -81.7986489,
+        "cityBbox": [
+            41.4124,
+            41.4125,
+            -81.7987,
+            -81.7986
+        ]
+    },
+    {
+        "continent": "NA",
+        "country": "United States",
+        "state": "Ohio",
+        "city": "Huber Heights",
+        "address": "Chambersburg Road",
+        "addressLat": 39.8484365,
+        "addressLon": -84.1161996,
+        "cityBbox": [
+            39.8471,
+            39.8498,
+            -84.1185,
+            -84.1141
+        ]
+    },
+    {
+        "continent": "AF",
+        "country": "Kenya",
+        "state": "",
+        "city": "Nyahururu",
+        "address": "Nyeri-Nyahururu Road",
+        "addressLat": 0.0456014,
+        "addressLon": 36.3717429,
+        "cityBbox": [
+            0.044,
+            0.0464,
+            36.3711,
+            36.3725
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Germany",
+        "state": "",
+        "city": "Sasel",
+        "address": "34a Heideknick",
+        "addressLat": 53.6472886,
+        "addressLon": 10.1267165,
+        "cityBbox": [
+            53.6472,
+            53.6473,
+            10.1266,
+            10.1268
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Ukraine",
+        "state": "",
+        "city": "Khmilnyk",
+        "address": "\u0432\u0443\u043b\u0438\u0446\u044f \u0406\u0432\u0430\u043d\u0430 \u041a\u043e\u0442\u043b\u044f\u0440\u0435\u0432\u0441\u044c\u043a\u043e\u0433\u043e",
+        "addressLat": 49.5598416,
+        "addressLon": 27.9617144,
+        "cityBbox": [
+            49.5593,
+            49.5606,
+            27.9612,
+            27.9622
+        ]
+    },
+    {
+        "continent": "SA",
+        "country": "Brazil",
+        "state": "",
+        "city": "S\u00e3o Miguel dos Campos",
+        "address": "AL-420",
+        "addressLat": -9.7971553,
+        "addressLon": -36.0933011,
+        "cityBbox": [
+            -9.7978,
+            -9.7958,
+            -36.0962,
+            -36.0919
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Russia",
+        "state": "",
+        "city": "Kirovsk",
+        "address": "24 \u0421\u043e\u0432\u0435\u0442\u0441\u043a\u0430\u044f \u0443\u043b\u0438\u0446\u0430",
+        "addressLat": 59.8758533,
+        "addressLon": 30.9940224,
+        "cityBbox": [
+            59.8757,
+            59.8761,
+            30.9939,
+            30.9945
+        ]
+    },
+    {
+        "continent": "NA",
+        "country": "United States",
+        "state": "California",
+        "city": "Monrovia",
+        "address": "246 East Lemon Avenue",
+        "addressLat": 34.1469489,
+        "addressLon": -117.9977343,
+        "cityBbox": [
+            34.1469,
+            34.147,
+            -117.9978,
+            -117.9977
+        ]
+    },
+    {
+        "continent": "AF",
+        "country": "Liberia",
+        "state": "",
+        "city": "Monrovia",
+        "address": "Tubman Boulevard",
+        "addressLat": 6.297012,
+        "addressLon": -10.7955145,
+        "cityBbox": [
+            6.297,
+            6.2971,
+            -10.7956,
+            -10.7955
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "Saudi Arabia",
+        "state": "",
+        "city": "Ra\u1e29\u012bmah",
+        "address": "Prince Nayef bin Abdulaziz Street",
+        "addressLat": 26.7138304,
+        "addressLon": 50.053344,
+        "cityBbox": [
+            26.709,
+            26.7178,
+            50.0415,
+            50.0631
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "United Kingdom",
+        "state": "ENG",
+        "city": "Lancaster",
+        "address": "Brettargh Drive",
+        "addressLat": 54.0363392,
+        "addressLon": -2.8039259,
+        "cityBbox": [
+            54.0362,
+            54.0365,
+            -2.8042,
+            -2.8037
+        ]
+    },
+    {
+        "continent": "NA",
+        "country": "United States",
+        "state": "Arizona",
+        "city": "El Mirage",
+        "address": "14409 North Alto Street",
+        "addressLat": 33.614874,
+        "addressLon": -112.3233095,
+        "cityBbox": [
+            33.6148,
+            33.6149,
+            -112.3234,
+            -112.3232
+        ]
+    },
+    {
+        "continent": "AF",
+        "country": "Angola",
+        "state": "",
+        "city": "Mossamedes",
+        "address": "Avenida Joaquim Morais",
+        "addressLat": -15.2014988,
+        "addressLon": 12.1580857,
+        "cityBbox": [
+            -15.204,
+            -15.1986,
+            12.1561,
+            12.16
+        ]
+    },
+    {
+        "continent": "NA",
+        "country": "United States",
+        "state": "New Jersey",
+        "city": "Belleville",
+        "address": "55 Birchwood Drive",
+        "addressLat": 40.7966832,
+        "addressLon": -74.1367908,
+        "cityBbox": [
+            40.7966,
+            40.7967,
+            -74.1368,
+            -74.1367
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "Malaysia",
+        "state": "",
+        "city": "Siburan",
+        "address": "Jalan Endap",
+        "addressLat": 1.3634826,
+        "addressLon": 110.414233,
+        "cityBbox": [
+            1.3621,
+            1.3649,
+            110.4114,
+            110.4162
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "China",
+        "state": "",
+        "city": "Wenzhou",
+        "address": "\u5357\u90ca\u8857\u9053",
+        "addressLat": 27.9853353,
+        "addressLon": 120.658455,
+        "cityBbox": [
+            27.9836,
+            27.9857,
+            120.6584,
+            120.6591
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Czechia",
+        "state": "",
+        "city": "Kop\u0159ivnice",
+        "address": "Smetanova",
+        "addressLat": 49.5903053,
+        "addressLon": 18.1412709,
+        "cityBbox": [
+            49.5902,
+            49.5904,
+            18.1411,
+            18.1414
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Russia",
+        "state": "",
+        "city": "Sunzha",
+        "address": "\u0443\u043b\u0438\u0446\u0430 \u0427\u0435\u0440\u043d\u044b\u0448\u0435\u0432\u0441\u043a\u043e\u0433\u043e",
+        "addressLat": 43.306603,
+        "addressLon": 45.0548636,
+        "cityBbox": [
+            43.3057,
+            43.3315,
+            45.038,
+            45.0555
+        ]
+    },
+    {
+        "continent": "NA",
+        "country": "United States",
+        "state": "Massachusetts",
+        "city": "Newton",
+        "address": "59 Pine Ridge Road",
+        "addressLat": 42.3277053,
+        "addressLon": -71.2230622,
+        "cityBbox": [
+            42.3276,
+            42.3278,
+            -71.2232,
+            -71.223
+        ]
+    },
+    {
+        "continent": "SA",
+        "country": "Brazil",
+        "state": "",
+        "city": "Pontal do Paran\u00e1",
+        "address": "Rodovia Engenheiro Argus Th\u00e1 Heyn",
+        "addressLat": -25.6607914,
+        "addressLon": -48.5209893,
+        "cityBbox": [
+            -25.6716,
+            -25.5893,
+            -48.565,
+            -48.5134
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "Philippines",
+        "state": "",
+        "city": "Plaridel",
+        "address": "Tabang Local Road",
+        "addressLat": 14.8763141,
+        "addressLon": 120.8610902,
+        "cityBbox": [
+            14.8727,
+            14.8767,
+            120.861,
+            120.8616
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "China",
+        "state": "",
+        "city": "Shulan",
+        "address": "\u4eba\u6c11\u5927\u8def",
+        "addressLat": 44.4122965,
+        "addressLon": 126.9618805,
+        "cityBbox": [
+            44.4121,
+            44.4125,
+            126.961,
+            126.9628
+        ]
+    },
+    {
+        "continent": "OC",
+        "country": "Australia",
+        "state": "",
+        "city": "Morley",
+        "address": "Johnsmith Street",
+        "addressLat": -31.8975947,
+        "addressLon": 115.9057185,
+        "cityBbox": [
+            -31.8983,
+            -31.8973,
+            115.9043,
+            115.9069
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "China",
+        "state": "",
+        "city": "Jiyuan",
+        "address": "\u6587\u660c\u8def",
+        "addressLat": 35.1011708,
+        "addressLon": 112.5900065,
+        "cityBbox": [
+            35.1004,
+            35.1019,
+            112.5894,
+            112.5906
+        ]
+    },
+    {
+        "continent": "NA",
+        "country": "Canada",
+        "state": "",
+        "city": "Banbury-Don Mills",
+        "address": "45 Suncrest Drive",
+        "addressLat": 43.72709,
+        "addressLon": -79.35562,
+        "cityBbox": [
+            43.727,
+            43.7271,
+            -79.3557,
+            -79.3556
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Italy",
+        "state": "",
+        "city": "Terzigno",
+        "address": "Via Parisi Superiore",
+        "addressLat": 40.8031247,
+        "addressLon": 14.4913894,
+        "cityBbox": [
+            40.8031,
+            40.806,
+            14.483,
+            14.4916
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Italy",
+        "state": "",
+        "city": "Campi Bisenzio",
+        "address": "Via Guglielmo Marconi",
+        "addressLat": 43.8353023,
+        "addressLon": 11.1341949,
+        "cityBbox": [
+            43.8352,
+            43.8354,
+            11.1339,
+            11.1345
+        ]
+    },
+    {
+        "continent": "NA",
+        "country": "United States",
+        "state": "Texas",
+        "city": "Mercedes",
+        "address": "265 West 5th Street",
+        "addressLat": 26.1470326,
+        "addressLon": -97.9117098,
+        "cityBbox": [
+            26.147,
+            26.1471,
+            -97.9118,
+            -97.9117
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Russia",
+        "state": "",
+        "city": "Kirov",
+        "address": "40 \u0443\u043b\u0438\u0446\u0430 \u0413\u0430\u0433\u0430\u0440\u0438\u043d\u0430",
+        "addressLat": 54.0704622,
+        "addressLon": 34.2964158,
+        "cityBbox": [
+            54.0703,
+            54.0707,
+            34.2961,
+            34.2966
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "Pakistan",
+        "state": "",
+        "city": "Renala Khurd",
+        "address": "Renala Khurd - Shergarh road",
+        "addressLat": 30.8628647,
+        "addressLon": 73.6073179,
+        "cityBbox": [
+            30.8199,
+            30.8671,
+            73.6019,
+            73.7459
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "Uzbekistan",
+        "state": "",
+        "city": "Beruniy",
+        "address": "77/A Kepakli qal'a ko'shesi",
+        "addressLat": 41.6878581,
+        "addressLon": 60.7562533,
+        "cityBbox": [
+            41.6878,
+            41.6879,
+            60.7562,
+            60.7563
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "Singapore",
+        "state": "",
+        "city": "Marsiling",
+        "address": "Stephen Lee Road",
+        "addressLat": 1.4188975,
+        "addressLon": 103.7842453,
+        "cityBbox": [
+            1.4177,
+            1.4209,
+            103.7835,
+            103.7847
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "France",
+        "state": "",
+        "city": "Montb\u00e9liard",
+        "address": "21 Rue du Bois Bourgeois",
+        "addressLat": 47.514054,
+        "addressLon": 6.791885,
+        "cityBbox": [
+            47.514,
+            47.5141,
+            6.7918,
+            6.7919
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "South Korea",
+        "state": "",
+        "city": "Boryeong",
+        "address": "\uc911\uc559\ub85c",
+        "addressLat": 36.3617737,
+        "addressLon": 126.5835297,
+        "cityBbox": [
+            36.3541,
+            36.3623,
+            126.582,
+            126.5841
+        ]
+    },
+    {
+        "continent": "OC",
+        "country": "Australia",
+        "state": "",
+        "city": "Upper Coomera",
+        "address": "Courtney Drive",
+        "addressLat": -27.8679295,
+        "addressLon": 153.2778383,
+        "cityBbox": [
+            -27.8685,
+            -27.8671,
+            153.2776,
+            153.2785
+        ]
+    },
+    {
+        "continent": "NA",
+        "country": "United States",
+        "state": "Illinois",
+        "city": "Bartlett",
+        "address": "North Oak Avenue",
+        "addressLat": 42.0028524,
+        "addressLon": -88.1838621,
+        "cityBbox": [
+            41.9999,
+            42.0035,
+            -88.1853,
+            -88.1838
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "United Kingdom",
+        "state": "ENG",
+        "city": "Birkenhead",
+        "address": "Alfred Road",
+        "addressLat": 53.4062928,
+        "addressLon": -3.0219272,
+        "cityBbox": [
+            53.4058,
+            53.4073,
+            -3.0228,
+            -3.0217
+        ]
+    },
+    {
+        "continent": "NA",
+        "country": "Mexico",
+        "state": "",
+        "city": "Tezoyuca",
+        "address": "Calle Arroyo",
+        "addressLat": 19.5782407,
+        "addressLon": -98.9212533,
+        "cityBbox": [
+            19.5778,
+            19.5787,
+            -98.9229,
+            -98.9195
+        ]
+    },
+    {
+        "continent": "AF",
+        "country": "Egypt",
+        "state": "",
+        "city": "6th of October City",
+        "address": "\u0637\u0631\u064a\u0642 \u0627\u0644\u0642\u0627\u0647\u0631\u0629, \u0627\u0644\u0641\u064a\u0648\u0645 \u0627\u0644\u0635\u062d\u0631\u0627\u0648\u0649",
+        "addressLat": 29.8238521,
+        "addressLon": 31.0439588,
+        "cityBbox": [
+            29.7274,
+            29.8322,
+            30.9924,
+            31.0494
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Germany",
+        "state": "",
+        "city": "Erkrath",
+        "address": "Erkrather Stra\u00dfe",
+        "addressLat": 51.208757,
+        "addressLon": 6.9133683,
+        "cityBbox": [
+            51.2087,
+            51.2088,
+            6.9133,
+            6.9134
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "China",
+        "state": "",
+        "city": "Shangyu",
+        "address": "\u89e3\u653e\u8def\u6b65\u884c\u8857",
+        "addressLat": 30.018987,
+        "addressLon": 120.8756122,
+        "cityBbox": [
+            30.0141,
+            30.0201,
+            120.8747,
+            120.8757
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "France",
+        "state": "",
+        "city": "Sens",
+        "address": "Rue du Mail",
+        "addressLat": 48.2008264,
+        "addressLon": 3.2877334,
+        "cityBbox": [
+            48.2007,
+            48.201,
+            3.2875,
+            3.288
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "United Kingdom",
+        "state": "ENG",
+        "city": "Middlesbrough",
+        "address": "Westminster Road",
+        "addressLat": 54.5620364,
+        "addressLon": -1.2353523,
+        "cityBbox": [
+            54.562,
+            54.5628,
+            -1.2411,
+            -1.2342
+        ]
+    },
+    {
+        "continent": "AF",
+        "country": "Democratic Republic of the Congo",
+        "state": "",
+        "city": "Moanda",
+        "address": "Avenue Kasa-Vubu",
+        "addressLat": -5.9224316,
+        "addressLon": 12.3786629,
+        "cityBbox": [
+            -5.9267,
+            -5.9215,
+            12.3777,
+            12.3939
+        ]
+    },
+    {
+        "continent": "SA",
+        "country": "Brazil",
+        "state": "",
+        "city": "Viam\u00e3o",
+        "address": "Rua Dona Edith",
+        "addressLat": -30.0718193,
+        "addressLon": -51.0176595,
+        "cityBbox": [
+            -30.0726,
+            -30.0713,
+            -51.0179,
+            -51.0172
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "India",
+        "state": "",
+        "city": "Kundla",
+        "address": "Kundla",
+        "addressLat": 21.3397598,
+        "addressLon": 71.2995947,
+        "cityBbox": [
+            21.3346,
+            21.3408,
+            71.2992,
+            71.3033
+        ]
+    },
+    {
+        "continent": "NA",
+        "country": "United States",
+        "state": "Florida",
+        "city": "Tarpon Springs",
+        "address": "Shell Pointe Drive",
+        "addressLat": 28.156048,
+        "addressLon": -82.7424324,
+        "cityBbox": [
+            28.156,
+            28.1577,
+            -82.7432,
+            -82.7409
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "Kuwait",
+        "state": "",
+        "city": "Kuwait City",
+        "address": "12 \u0634\u0627\u0631\u0639 14",
+        "addressLat": 29.3588625,
+        "addressLon": 47.9895271,
+        "cityBbox": [
+            29.3588,
+            29.359,
+            47.9894,
+            47.9897
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "France",
+        "state": "",
+        "city": "Oyonnax",
+        "address": "Route Foresti\u00e8re de la Caserne",
+        "addressLat": 46.244223,
+        "addressLon": 5.6506181,
+        "cityBbox": [
+            46.2397,
+            46.2476,
+            5.6401,
+            5.6561
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "Armenia",
+        "state": "",
+        "city": "Malatia-Sebastia",
+        "address": "28/5 \u0533\u0578\u0582\u057d\u0561\u0576 \u0547\u0565\u0580\u0561\u0574\u056b \u0583\u0578\u0572\u0578\u0581",
+        "addressLat": 40.1833053,
+        "addressLon": 44.442258,
+        "cityBbox": [
+            40.1832,
+            40.1834,
+            44.4422,
+            44.4423
+        ]
+    },
+    {
+        "continent": "AF",
+        "country": "Ethiopia",
+        "state": "",
+        "city": "Worabe",
+        "address": "K'Ali K'Esa Bota",
+        "addressLat": 7.8411462,
+        "addressLon": 38.1840613,
+        "cityBbox": [
+            7.8411,
+            7.8426,
+            38.1841,
+            38.1849
+        ]
+    },
+    {
+        "continent": "SA",
+        "country": "Brazil",
+        "state": "",
+        "city": "Ourinhos",
+        "address": "Rua Augusta Wening",
+        "addressLat": -22.9830523,
+        "addressLon": -49.8764084,
+        "cityBbox": [
+            -22.9831,
+            -22.9823,
+            -49.8778,
+            -49.8759
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Ukraine",
+        "state": "",
+        "city": "Okhtyrka",
+        "address": "\u041c\u0430\u0440\u0456\u0443\u043f\u043e\u043b\u044c\u0441\u044c\u043a\u0438\u0439 \u043f\u0440\u043e\u0432\u0443\u043b\u043e\u043a",
+        "addressLat": 50.3165796,
+        "addressLon": 34.9126672,
+        "cityBbox": [
+            50.3148,
+            50.317,
+            34.9081,
+            34.914
+        ]
+    },
+    {
+        "continent": "SA",
+        "country": "Brazil",
+        "state": "",
+        "city": "S\u00e3o Sebasti\u00e3o do Ca\u00ed",
+        "address": "Rua Bento Gon\u00e7alves",
+        "addressLat": -29.598921,
+        "addressLon": -51.3734205,
+        "cityBbox": [
+            -29.5989,
+            -29.5988,
+            -51.3752,
+            -51.3705
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Spain",
+        "state": "",
+        "city": "Realejo Alto",
+        "address": "Carretera Palo Blanco",
+        "addressLat": 28.369919,
+        "addressLon": -16.5799261,
+        "cityBbox": [
+            28.3676,
+            28.3721,
+            -16.5843,
+            -16.5773
+        ]
+    },
+    {
+        "continent": "NA",
+        "country": "United States",
+        "state": "North Carolina",
+        "city": "Mooresville",
+        "address": "403 East McLelland Avenue",
+        "addressLat": 35.5742664,
+        "addressLon": -80.8113724,
+        "cityBbox": [
+            35.5742,
+            35.5743,
+            -80.8114,
+            -80.8113
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "Thailand",
+        "state": "",
+        "city": "Sawankhalok",
+        "address": "\u0e16\u0e19\u0e19\u0e1b\u0e23\u0e30\u0e0a\u0e32\u0e21\u0e15\u0e34",
+        "addressLat": 17.3113946,
+        "addressLon": 99.8236323,
+        "cityBbox": [
+            17.3109,
+            17.312,
+            99.8225,
+            99.8248
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "Philippines",
+        "state": "",
+        "city": "Carmona",
+        "address": "Central Road",
+        "addressLat": 14.3036069,
+        "addressLon": 121.0535253,
+        "cityBbox": [
+            14.3,
+            14.3087,
+            121.0488,
+            121.0596
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Germany",
+        "state": "",
+        "city": "Horn",
+        "address": "Angelika-Landwehr-Stieg",
+        "addressLat": 53.54939,
+        "addressLon": 10.0879229,
+        "cityBbox": [
+            53.5488,
+            53.5499,
+            10.0871,
+            10.0888
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Czechia",
+        "state": "",
+        "city": "\u017d\u010f\u00e1r nad S\u00e1zavou",
+        "address": "\u017d\u010f\u00e1r nad S\u00e1zavou 3",
+        "addressLat": 49.5636971,
+        "addressLon": 15.9323133,
+        "cityBbox": [
+            49.5635,
+            49.5639,
+            15.9313,
+            15.9326
+        ]
+    },
+    {
+        "continent": "NA",
+        "country": "Mexico",
+        "state": "",
+        "city": "San Agust\u00edn",
+        "address": "372 Paseo de las Santas Mar\u00edas",
+        "addressLat": 20.5374062,
+        "addressLon": -103.4548783,
+        "cityBbox": [
+            20.5374,
+            20.5375,
+            -103.4549,
+            -103.4548
+        ]
+    },
+    {
+        "continent": "AF",
+        "country": "Zambia",
+        "state": "",
+        "city": "Livingstone",
+        "address": "Maamba Road",
+        "addressLat": -17.845161,
+        "addressLon": 25.8415388,
+        "cityBbox": [
+            -17.8492,
+            -17.8443,
+            25.8381,
+            25.8418
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Poland",
+        "state": "",
+        "city": "\u0141apy",
+        "address": "19 Genera\u0142a W\u0142adys\u0142awa Sikorskiego",
+        "addressLat": 52.9877355,
+        "addressLon": 22.8779591,
+        "cityBbox": [
+            52.9873,
+            52.9883,
+            22.8772,
+            22.8791
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "United Kingdom",
+        "state": "ENG",
+        "city": "Nottingham",
+        "address": "4 Stoney Street",
+        "addressLat": 52.9533669,
+        "addressLon": -1.1437312,
+        "cityBbox": [
+            52.9533,
+            52.9534,
+            -1.1438,
+            -1.1437
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "India",
+        "state": "",
+        "city": "M\u0101ngrol",
+        "address": "NH51",
+        "addressLat": 21.1349611,
+        "addressLon": 70.1027153,
+        "cityBbox": [
+            21.1011,
+            21.196,
+            70.0438,
+            70.1563
+        ]
+    },
+    {
+        "continent": "AF",
+        "country": "Ghana",
+        "state": "",
+        "city": "Shama Junction",
+        "address": "Nana Wirekoh road",
+        "addressLat": 5.0198736,
+        "addressLon": -1.6787919,
+        "cityBbox": [
+            5.0183,
+            5.0199,
+            -1.6788,
+            -1.6782
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Belgium",
+        "state": "WAL",
+        "city": "Heusy",
+        "address": "51 Rue Joseph Wauters",
+        "addressLat": 50.582705,
+        "addressLon": 5.8717291,
+        "cityBbox": [
+            50.5826,
+            50.5828,
+            5.8716,
+            5.8718
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "China",
+        "state": "",
+        "city": "Yushu",
+        "address": "\u73af\u5e9c\u4e1c\u8def",
+        "addressLat": 44.834545,
+        "addressLon": 126.5277799,
+        "cityBbox": [
+            44.8345,
+            44.8388,
+            126.527,
+            126.5302
+        ]
+    },
+    {
+        "continent": "SA",
+        "country": "Colombia",
+        "state": "",
+        "city": "La Virginia",
+        "address": "Carrera 20A",
+        "addressLat": 4.8882844,
+        "addressLon": -75.8709034,
+        "cityBbox": [
+            4.8881,
+            4.8883,
+            -75.8709,
+            -75.8707
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Greece",
+        "state": "",
+        "city": "N\u00e9a Ion\u00eda",
+        "address": "152 \u0397\u03c1\u03b1\u03ba\u03bb\u03b5\u03af\u03bf\u03c5",
+        "addressLat": 38.0287304,
+        "addressLon": 23.742913,
+        "cityBbox": [
+            38.0287,
+            38.0288,
+            23.7429,
+            23.743
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "China",
+        "state": "",
+        "city": "Dongsheng",
+        "address": "\u5929\u9a84\u5317\u8def",
+        "addressLat": 39.8254228,
+        "addressLon": 109.9760361,
+        "cityBbox": [
+            39.8251,
+            39.8257,
+            109.9759,
+            109.9765
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Germany",
+        "state": "",
+        "city": "Mainz",
+        "address": "Jakob-Anstatt-Stra\u00dfe",
+        "addressLat": 49.9754113,
+        "addressLon": 8.2922458,
+        "cityBbox": [
+            49.975,
+            49.9758,
+            8.2914,
+            8.2931
+        ]
+    },
+    {
+        "continent": "SA",
+        "country": "Brazil",
+        "state": "",
+        "city": "S\u00e3o Louren\u00e7o",
+        "address": "Trilha Ilha x Ramon",
+        "addressLat": -22.1075608,
+        "addressLon": -45.0493826,
+        "cityBbox": [
+            -22.1089,
+            -22.1008,
+            -45.0515,
+            -45.0465
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "France",
+        "state": "",
+        "city": "Sartrouville",
+        "address": "4 Rue des Poiriers",
+        "addressLat": 48.943555,
+        "addressLon": 2.17838,
+        "cityBbox": [
+            48.9435,
+            48.9436,
+            2.1783,
+            2.1784
+        ]
+    },
+    {
+        "continent": "NA",
+        "country": "Canada",
+        "state": "",
+        "city": "Lougheed",
+        "address": "9288 Cameron Street",
+        "addressLat": 49.2529452,
+        "addressLon": -122.9029143,
+        "cityBbox": [
+            49.2526,
+            49.2533,
+            -122.9034,
+            -122.9024
+        ]
+    },
+    {
+        "continent": "NA",
+        "country": "United States",
+        "state": "Utah",
+        "city": "Sandy",
+        "address": "9423 State Street",
+        "addressLat": 40.5801521,
+        "addressLon": -111.8907704,
+        "cityBbox": [
+            40.5801,
+            40.5802,
+            -111.8908,
+            -111.8907
+        ]
+    },
+    {
+        "continent": "NA",
+        "country": "United States",
+        "state": "Arkansas",
+        "city": "Texarkana",
+        "address": "1679 East 24th Street",
+        "addressLat": 33.4454965,
+        "addressLon": -94.0248107,
+        "cityBbox": [
+            33.4454,
+            33.4455,
+            -94.0249,
+            -94.0248
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "Philippines",
+        "state": "",
+        "city": "Jose Pa\u00f1ganiban",
+        "address": "Vinzons Avenue",
+        "addressLat": 14.2870924,
+        "addressLon": 122.6932233,
+        "cityBbox": [
+            14.287,
+            14.2871,
+            122.6932,
+            122.6933
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "India",
+        "state": "",
+        "city": "Gokavaram",
+        "address": "MDR044",
+        "addressLat": 17.2637896,
+        "addressLon": 81.844332,
+        "cityBbox": [
+            17.2635,
+            17.2727,
+            81.8272,
+            81.8481
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Greece",
+        "state": "",
+        "city": "Io\u00e1nnina",
+        "address": "\u039a\u03c9\u03bd\u03c3\u03c4\u03b1\u03bd\u03c4\u03b9\u03bd\u03bf\u03c5\u03c0\u03cc\u03bb\u03b5\u03c9\u03c2",
+        "addressLat": 39.6615145,
+        "addressLon": 20.8418325,
+        "cityBbox": [
+            39.6579,
+            39.6812,
+            20.8236,
+            20.8467
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "France",
+        "state": "",
+        "city": "Porte Saint-Denis",
+        "address": "27 Rue d'Orsel",
+        "addressLat": 48.8837775,
+        "addressLon": 2.3441768,
+        "cityBbox": [
+            48.8837,
+            48.8838,
+            2.3441,
+            2.3442
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "India",
+        "state": "",
+        "city": "Pinar\u0101yi",
+        "address": "Thalasseri - Irikkur Road",
+        "addressLat": 11.7933185,
+        "addressLon": 75.4903396,
+        "cityBbox": [
+            11.7759,
+            11.7939,
+            75.4873,
+            75.4909
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "India",
+        "state": "",
+        "city": "Kamaruddinnagar",
+        "address": "Nangloi Extension",
+        "addressLat": 28.6642628,
+        "addressLon": 77.0463879,
+        "cityBbox": [
+            28.6632,
+            28.6644,
+            77.0461,
+            77.0517
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "Hong Kong",
+        "state": "NYL",
+        "city": "Yuen Long Kau Hui",
+        "address": "\u6eaf\u6e90\u5f91",
+        "addressLat": 22.4546849,
+        "addressLon": 114.0172647,
+        "cityBbox": [
+            22.4547,
+            22.4551,
+            114.0173,
+            114.0175
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Czechia",
+        "state": "",
+        "city": "\u010cern\u00fd Most",
+        "address": "Pra\u017esk\u00fd okruh",
+        "addressLat": 50.0963634,
+        "addressLon": 14.5874288,
+        "cityBbox": [
+            50.0898,
+            50.1007,
+            14.58,
+            14.5945
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Switzerland",
+        "state": "SG",
+        "city": "Rapperswil",
+        "address": "B\u00fchlerallee",
+        "addressLat": 47.226862,
+        "addressLon": 8.8112747,
+        "cityBbox": [
+            47.2268,
+            47.2269,
+            8.8112,
+            8.8113
+        ]
+    },
+    {
+        "continent": "NA",
+        "country": "United States",
+        "state": "Texas",
+        "city": "Abilene",
+        "address": "979 Rose Street",
+        "addressLat": 32.4381651,
+        "addressLon": -99.7259375,
+        "cityBbox": [
+            32.4381,
+            32.4382,
+            -99.726,
+            -99.7259
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "Kazakhstan",
+        "state": "",
+        "city": "Taldykorgan",
+        "address": "103 \u0443\u043b\u0438\u0446\u0430 \u0413\u0430\u043b\u0438 \u041e\u0440\u043c\u0430\u043d\u043e\u0432\u0430",
+        "addressLat": 45.0164333,
+        "addressLon": 78.3697312,
+        "cityBbox": [
+            45.0163,
+            45.0165,
+            78.3692,
+            78.3703
+        ]
+    },
+    {
+        "continent": "SA",
+        "country": "Brazil",
+        "state": "",
+        "city": "Boa Esperan\u00e7a",
+        "address": "Rua Brilhantes",
+        "addressLat": -21.0856706,
+        "addressLon": -45.5728656,
+        "cityBbox": [
+            -21.0862,
+            -21.0856,
+            -45.5733,
+            -45.5728
+        ]
+    },
+    {
+        "continent": "SA",
+        "country": "Brazil",
+        "state": "",
+        "city": "Concei\u00e7\u00e3o da Barra",
+        "address": "Rua Limoeiro",
+        "addressLat": -18.5909907,
+        "addressLon": -39.7401238,
+        "cityBbox": [
+            -18.591,
+            -18.5838,
+            -39.7406,
+            -39.7401
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "Bahrain",
+        "state": "",
+        "city": "Manama",
+        "address": "\u0637\u0631\u064a\u0642 524",
+        "addressLat": 26.2358444,
+        "addressLon": 50.5820434,
+        "cityBbox": [
+            26.2357,
+            26.2358,
+            50.5818,
+            50.582
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "China",
+        "state": "",
+        "city": "Longxing",
+        "address": "\u5174\u822a\u5927\u9053",
+        "addressLat": 29.7033237,
+        "addressLon": 106.7855679,
+        "cityBbox": [
+            29.7033,
+            29.7059,
+            106.7784,
+            106.7918
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "China",
+        "state": "",
+        "city": "Cuijiaji",
+        "address": "\u9752\u5e74\u8def",
+        "addressLat": 36.6178735,
+        "addressLon": 119.7209263,
+        "cityBbox": [
+            36.6153,
+            36.6183,
+            119.6825,
+            119.7272
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Sweden",
+        "state": "",
+        "city": "\u00c4ngelholm",
+        "address": "13 Flintv\u00e4gen",
+        "addressLat": 56.2312154,
+        "addressLon": 12.8592474,
+        "cityBbox": [
+            56.2311,
+            56.2313,
+            12.8591,
+            12.8594
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "India",
+        "state": "",
+        "city": "Ch\u0101chaura",
+        "address": "MD0706",
+        "addressLat": 24.1788744,
+        "addressLon": 76.9893472,
+        "cityBbox": [
+            24.1773,
+            24.1986,
+            76.9605,
+            76.9962
+        ]
+    },
+    {
+        "continent": "AF",
+        "country": "Ethiopia",
+        "state": "SI",
+        "city": "Wendo",
+        "address": "Yirgalem-Negele Road",
+        "addressLat": 6.6051876,
+        "addressLon": 38.4186806,
+        "cityBbox": [
+            6.6045,
+            6.6059,
+            38.4179,
+            38.4194
+        ]
+    },
+    {
+        "continent": "AS",
+        "country": "China",
+        "state": "",
+        "city": "Dehui",
+        "address": "\u5efa\u8bbe\u8857\u9053",
+        "addressLat": 44.5477961,
+        "addressLon": 125.6874866,
+        "cityBbox": [
+            44.546,
+            44.5486,
+            125.6871,
+            125.6877
+        ]
+    },
+    {
+        "continent": "NA",
+        "country": "United States",
+        "state": "Oklahoma",
+        "city": "Bethany",
+        "address": "5899 Northwest 45th Street",
+        "addressLat": 35.518289,
+        "addressLon": -97.617234,
+        "cityBbox": [
+            35.5182,
+            35.5183,
+            -97.6173,
+            -97.6172
+        ]
+    },
+    {
+        "continent": "EU",
+        "country": "Poland",
+        "state": "",
+        "city": "Gostynin",
+        "address": "12B Miko\u0142aja Kopernika",
+        "addressLat": 52.418794,
+        "addressLon": 19.4645096,
+        "cityBbox": [
+            52.4188,
+            52.4188,
+            19.4644,
+            19.4646
+        ]
+    }
+]

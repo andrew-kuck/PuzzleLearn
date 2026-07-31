@@ -1,0 +1,826 @@
+create an activity using html, css, and javascript. generate a random fractions division problem: (a/b) / (c/d), where a, b, c, and d are integers between 1 and 7, and neither fraction can be reduced to simpler terms. display the problem to the user with one fraction above and one below a large horizontal fraction bar. Below the problem show a horizontal bar with tick marks, which can be filled up to various amounts, such as 1/2, 3, 11/3, etc. The bar should extend from 0 to the quantity a*d, with integers labeled, filling the whole width of the screen. The bar is initially filled to 1. If the user clicks on a number in the problem, it changes to a bright color and the bar fill changes to that same color. The user is then able to drag the color part of the bar to some fill amount. After releasing the drag, the fill bounces to the correct fill amount and the difference between the user-dragged fill and the correct fill is added to a running error count on the screen; also, the clicked-on number fades to gray and the fill color returns to normal. For clicks on a and d, the correct fill amount is the previous correct fill amount multiplied by the number. For clicks on b and c, the correct fill amount is the previous correct fill amount divided by the number.  After all numbers have been clicked on, the entire division problem should be grayed out and the fill bar zooms in so that it extends from 0 to some integer and at least half of the visible bar is filled in. Equally spaced tick marks are placed with enough frequency such that there is a tick mark corresponding to the exact fill amount. A new input then allows the user to enter the fraction represented by the fill. They must supply the reduced fraction that is equivalent to the original problem. Each incorrect response increases the error total by 2. A correct response advances a progress bar at the top and gives an entirely new question. After 10 correct questions, the progress bar should be full and a function activityComplete() will be called.
+
+there should not be rounded edges for the bar being filled. the lines on the bar should be fainter and not every tick mark needs to be labeled (there should be a maximum of 10 labeled tick marks). the highlighted space around a number when it gets clicked is slightly too big; that highlighted space should not touch any other parts of the fraction. there should not be an text or instructions near the bar.
+
+Below is a complete single-file HTML activity. Save it as `fraction-division-activity.html` and open it in a browser.
+
+One note: for the actual math of division,  
+\[
+(a/b) \div (c/d)=\frac{a\cdot d}{b\cdot c}
+\]  
+so the code makes `a` and `d` multiply, and `b` and `c` divide. I added a comment in the JavaScript showing where to change that if you truly want `a` and `c` to multiply instead.
+
+Make small changes to 
+
+Here is the revised version with your requested changes:
+
+- Filled bar has square edges.
+- Tick marks are fainter.
+- At most 10 tick labels are shown.
+- Number highlight is smaller and does not touch the fraction bars.
+- Text/instructions near the bar have been removed.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fraction Division Bar Activity</title>
+  <style>
+    :root {
+      --normal-fill: #2f7df6;
+      --track: #e8edf7;
+      --tick: #1f2937;
+      --gray: #9ca3af;
+      --text: #111827;
+      --good: #0f9f6e;
+      --bad: #dc2626;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+    }
+
+    .top-panel {
+      width: min(1100px, 96vw);
+      margin-bottom: 16px;
+    }
+
+    .progress-shell {
+      width: 100%;
+      height: 22px;
+      background: #dbeafe;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 2px solid #93c5fd;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #2563eb, #22c55e);
+      transition: width 400ms ease;
+    }
+
+    .stats {
+      margin-top: 8px;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      font-weight: 700;
+    }
+
+    main {
+      width: min(1100px, 96vw);
+      background: white;
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      text-align: center;
+      font-size: clamp(1.4rem, 3vw, 2rem);
+    }
+
+    .instructions {
+      text-align: center;
+      margin: 0 auto 20px;
+      max-width: 760px;
+      color: #475569;
+      line-height: 1.45;
+    }
+
+    .problem-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 230px;
+      margin-bottom: 26px;
+      transition: opacity 400ms ease, filter 400ms ease;
+    }
+
+    .problem-wrap.complete {
+      opacity: 0.55;
+      filter: grayscale(1);
+    }
+
+    .complex-fraction {
+      display: inline-grid;
+      grid-template-rows: auto 12px auto;
+      align-items: center;
+      justify-items: center;
+      gap: 12px;
+      font-size: clamp(2.2rem, 8vw, 5.2rem);
+      font-weight: 800;
+    }
+
+    .complex-bar {
+      width: min(380px, 70vw);
+      height: 10px;
+      background: #111827;
+      border-radius: 0;
+    }
+
+    .simple-frac {
+      display: inline-grid;
+      grid-template-rows: auto 7px auto;
+      align-items: center;
+      justify-items: center;
+      row-gap: 0.12em;
+      line-height: 0.9;
+      min-width: 1.2em;
+    }
+
+    .simple-bar {
+      width: 1.15em;
+      height: 6px;
+      background: #111827;
+      border-radius: 0;
+    }
+
+    .num {
+      cursor: pointer;
+      padding: 0.005em 0.055em;
+      border-radius: 0.08em;
+      transition: color 450ms ease, background 200ms ease, box-shadow 200ms ease, transform 150ms ease;
+      user-select: none;
+      line-height: 0.9;
+    }
+
+    .num:hover:not(.used):not(.active-num) {
+      background: #e0f2fe;
+      transform: translateY(-2px);
+    }
+
+    .num.active-num {
+      color: var(--active-color);
+      background: color-mix(in srgb, var(--active-color) 12%, transparent);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--active-color) 45%, transparent);
+      outline: none;
+    }
+
+    .num.used {
+      color: var(--gray);
+      cursor: default;
+    }
+
+    .bar-section {
+      margin-top: 4px;
+      padding-top: 4px;
+    }
+
+    .number-line {
+      position: relative;
+      width: 100%;
+      padding-bottom: 42px;
+    }
+
+    .track {
+      position: relative;
+      width: 100%;
+      height: 44px;
+      background: var(--track);
+      border: 2px solid #bfdbfe;
+      border-radius: 0;
+      overflow: visible;
+      touch-action: none;
+      cursor: default;
+    }
+
+    .track.active {
+      cursor: ew-resize;
+    }
+
+    .fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      width: 0%;
+      background: var(--normal-fill);
+      border-radius: 0;
+      transition: width 450ms cubic-bezier(.2, 1.25, .35, 1), background 250ms ease;
+      z-index: 1;
+    }
+
+    .ticks {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .tick {
+      position: absolute;
+      top: -6px;
+      width: 1px;
+      height: 56px;
+      background: rgba(31, 41, 55, 0.18);
+      transform: translateX(-0.5px);
+    }
+
+    .tick.major {
+      width: 1px;
+      background: rgba(31, 41, 55, 0.32);
+      height: 62px;
+      top: -9px;
+    }
+
+    .tick.exact {
+      width: 2px;
+      background: rgba(249, 115, 22, 0.75);
+      height: 68px;
+      top: -12px;
+    }
+
+    .tick-label {
+      position: absolute;
+      top: 60px;
+      transform: translateX(-50%);
+      font-size: clamp(0.65rem, 1.8vw, 0.9rem);
+      color: #111827;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .answer-panel {
+      margin-top: 24px;
+      padding: 18px;
+      background: #f1f5f9;
+      border: 2px solid #cbd5e1;
+      border-radius: 14px;
+      text-align: center;
+    }
+
+    .answer-panel label {
+      display: block;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+
+    .answer-row {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    input[type="text"] {
+      font-size: 1.2rem;
+      padding: 10px 12px;
+      border: 2px solid #94a3b8;
+      border-radius: 10px;
+      width: min(260px, 80vw);
+    }
+
+    button {
+      font-size: 1.05rem;
+      font-weight: 800;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 10px;
+      background: #2563eb;
+      color: white;
+      cursor: pointer;
+      transition: transform 120ms ease, background 200ms ease;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+    }
+
+    .feedback {
+      min-height: 28px;
+      margin-top: 10px;
+      font-weight: 800;
+    }
+
+    .feedback.good {
+      color: var(--good);
+    }
+
+    .feedback.bad {
+      color: var(--bad);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-panel">
+    <div class="progress-shell" aria-label="Progress toward 10 correct problems">
+      <div id="progressFill" class="progress-fill"></div>
+    </div>
+    <div class="stats">
+      <div>Correct: <span id="correctCount">0</span>/10</div>
+      <div>Error total: <span id="errorCount">0</span></div>
+    </div>
+  </div>
+
+  <main>
+    <h1>Fraction Division Bar Activity</h1>
+    <p class="instructions">
+      Click each number in the division problem, then drag the colored bar to show its effect.
+    </p>
+
+    <section id="problemWrap" class="problem-wrap" aria-label="Fraction division problem"></section>
+
+    <section class="bar-section">
+      <div class="number-line">
+        <div id="track" class="track" aria-label="Interactive number line">
+          <div id="fill" class="fill"></div>
+          <div id="ticks" class="ticks"></div>
+        </div>
+      </div>
+    </section>
+
+    <form id="answerPanel" class="answer-panel hidden">
+      <label for="fractionAnswer">What reduced fraction does the filled bar represent?</label>
+      <div class="answer-row">
+        <input id="fractionAnswer" type="text" autocomplete="off" placeholder="Example: 11/3" />
+        <button type="submit">Check</button>
+      </div>
+      <div id="feedback" class="feedback" aria-live="polite"></div>
+    </form>
+  </main>
+
+  <script>
+    /*
+      For fraction division:
+      (a/b) ÷ (c/d) = (a/b) × (d/c) = (a*d)/(b*c)
+
+      Therefore:
+      a and d multiply.
+      b and c divide.
+
+      If you want a and c to multiply and b and d to divide instead, use:
+      const OPERATION_MAP = { a: "multiply", b: "divide", c: "multiply", d: "divide" };
+    */
+
+    const OPERATION_MAP = {
+      a: "multiply",
+      b: "divide",
+      c: "divide",
+      d: "multiply"
+    };
+
+    const brightColors = [
+      "#f97316",
+      "#ec4899",
+      "#8b5cf6",
+      "#06b6d4"
+    ];
+
+    const problemWrap = document.getElementById("problemWrap");
+    const progressFill = document.getElementById("progressFill");
+    const correctCountEl = document.getElementById("correctCount");
+    const errorCountEl = document.getElementById("errorCount");
+    const track = document.getElementById("track");
+    const fill = document.getElementById("fill");
+    const ticks = document.getElementById("ticks");
+    const answerPanel = document.getElementById("answerPanel");
+    const answerInput = document.getElementById("fractionAnswer");
+    const feedback = document.getElementById("feedback");
+
+    let a, b, c, d;
+    let scaleMax = 1;
+    let currentFill = 1;
+    let correctFill = 1;
+    let activeSelection = null;
+    let dragging = false;
+    let clickedRoles = new Set();
+    let correctProblems = 0;
+    let errorTotal = 0;
+    let reducedAnswer = { num: 1, den: 1 };
+
+    window.activityComplete = window.activityComplete || function () {
+      alert("Activity complete — excellent work!");
+    };
+
+    function gcd(x, y) {
+      x = Math.abs(x);
+      y = Math.abs(y);
+
+      while (y !== 0) {
+        const t = y;
+        y = x % y;
+        x = t;
+      }
+
+      return x;
+    }
+
+    function reduceFraction(num, den) {
+      const g = gcd(num, den);
+      return {
+        num: num / g,
+        den: den / g
+      };
+    }
+
+    function randInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function generateProblem() {
+      while (true) {
+        const nextA = randInt(1, 7);
+        const nextB = randInt(1, 7);
+        const nextC = randInt(1, 7);
+        const nextD = randInt(1, 7);
+
+        if (gcd(nextA, nextB) !== 1) continue;
+        if (gcd(nextC, nextD) !== 1) continue;
+
+        const value = (nextA * nextD) / (nextB * nextC);
+
+        if (value < 0.5) continue;
+
+        return {
+          a: nextA,
+          b: nextB,
+          c: nextC,
+          d: nextD
+        };
+      }
+    }
+
+    function formatNumber(value) {
+      if (Math.abs(value - Math.round(value)) < 0.000001) {
+        return String(Math.round(value));
+      }
+
+      return Number(value.toFixed(3)).toString();
+    }
+
+    function updateStats() {
+      correctCountEl.textContent = correctProblems;
+      errorCountEl.textContent = formatNumber(errorTotal);
+      progressFill.style.width = `${(correctProblems / 10) * 100}%`;
+    }
+
+    function renderProblem() {
+      problemWrap.classList.remove("complete");
+
+      problemWrap.innerHTML = `
+        <div class="complex-fraction">
+          <div class="simple-frac" aria-label="top fraction ${a} over ${b}">
+            <span class="num" data-role="a" data-value="${a}" tabindex="0" role="button">${a}</span>
+            <div class="simple-bar"></div>
+            <span class="num" data-role="b" data-value="${b}" tabindex="0" role="button">${b}</span>
+          </div>
+
+          <div class="complex-bar" aria-hidden="true"></div>
+
+          <div class="simple-frac" aria-label="bottom fraction ${c} over ${d}">
+            <span class="num" data-role="c" data-value="${c}" tabindex="0" role="button">${c}</span>
+            <div class="simple-bar"></div>
+            <span class="num" data-role="d" data-value="${d}" tabindex="0" role="button">${d}</span>
+          </div>
+        </div>
+      `;
+
+      document.querySelectorAll(".num").forEach(numEl => {
+        numEl.addEventListener("click", handleNumberClick);
+
+        numEl.addEventListener("keydown", event => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            handleNumberClick(event);
+          }
+        });
+      });
+    }
+
+    function getLabelStep(max) {
+      let step = 1;
+
+      while (Math.floor(max / step) + 1 > 10) {
+        step++;
+      }
+
+      return step;
+    }
+
+    function renderTicks(max, mode = "initial", denominator = 1, exactValue = null) {
+      ticks.innerHTML = "";
+
+      const labelStep = getLabelStep(max);
+
+      if (mode === "initial") {
+        for (let i = 0; i <= max; i++) {
+          const shouldLabel = i % labelStep === 0 || i === max;
+          addTick(i / max, shouldLabel ? i : null, true, false);
+        }
+
+        return;
+      }
+
+      const totalSteps = max * denominator;
+
+      for (let step = 0; step <= totalSteps; step++) {
+        const value = step / denominator;
+        const percent = value / max;
+        const isWholeNumber = step % denominator === 0;
+        const isExact = exactValue !== null && Math.abs(value - exactValue) < 0.000001;
+
+        let label = null;
+
+        if (isWholeNumber) {
+          const whole = Math.round(value);
+          if (whole % labelStep === 0 || whole === max) {
+            label = whole;
+          }
+        }
+
+        addTick(percent, label, isWholeNumber, isExact);
+      }
+    }
+
+    function addTick(percent, label, major = false, exact = false) {
+      const tick = document.createElement("div");
+      tick.className = "tick";
+
+      if (major) tick.classList.add("major");
+      if (exact) tick.classList.add("exact");
+
+      tick.style.left = `${percent * 100}%`;
+      ticks.appendChild(tick);
+
+      if (label !== null) {
+        const tickLabel = document.createElement("div");
+        tickLabel.className = "tick-label";
+        tickLabel.textContent = formatNumber(label);
+        tickLabel.style.left = `${percent * 100}%`;
+        ticks.appendChild(tickLabel);
+      }
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function setFillValue(value, animate = true) {
+      currentFill = clamp(value, 0, scaleMax);
+
+      fill.style.transition = animate
+        ? "width 450ms cubic-bezier(.2, 1.25, .35, 1), background 250ms ease"
+        : "none";
+
+      const percent = scaleMax === 0 ? 0 : (currentFill / scaleMax) * 100;
+      fill.style.width = `${percent}%`;
+    }
+
+    function startNewQuestion() {
+      const problem = generateProblem();
+
+      a = problem.a;
+      b = problem.b;
+      c = problem.c;
+      d = problem.d;
+
+      scaleMax = a * d;
+      currentFill = 1;
+      correctFill = 1;
+      activeSelection = null;
+      dragging = false;
+      clickedRoles = new Set();
+
+      fill.style.background = "var(--normal-fill)";
+      track.classList.remove("active");
+      answerPanel.classList.add("hidden");
+      feedback.textContent = "";
+      feedback.className = "feedback";
+
+      renderProblem();
+      renderTicks(scaleMax, "initial");
+      setFillValue(1, false);
+      updateStats();
+    }
+
+    function handleNumberClick(event) {
+      if (activeSelection) return;
+
+      const el = event.currentTarget;
+      const role = el.dataset.role;
+
+      if (clickedRoles.has(role)) return;
+
+      const value = Number(el.dataset.value);
+      const operation = OPERATION_MAP[role];
+      const color = brightColors[clickedRoles.size % brightColors.length];
+
+      let target;
+
+      if (operation === "multiply") {
+        target = correctFill * value;
+      } else {
+        target = correctFill / value;
+      }
+
+      activeSelection = {
+        el,
+        role,
+        value,
+        operation,
+        color,
+        target
+      };
+
+      el.style.setProperty("--active-color", color);
+      el.classList.add("active-num");
+
+      fill.style.background = color;
+      track.classList.add("active");
+    }
+
+    function valueFromPointer(event) {
+      const rect = track.getBoundingClientRect();
+      const x = clamp(event.clientX - rect.left, 0, rect.width);
+      return (x / rect.width) * scaleMax;
+    }
+
+    track.addEventListener("pointerdown", event => {
+      if (!activeSelection) return;
+
+      dragging = true;
+      track.setPointerCapture(event.pointerId);
+      setFillValue(valueFromPointer(event), false);
+    });
+
+    track.addEventListener("pointermove", event => {
+      if (!dragging || !activeSelection) return;
+
+      setFillValue(valueFromPointer(event), false);
+    });
+
+    track.addEventListener("pointerup", event => {
+      if (!dragging || !activeSelection) return;
+
+      dragging = false;
+      track.releasePointerCapture(event.pointerId);
+      setFillValue(valueFromPointer(event), false);
+      finishDrag();
+    });
+
+    track.addEventListener("pointercancel", () => {
+      dragging = false;
+    });
+
+    function finishDrag() {
+      const selected = activeSelection;
+      const userFill = currentFill;
+      const target = selected.target;
+      const difference = Math.abs(userFill - target);
+
+      errorTotal += difference;
+      updateStats();
+
+      selected.el.classList.remove("active-num");
+      selected.el.classList.add("used");
+      selected.el.removeAttribute("tabindex");
+
+      clickedRoles.add(selected.role);
+      activeSelection = null;
+      track.classList.remove("active");
+
+      const direction = target >= userFill ? 1 : -1;
+      const overshootAmount = Math.min(
+        scaleMax * 0.04,
+        Math.abs(target - userFill) * 0.35 + 0.05
+      );
+
+      const overshoot = clamp(target + direction * overshootAmount, 0, scaleMax);
+
+      setFillValue(overshoot, true);
+
+      setTimeout(() => {
+        setFillValue(target, true);
+      }, 130);
+
+      setTimeout(() => {
+        correctFill = target;
+        currentFill = target;
+        fill.style.background = "var(--normal-fill)";
+
+        if (clickedRoles.size === 4) {
+          showFinalAnswerStage();
+        }
+      }, 650);
+    }
+
+    function showFinalAnswerStage() {
+      problemWrap.classList.add("complete");
+
+      reducedAnswer = reduceFraction(a * d, b * c);
+
+      const finalValue = reducedAnswer.num / reducedAnswer.den;
+
+      scaleMax = Math.max(1, Math.ceil(finalValue));
+
+      renderTicks(scaleMax, "final", reducedAnswer.den, finalValue);
+      setFillValue(finalValue, true);
+
+      answerPanel.classList.remove("hidden");
+      answerInput.value = "";
+      answerInput.focus();
+    }
+
+    function parseFractionResponse(text) {
+      const clean = text.trim().replace(/\s+/g, "");
+
+      if (/^\d+$/.test(clean)) {
+        return {
+          num: Number(clean),
+          den: 1
+        };
+      }
+
+      const match = clean.match(/^(\d+)\/(\d+)$/);
+
+      if (!match) return null;
+
+      const num = Number(match[1]);
+      const den = Number(match[2]);
+
+      if (den === 0) return null;
+
+      return { num, den };
+    }
+
+    answerPanel.addEventListener("submit", event => {
+      event.preventDefault();
+
+      const response = parseFractionResponse(answerInput.value);
+
+      if (!response) {
+        markIncorrect("Enter a fraction like 11/3, or a whole number like 4.");
+        return;
+      }
+
+      const isReduced = gcd(response.num, response.den) === 1;
+      const isEquivalent =
+        response.num * reducedAnswer.den === reducedAnswer.num * response.den;
+
+      const isExactlyCorrect =
+        response.num === reducedAnswer.num &&
+        response.den === reducedAnswer.den;
+
+      if (isExactlyCorrect && isReduced) {
+        feedback.textContent = "Correct!";
+        feedback.className = "feedback good";
+
+        correctProblems++;
+        updateStats();
+
+        if (correctProblems >= 10) {
+          progressFill.style.width = "100%";
+
+          setTimeout(() => {
+            activityComplete();
+          }, 500);
+        } else {
+          setTimeout(startNewQuestion, 900);
+        }
+      } else if (isEquivalent && !isReduced) {
+        markIncorrect("That is equivalent, but it is not reduced.");
+      } else {
+        markIncorrect("Not quite. Try the reduced fraction shown by the filled bar.");
+      }
+    });
+
+    function markIncorrect(message) {
+      errorTotal += 2;
+      updateStats();
+
+      feedback.textContent = `${message} Error +2.`;
+      feedback.className = "feedback bad";
+      answerInput.select();
+    }
+
+    startNewQuestion();
+  </script>
+</body>
+</html>
+```

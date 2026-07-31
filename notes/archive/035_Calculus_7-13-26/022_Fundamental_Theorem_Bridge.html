@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Fundamental Theorem Bridge</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --ink: #1f2937;
+      --muted: #6b7280;
+      --blue: #2563eb;
+      --maize: #ffcb05;
+      --green: #16a34a;
+      --red: #dc2626;
+      --orange: #ea580c;
+      --purple: #7c3aed;
+      --grid: #dbe3ef;
+      --axis: #334155;
+      --bad: #fee2e2;
+      --good: #dcfce7;
+      --warn: #ffedd5;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #e8f0ff, var(--bg));
+      color: var(--ink);
+    }
+
+    header {
+      padding: 1.25rem 1rem;
+      background: linear-gradient(135deg, #00274c, #2563eb);
+      color: white;
+      box-shadow: 0 3px 14px rgba(0, 0, 0, 0.2);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: clamp(1.5rem, 3vw, 2.4rem);
+    }
+
+    header p {
+      margin: 0.4rem 0 0;
+      color: #e5efff;
+      max-width: 900px;
+      line-height: 1.45;
+    }
+
+    main {
+      max-width: 1250px;
+      margin: 0 auto;
+      padding: 1rem;
+      display: grid;
+      grid-template-columns: 310px 1fr;
+      gap: 1rem;
+    }
+
+    @media (max-width: 950px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--panel);
+      border-radius: 18px;
+      box-shadow: 0 8px 28px rgba(15, 23, 42, 0.1);
+      padding: 1rem;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    h2, h3 {
+      margin-top: 0;
+    }
+
+    h2 {
+      font-size: 1.25rem;
+    }
+
+    h3 {
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .control-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 0.55rem 0;
+    }
+
+    label {
+      font-weight: 650;
+    }
+
+    select, button {
+      font: inherit;
+      border-radius: 999px;
+      border: 1px solid #cbd5e1;
+      background: white;
+      padding: 0.55rem 0.75rem;
+    }
+
+    select {
+      width: 100%;
+    }
+
+    button {
+      cursor: pointer;
+      transition: transform 0.1s ease, background 0.15s ease, color 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      background: #f1f5f9;
+    }
+
+    button.primary {
+      background: var(--blue);
+      color: white;
+      border-color: var(--blue);
+    }
+
+    button.primary:hover {
+      background: #1d4ed8;
+    }
+
+    button.marker-btn.active {
+      background: var(--maize);
+      border-color: #d6a900;
+      color: #172554;
+      font-weight: 800;
+    }
+
+    .small {
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .formula {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      padding: 0.65rem;
+      border-radius: 12px;
+      overflow-x: auto;
+    }
+
+    .readout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+
+    .metric {
+      background: #f8fafc;
+      border-radius: 14px;
+      padding: 0.65rem;
+      border: 1px solid #e2e8f0;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 1.15rem;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .status {
+      border-radius: 14px;
+      padding: 0.8rem;
+      font-weight: 750;
+      border: 1px solid transparent;
+    }
+
+    .status.good {
+      background: var(--good);
+      border-color: #86efac;
+      color: #14532d;
+    }
+
+    .status.warn {
+      background: var(--warn);
+      border-color: #fdba74;
+      color: #7c2d12;
+    }
+
+    .status.bad {
+      background: var(--bad);
+      border-color: #fecaca;
+      color: #7f1d1d;
+    }
+
+    .graphs {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .graph-card {
+      padding: 0.75rem;
+    }
+
+    .graph-title {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .graph-title h2 {
+      margin: 0;
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      background: linear-gradient(#ffffff, #f8fbff);
+      border-radius: 16px;
+      border: 1px solid #dbe3ef;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .axis {
+      stroke: var(--axis);
+      stroke-width: 1.4;
+    }
+
+    .grid {
+      stroke: var(--grid);
+      stroke-width: 1;
+    }
+
+    .tick-label {
+      font-size: 11px;
+      fill: #475569;
+    }
+
+    .rate-path {
+      fill: none;
+      stroke: var(--blue);
+      stroke-width: 3.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .true-path {
+      fill: none;
+      stroke: rgba(22, 163, 74, 0.9);
+      stroke-width: 3;
+      stroke-dasharray: 7 6;
+      stroke-linecap: round;
+    }
+
+    .student-path {
+      fill: none;
+      stroke: #7c3aed;
+      stroke-width: 4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .area-fill {
+      fill: rgba(37, 99, 235, 0.18);
+      stroke: rgba(37, 99, 235, 0.35);
+      stroke-width: 1;
+    }
+
+    .area-fill.negative {
+      fill: rgba(220, 38, 38, 0.16);
+      stroke: rgba(220, 38, 38, 0.28);
+    }
+
+    .cursor-line {
+      stroke: #111827;
+      stroke-width: 2;
+      stroke-dasharray: 5 5;
+      pointer-events: none;
+    }
+
+    .cursor-dot {
+      fill: var(--maize);
+      stroke: #111827;
+      stroke-width: 2;
+      pointer-events: none;
+    }
+
+    .control-point {
+      cursor: grab;
+      stroke: white;
+      stroke-width: 3;
+      filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.25));
+    }
+
+    .control-point.locked {
+      cursor: not-allowed;
+      fill: #64748b;
+    }
+
+    .control-point.good {
+      fill: var(--green);
+    }
+
+    .control-point.bad {
+      fill: var(--red);
+    }
+
+    .control-point.neutral {
+      fill: var(--purple);
+    }
+
+    .tangent {
+      stroke: var(--orange);
+      stroke-width: 3;
+      stroke-linecap: round;
+      pointer-events: none;
+    }
+
+    .marker {
+      pointer-events: none;
+    }
+
+    .marker text {
+      font-size: 12px;
+      font-weight: 800;
+      paint-order: stroke;
+      stroke: white;
+      stroke-width: 3px;
+      fill: #111827;
+    }
+
+    .canyon {
+      fill: rgba(15, 23, 42, 0.08);
+    }
+
+    .bridge-support {
+      stroke: #94a3b8;
+      stroke-width: 1.2;
+      stroke-dasharray: 3 5;
+    }
+
+    .legend {
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .swatch {
+      width: 1rem;
+      height: 0.25rem;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .feature-list {
+      list-style: none;
+      padding: 0;
+      margin: 0.5rem 0 0;
+      display: grid;
+      gap: 0.4rem;
+    }
+
+    .feature-list li {
+      padding: 0.45rem 0.55rem;
+      border-radius: 10px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      font-size: 0.92rem;
+    }
+
+    .feature-list li.done {
+      background: var(--good);
+      border-color: #86efac;
+    }
+
+    .toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+
+    input[type="checkbox"] {
+      transform: scale(1.15);
+    }
+
+    .hint-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e3a8a;
+      border-radius: 14px;
+      padding: 0.75rem;
+      font-size: 0.93rem;
+      line-height: 1.45;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Fundamental Theorem Bridge</h1>
+    <p>
+      Build the bridge shape <strong>A(x)</strong> from the wind-speed graph <strong>f(x)</strong>.
+      The rule is the Fundamental Theorem of Calculus:
+      <strong>A′(x) = f(x)</strong>.
+    </p>
+  </header>
+
+  <main>
+    <aside class="sidebar">
+      <section class="card">
+        <h2>Level</h2>
+        <label for="levelSelect">Choose a rate function</label>
+        <select id="levelSelect"></select>
+
+        <div class="formula" id="formulaBox"></div>
+
+        <div class="control-row">
+          <button class="primary" id="checkBtn">Check Bridge</button>
+          <button id="resetBtn">Reset Curve</button>
+        </div>
+
+        <label class="toggle">
+          <input type="checkbox" id="guideToggle" />
+          Show exact accumulation guide
+        </label>
+
+        <p class="small">
+          The first point is locked at <strong>A(a)=0</strong>. Drag the other points so the slope of
+          your bridge matches the height of the top graph.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Cursor Readout</h2>
+        <div class="readout">
+          <div class="metric">
+            <strong id="xReadout">x = —</strong>
+            <span>current location</span>
+          </div>
+          <div class="metric">
+            <strong id="fReadout">f(x) = —</strong>
+            <span>desired slope</span>
+          </div>
+          <div class="metric">
+            <strong id="areaReadout">A(x) ≈ —</strong>
+            <span>true accumulation</span>
+          </div>
+          <div class="metric">
+            <strong id="slopeReadout">slope ≈ —</strong>
+            <span>your local slope</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Bridge Stability</h2>
+        <div id="statusBox" class="status warn">
+          Drag the purple points, then check your bridge.
+        </div>
+        <p class="small" id="scoreDetails"></p>
+      </section>
+
+      <section class="card">
+        <h2>Feature Markers</h2>
+        <p class="small">
+          Pick a marker, then click on the lower graph. For intervals, click anywhere on a matching part.
+        </p>
+
+        <div class="control-row">
+          <button class="marker-btn" data-marker="increasing">Increasing</button>
+          <button class="marker-btn" data-marker="decreasing">Decreasing</button>
+          <button class="marker-btn" data-marker="max">Local max</button>
+          <button class="marker-btn" data-marker="min">Local min</button>
+          <button class="marker-btn" data-marker="inflection">Inflection</button>
+        </div>
+
+        <button id="clearMarkersBtn">Clear markers</button>
+
+        <ul class="feature-list" id="featureList"></ul>
+      </section>
+
+      <section class="card">
+        <h2>Key idea</h2>
+        <div class="hint-box">
+          <strong>Height on top = slope on bottom.</strong><br />
+          If <strong>f(x)&gt;0</strong>, then <strong>A</strong> rises.
+          If <strong>f(x)&lt;0</strong>, then <strong>A</strong> falls.
+          If <strong>f(x)=0</strong>, then <strong>A</strong> has a horizontal tangent.
+        </div>
+      </section>
+    </aside>
+
+    <section class="graphs">
+      <section class="card graph-card">
+        <div class="graph-title">
+          <h2>Top graph: rate function f(x)</h2>
+          <span class="small">Move across this graph to inspect the desired slope.</span>
+        </div>
+        <svg id="rateSvg" viewBox="0 0 820 300" aria-label="Rate function graph"></svg>
+      </section>
+
+      <section class="card graph-card">
+        <div class="graph-title">
+          <h2>Bottom graph: bridge shape A(x)</h2>
+          <span class="small">Drag the points. Slope should match f(x).</span>
+        </div>
+
+        <svg id="accumSvg" viewBox="0 0 820 360" aria-label="Accumulation function graph"></svg>
+
+        <div class="legend" style="margin-top:0.6rem;">
+          <span><i class="swatch" style="background:#2563eb;"></i> f(x)</span>
+          <span><i class="swatch" style="background:#7c3aed;"></i> your A(x)</span>
+          <span><i class="swatch" style="background:#16a34a;"></i> exact guide</span>
+          <span><i class="swatch" style="background:#ea580c;"></i> tangent slope</span>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const SVG_NS = "http://www.w3.org/2000/svg";
+
+    const rateSvg = document.getElementById("rateSvg");
+    const accumSvg = document.getElementById("accumSvg");
+
+    const levelSelect = document.getElementById("levelSelect");
+    const formulaBox = document.getElementById("formulaBox");
+    const guideToggle = document.getElementById("guideToggle");
+
+    const xReadout = document.getElementById("xReadout");
+    const fReadout = document.getElementById("fReadout");
+    const areaReadout = document.getElementById("areaReadout");
+    const slopeReadout = document.getElementById("slopeReadout");
+
+    const statusBox = document.getElementById("statusBox");
+    const scoreDetails = document.getElementById("scoreDetails");
+    const featureList = document.getElementById("featureList");
+
+    const W = 820;
+    const H_RATE = 300;
+    const H_ACCUM = 360;
+
+    const pad = {
+      left: 58,
+      right: 24,
+      top: 28,
+      bottom: 42
+    };
+
+    const levels = [
+      {
+        name: "Training: piecewise constant wind",
+        formula: "f(x) = 1 for x<1.5, -0.8 for 1.5≤x<3, 1.6 for 3≤x<4.5, 0.3 after",
+        xmin: 0,
+        xmax: 6,
+        f: x => x < 1.5 ? 1 : x < 3 ? -0.8 : x < 4.5 ? 1.6 : 0.3,
+        tolerance: 0.38,
+        features: {
+          increasing: true,
+          decreasing: true,
+          max: [1.5],
+          min: [3],
+          inflection: []
+        }
+      },
+      {
+        name: "Level 1: constant rate",
+        formula: "f(x) = 2",
+        xmin: 0,
+        xmax: 5,
+        f: x => 2,
+        tolerance: 0.45,
+        features: {
+          increasing: true,
+          decreasing: false,
+          max: [],
+          min: [],
+          inflection: []
+        }
+      },
+      {
+        name: "Level 2: linear rate",
+        formula: "f(x) = x",
+        xmin: -3,
+        xmax: 3,
+        f: x => x,
+        tolerance: 0.5,
+        features: {
+          increasing: true,
+          decreasing: true,
+          max: [],
+          min: [0],
+          inflection: []
+        }
+      },
+      {
+        name: "Level 3: quadratic rate",
+        formula: "f(x) = x² - 1",
+        xmin: -2,
+        xmax: 2,
+        f: x => x * x - 1,
+        tolerance: 0.42,
+        features: {
+          increasing: true,
+          decreasing: true,
+          max: [-1],
+          min: [1],
+          inflection: [0]
+        }
+      },
+      {
+        name: "Level 4: sinusoidal rate",
+        formula: "f(x) = sin(x)",
+        xmin: 0,
+        xmax: Math.PI * 2,
+        f: x => Math.sin(x),
+        tolerance: 0.32,
+        features: {
+          increasing: true,
+          decreasing: true,
+          max: [Math.PI],
+          min: [],
+          inflection: [Math.PI / 2, 3 * Math.PI / 2]
+        }
+      }
+    ];
+
+    let currentLevelIndex = 0;
+    let level = levels[0];
+
+    let samples = [];
+    let xMin, xMax, yRateMin, yRateMax, yAccumMin, yAccumMax;
+    let cursorX;
+    let controlPoints = [];
+    let draggingPointIndex = null;
+    let draggingCursor = false;
+    let selectedMarker = null;
+    let markers = [];
+
+    const N_CONTROL = 11;
+    const SAMPLE_N = 700;
+
+    function createSvgElement(type, attrs = {}) {
+      const el = document.createElementNS(SVG_NS, type);
+      for (const [k, v] of Object.entries(attrs)) {
+        el.setAttribute(k, v);
+      }
+      return el;
+    }
+
+    function clearSvg(svg) {
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+    }
+
+    function fmt(n, digits = 2) {
+      if (!Number.isFinite(n)) return "—";
+      return Number(n).toFixed(digits);
+    }
+
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+
+    function clamp(v, lo, hi) {
+      return Math.max(lo, Math.min(hi, v));
+    }
+
+    function signWithThreshold(v, eps = 1e-4) {
+      if (v > eps) return 1;
+      if (v < -eps) return -1;
+      return 0;
+    }
+
+    function setupLevelOptions() {
+      levels.forEach((lvl, i) => {
+        const opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = lvl.name;
+        levelSelect.appendChild(opt);
+      });
+    }
+
+    function initializeLevel(index) {
+      currentLevelIndex = Number(index);
+      level = levels[currentLevelIndex];
+
+      xMin = level.xmin;
+      xMax = level.xmax;
+      cursorX = xMin;
+
+      formulaBox.textContent = level.formula;
+      markers = [];
+      selectedMarker = null;
+      document.querySelectorAll(".marker-btn").forEach(btn => btn.classList.remove("active"));
+
+      computeSamples();
+      initializeControlPoints();
+      updateFeatureList();
+
+      statusBox.className = "status warn";
+      statusBox.textContent = "Drag the purple points, then check your bridge.";
+      scoreDetails.textContent = "";
+
+      renderAll();
+    }
+
+    function computeSamples() {
+      samples = [];
+
+      let area = 0;
+      let prevX = xMin;
+      let prevF = level.f(prevX);
+
+      let fMin = Infinity;
+      let fMax = -Infinity;
+      let aMin = 0;
+      let aMax = 0;
+
+      for (let i = 0; i <= SAMPLE_N; i++) {
+        const t = i / SAMPLE_N;
+        const x = lerp(xMin, xMax, t);
+        const fx = level.f(x);
+
+        if (i > 0) {
+          area += 0.5 * (prevF + fx) * (x - prevX);
+        }
+
+        samples.push({ x, f: fx, A: area });
+
+        fMin = Math.min(fMin, fx);
+        fMax = Math.max(fMax, fx);
+        aMin = Math.min(aMin, area);
+        aMax = Math.max(aMax, area);
+
+        prevX = x;
+        prevF = fx;
+      }
+
+      const fPad = Math.max(0.5, 0.18 * (fMax - fMin || 1));
+      yRateMin = Math.min(fMin - fPad, -0.5);
+      yRateMax = Math.max(fMax + fPad, 0.5);
+
+      const aPad = Math.max(1, 0.18 * (aMax - aMin || 1));
+      yAccumMin = aMin - aPad;
+      yAccumMax = aMax + aPad;
+    }
+
+    function exactA(x) {
+      if (x <= xMin) return 0;
+      if (x >= xMax) return samples[samples.length - 1].A;
+
+      const t = (x - xMin) / (xMax - xMin) * SAMPLE_N;
+      const i = Math.floor(t);
+      const frac = t - i;
+
+      const s0 = samples[i];
+      const s1 = samples[i + 1];
+
+      return lerp(s0.A, s1.A, frac);
+    }
+
+    function exactF(x) {
+      return level.f(x);
+    }
+
+    function xToSvg(x) {
+      return pad.left + (x - xMin) / (xMax - xMin) * (W - pad.left - pad.right);
+    }
+
+    function svgToX(px) {
+      return xMin + (px - pad.left) / (W - pad.left - pad.right) * (xMax - xMin);
+    }
+
+    function yRateToSvg(y) {
+      return pad.top + (yRateMax - y) / (yRateMax - yRateMin) * (H_RATE - pad.top - pad.bottom);
+    }
+
+    function yAccumToSvg(y) {
+      return pad.top + (yAccumMax - y) / (yAccumMax - yAccumMin) * (H_ACCUM - pad.top - pad.bottom);
+    }
+
+    function svgToAccumY(py) {
+      return yAccumMax - (py - pad.top) / (H_ACCUM - pad.top - pad.bottom) * (yAccumMax - yAccumMin);
+    }
+
+    function svgPoint(svg, event) {
+      const pt = svg.createSVGPoint();
+      pt.x = event.clientX;
+      pt.y = event.clientY;
+      return pt.matrixTransform(svg.getScreenCTM().inverse());
+    }
+
+    function initializeControlPoints() {
+      controlPoints = [];
+
+      for (let i = 0; i < N_CONTROL; i++) {
+        const t = i / (N_CONTROL - 1);
+        const x = lerp(xMin, xMax, t);
+
+        controlPoints.push({
+          x,
+          y: 0,
+          locked: i === 0
+        });
+      }
+    }
+
+    function makePolylinePath(points, mapY, smooth = false) {
+      if (!points.length) return "";
+
+      if (!smooth || points.length < 3) {
+        return points
+          .map((p, i) => `${i === 0 ? "M" : "L"} ${xToSvg(p.x)} ${mapY(p.y)}`)
+          .join(" ");
+      }
+
+      let d = `M ${xToSvg(points[0].x)} ${mapY(points[0].y)}`;
+
+      for (let i = 0; i < points.length - 1; i++) {
+        const p0 = points[i - 1] || points[i];
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        const p3 = points[i + 2] || p2;
+
+        const c1x = p1.x + (p2.x - p0.x) / 6;
+        const c1y = p1.y + (p2.y - p0.y) / 6;
+        const c2x = p2.x - (p3.x - p1.x) / 6;
+        const c2y = p2.y - (p3.y - p1.y) / 6;
+
+        d += ` C ${xToSvg(c1x)} ${mapY(c1y)}, ${xToSvg(c2x)} ${mapY(c2y)}, ${xToSvg(p2.x)} ${mapY(p2.y)}`;
+      }
+
+      return d;
+    }
+
+    function drawGrid(svg, height, yMin, yMax, yToSvg) {
+      const graphLeft = pad.left;
+      const graphRight = W - pad.right;
+      const graphTop = pad.top;
+      const graphBottom = height - pad.bottom;
+
+      for (let i = 0; i <= 8; i++) {
+        const x = lerp(xMin, xMax, i / 8);
+        const px = xToSvg(x);
+
+        svg.appendChild(createSvgElement("line", {
+          x1: px,
+          y1: graphTop,
+          x2: px,
+          y2: graphBottom,
+          class: "grid"
+        }));
+
+        svg.appendChild(createSvgElement("text", {
+          x: px,
+          y: height - 15,
+          "text-anchor": "middle",
+          class: "tick-label"
+        })).textContent = fmt(x, Math.abs(xMax - xMin) > 7 ? 1 : 2);
+      }
+
+      for (let i = 0; i <= 6; i++) {
+        const y = lerp(yMin, yMax, i / 6);
+        const py = yToSvg(y);
+
+        svg.appendChild(createSvgElement("line", {
+          x1: graphLeft,
+          y1: py,
+          x2: graphRight,
+          y2: py,
+          class: "grid"
+        }));
+
+        svg.appendChild(createSvgElement("text", {
+          x: 45,
+          y: py + 4,
+          "text-anchor": "end",
+          class: "tick-label"
+        })).textContent = fmt(y, 1);
+      }
+
+      svg.appendChild(createSvgElement("line", {
+        x1: graphLeft,
+        y1: graphBottom,
+        x2: graphRight,
+        y2: graphBottom,
+        class: "axis"
+      }));
+
+      svg.appendChild(createSvgElement("line", {
+        x1: graphLeft,
+        y1: graphTop,
+        x2: graphLeft,
+        y2: graphBottom,
+        class: "axis"
+      }));
+
+      if (yMin <= 0 && yMax >= 0) {
+        svg.appendChild(createSvgElement("line", {
+          x1: graphLeft,
+          y1: yToSvg(0),
+          x2: graphRight,
+          y2: yToSvg(0),
+          class: "axis",
+          opacity: 0.75
+        }));
+      }
+    }
+
+    function renderRateGraph() {
+      clearSvg(rateSvg);
+      drawGrid(rateSvg, H_RATE, yRateMin, yRateMax, yRateToSvg);
+
+      const ratePathData = samples
+        .map((s, i) => `${i === 0 ? "M" : "L"} ${xToSvg(s.x)} ${yRateToSvg(s.f)}`)
+        .join(" ");
+
+      const ratePath = createSvgElement("path", {
+        d: ratePathData,
+        class: "rate-path"
+      });
+
+      rateSvg.appendChild(ratePath);
+
+      drawAccumulatedAreaOnRateGraph();
+
+      const px = xToSvg(cursorX);
+      const py = yRateToSvg(exactF(cursorX));
+
+      rateSvg.appendChild(createSvgElement("line", {
+        x1: px,
+        y1: pad.top,
+        x2: px,
+        y2: H_RATE - pad.bottom,
+        class: "cursor-line"
+      }));
+
+      rateSvg.appendChild(createSvgElement("circle", {
+        cx: px,
+        cy: py,
+        r: 7,
+        class: "cursor-dot"
+      }));
+    }
+
+    function drawAccumulatedAreaOnRateGraph() {
+      const zeroY = yRateToSvg(0);
+      const endIndex = Math.max(0, Math.min(SAMPLE_N, Math.round((cursorX - xMin) / (xMax - xMin) * SAMPLE_N)));
+      const areaSamples = samples.slice(0, endIndex + 1);
+
+      if (areaSamples.length < 2) return;
+
+      const d = [
+        `M ${xToSvg(xMin)} ${zeroY}`,
+        ...areaSamples.map(s => `L ${xToSvg(s.x)} ${yRateToSvg(s.f)}`),
+        `L ${xToSvg(areaSamples[areaSamples.length - 1].x)} ${zeroY}`,
+        "Z"
+      ].join(" ");
+
+      const fAtCursor = exactF(cursorX);
+
+      rateSvg.insertBefore(createSvgElement("path", {
+        d,
+        class: `area-fill ${fAtCursor < 0 ? "negative" : ""}`
+      }), rateSvg.firstChild.nextSibling);
+    }
+
+    function renderAccumGraph() {
+      clearSvg(accumSvg);
+      drawGrid(accumSvg, H_ACCUM, yAccumMin, yAccumMax, yAccumToSvg);
+
+      drawCanyonBackdrop();
+
+      const studentD = makePolylinePath(controlPoints, yAccumToSvg, true);
+      const studentPath = createSvgElement("path", {
+        d: studentD,
+        class: "student-path"
+      });
+      accumSvg.appendChild(studentPath);
+
+      if (guideToggle.checked) {
+        const exactPoints = samples.map(s => ({ x: s.x, y: s.A }));
+        const exactD = makePolylinePath(exactPoints, yAccumToSvg, false);
+        accumSvg.appendChild(createSvgElement("path", {
+          d: exactD,
+          class: "true-path"
+        }));
+      }
+
+      drawTangentProbe();
+      drawAccumCursor();
+      drawControlPoints();
+      drawMarkers();
+    }
+
+    function drawCanyonBackdrop() {
+      const left = xToSvg(xMin);
+      const right = xToSvg(xMax);
+      const bottom = H_ACCUM - pad.bottom;
+      const mid = yAccumToSvg(lerp(yAccumMin, yAccumMax, 0.35));
+
+      const d = `
+        M ${left} ${bottom}
+        C ${left + 80} ${mid + 40}, ${left + 160} ${bottom - 20}, ${left + 230} ${mid + 70}
+        C ${left + 330} ${bottom + 25}, ${right - 240} ${mid + 30}, ${right - 160} ${bottom - 20}
+        C ${right - 80} ${mid + 55}, ${right - 40} ${bottom - 5}, ${right} ${bottom}
+        Z
+      `;
+
+      accumSvg.appendChild(createSvgElement("path", {
+        d,
+        class: "canyon"
+      }));
+
+      for (let i = 0; i < controlPoints.length; i++) {
+        const x = xToSvg(controlPoints[i].x);
+        accumSvg.appendChild(createSvgElement("line", {
+          x1: x,
+          y1: pad.top,
+          x2: x,
+          y2: H_ACCUM - pad.bottom,
+          class: "bridge-support"
+        }));
+      }
+    }
+
+    function drawAccumCursor() {
+      const px = xToSvg(cursorX);
+
+      accumSvg.appendChild(createSvgElement("line", {
+        x1: px,
+        y1: pad.top,
+        x2: px,
+        y2: H_ACCUM - pad.bottom,
+        class: "cursor-line"
+      }));
+    }
+
+    function interpolateStudentY(x) {
+      if (x <= controlPoints[0].x) return controlPoints[0].y;
+      if (x >= controlPoints[controlPoints.length - 1].x) return controlPoints[controlPoints.length - 1].y;
+
+      for (let i = 0; i < controlPoints.length - 1; i++) {
+        const p0 = controlPoints[i];
+        const p1 = controlPoints[i + 1];
+
+        if (x >= p0.x && x <= p1.x) {
+          const t = (x - p0.x) / (p1.x - p0.x);
+          return lerp(p0.y, p1.y, t);
+        }
+      }
+
+      return 0;
+    }
+
+    function approximateStudentSlopeAtX(x) {
+      const h = (xMax - xMin) / 100;
+      const x0 = clamp(x - h, xMin, xMax);
+      const x1 = clamp(x + h, xMin, xMax);
+
+      if (x1 === x0) return 0;
+      return (interpolateStudentY(x1) - interpolateStudentY(x0)) / (x1 - x0);
+    }
+
+    function drawTangentProbe() {
+      const x = cursorX;
+      const slope = exactF(x);
+      const y = interpolateStudentY(x);
+
+      const dx = (xMax - xMin) * 0.055;
+      const x0 = clamp(x - dx, xMin, xMax);
+      const x1 = clamp(x + dx, xMin, xMax);
+      const y0 = y + slope * (x0 - x);
+      const y1 = y + slope * (x1 - x);
+
+      accumSvg.appendChild(createSvgElement("line", {
+        x1: xToSvg(x0),
+        y1: yAccumToSvg(y0),
+        x2: xToSvg(x1),
+        y2: yAccumToSvg(y1),
+        class: "tangent"
+      }));
+
+      accumSvg.appendChild(createSvgElement("circle", {
+        cx: xToSvg(x),
+        cy: yAccumToSvg(y),
+        r: 5,
+        fill: "#ea580c",
+        stroke: "white",
+        "stroke-width": 2
+      }));
+    }
+
+    function drawControlPoints() {
+      const results = slopeResults();
+
+      controlPoints.forEach((p, i) => {
+        const cls = p.locked
+          ? "control-point locked"
+          : results.pointOkay[i]
+            ? "control-point good"
+            : "control-point bad";
+
+        const circle = createSvgElement("circle", {
+          cx: xToSvg(p.x),
+          cy: yAccumToSvg(p.y),
+          r: p.locked ? 8 : 9,
+          class: cls,
+          "data-index": i
+        });
+
+        circle.addEventListener("pointerdown", e => {
+          if (p.locked) return;
+          draggingPointIndex = i;
+          circle.setPointerCapture(e.pointerId);
+        });
+
+        accumSvg.appendChild(circle);
+      });
+    }
+
+    function drawMarkers() {
+      markers.forEach(m => {
+        const g = createSvgElement("g", { class: "marker" });
+
+        const color = markerColor(m.type);
+        const px = xToSvg(m.x);
+        const py = yAccumToSvg(m.y);
+
+        g.appendChild(createSvgElement("circle", {
+          cx: px,
+          cy: py,
+          r: 9,
+          fill: color,
+          stroke: "white",
+          "stroke-width": 3
+        }));
+
+        const label = markerShortLabel(m.type);
+
+        const text = createSvgElement("text", {
+          x: px,
+          y: py - 14,
+          "text-anchor": "middle"
+        });
+        text.textContent = label;
+        g.appendChild(text);
+
+        accumSvg.appendChild(g);
+      });
+    }
+
+    function markerColor(type) {
+      return {
+        increasing: "#16a34a",
+        decreasing: "#dc2626",
+        max: "#f59e0b",
+        min: "#06b6d4",
+        inflection: "#7c3aed"
+      }[type] || "#111827";
+    }
+
+    function markerShortLabel(type) {
+      return {
+        increasing: "inc",
+        decreasing: "dec",
+        max: "max",
+        min: "min",
+        inflection: "infl"
+      }[type] || "?";
+    }
+
+    function renderAll() {
+      renderRateGraph();
+      renderAccumGraph();
+      updateReadouts();
+      updateFeatureList();
+    }
+
+    function updateReadouts() {
+      const f = exactF(cursorX);
+      const A = exactA(cursorX);
+      const studentSlope = approximateStudentSlopeAtX(cursorX);
+
+      xReadout.textContent = `x = ${fmt(cursorX, 2)}`;
+      fReadout.textContent = `f(x) = ${fmt(f, 2)}`;
+      areaReadout.textContent = `A(x) ≈ ${fmt(A, 2)}`;
+      slopeReadout.textContent = `slope ≈ ${fmt(studentSlope, 2)}`;
+    }
+
+    function slopeResults() {
+      const pointOkay = Array(controlPoints.length).fill(false);
+      const errors = [];
+
+      for (let i = 0; i < controlPoints.length; i++) {
+        let slope;
+
+        if (i === 0) {
+          slope = (controlPoints[1].y - controlPoints[0].y) /
+            (controlPoints[1].x - controlPoints[0].x);
+        } else if (i === controlPoints.length - 1) {
+          slope = (controlPoints[i].y - controlPoints[i - 1].y) /
+            (controlPoints[i].x - controlPoints[i - 1].x);
+        } else {
+          slope = (controlPoints[i + 1].y - controlPoints[i - 1].y) /
+            (controlPoints[i + 1].x - controlPoints[i - 1].x);
+        }
+
+        const target = exactF(controlPoints[i].x);
+        const err = Math.abs(slope - target);
+        errors.push(err);
+
+        pointOkay[i] = err <= level.tolerance;
+      }
+
+      const okayCount = pointOkay.filter(Boolean).length;
+      const score = okayCount / pointOkay.length;
+
+      const avgErr = errors.reduce((a, b) => a + b, 0) / errors.length;
+
+      return {
+        pointOkay,
+        score,
+        avgErr
+      };
+    }
+
+    function checkBridge() {
+      const { score, avgErr } = slopeResults();
+
+      const percent = Math.round(score * 100);
+
+      if (score >= 0.85) {
+        statusBox.className = "status good";
+        statusBox.textContent = `Bridge stable! ${percent}% of slope checks match the wind.`;
+      } else if (score >= 0.6) {
+        statusBox.className = "status warn";
+        statusBox.textContent = `Bridge wobbling. ${percent}% stable. Tune the slopes where points are red.`;
+      } else {
+        statusBox.className = "status bad";
+        statusBox.textContent = `Bridge collapse! Only ${percent}% stable. Remember: f(x) is the slope of A(x).`;
+      }
+
+      scoreDetails.textContent =
+        `Average slope error: ${fmt(avgErr, 2)}. Tolerance for this level: ±${level.tolerance}.`;
+
+      renderAll();
+    }
+
+    function resetCurve() {
+      initializeControlPoints();
+      markers = [];
+      statusBox.className = "status warn";
+      statusBox.textContent = "Curve reset. Try building the bridge again.";
+      scoreDetails.textContent = "";
+      renderAll();
+    }
+
+    function updateCursorFromEvent(e) {
+      const pt = svgPoint(rateSvg, e);
+      cursorX = clamp(svgToX(pt.x), xMin, xMax);
+      renderAll();
+    }
+
+    rateSvg.addEventListener("pointerdown", e => {
+      draggingCursor = true;
+      rateSvg.setPointerCapture(e.pointerId);
+      updateCursorFromEvent(e);
+    });
+
+    rateSvg.addEventListener("pointermove", e => {
+      if (!draggingCursor) return;
+      updateCursorFromEvent(e);
+    });
+
+    rateSvg.addEventListener("pointerup", () => {
+      draggingCursor = false;
+    });
+
+    accumSvg.addEventListener("pointermove", e => {
+      if (draggingPointIndex === null) return;
+
+      const pt = svgPoint(accumSvg, e);
+      const y = clamp(svgToAccumY(pt.y), yAccumMin, yAccumMax);
+
+      controlPoints[draggingPointIndex].y = y;
+      renderAll();
+    });
+
+    accumSvg.addEventListener("pointerup", () => {
+      draggingPointIndex = null;
+    });
+
+    accumSvg.addEventListener("pointerleave", () => {
+      draggingPointIndex = null;
+    });
+
+    accumSvg.addEventListener("click", e => {
+      if (!selectedMarker || draggingPointIndex !== null) return;
+
+      const pt = svgPoint(accumSvg, e);
+      const x = clamp(svgToX(pt.x), xMin, xMax);
+      const y = clamp(svgToAccumY(pt.y), yAccumMin, yAccumMax);
+
+      markers.push({
+        type: selectedMarker,
+        x,
+        y
+      });
+
+      renderAll();
+    });
+
+    function markerIsCorrect(marker) {
+      const type = marker.type;
+      const x = marker.x;
+      const f = exactF(x);
+      const span = xMax - xMin;
+      const targetTol = span * 0.075;
+
+      if (type === "increasing") {
+        return f > 0.12;
+      }
+
+      if (type === "decreasing") {
+        return f < -0.12;
+      }
+
+      const targets = level.features[type] || [];
+
+      return targets.some(tx => Math.abs(x - tx) <= targetTol);
+    }
+
+    function featureSatisfied(type) {
+      if (type === "increasing" && !level.features.increasing) return true;
+      if (type === "decreasing" && !level.features.decreasing) return true;
+
+      const targets = level.features[type];
+
+      if (Array.isArray(targets) && targets.length === 0) return true;
+
+      if (type === "increasing" || type === "decreasing") {
+        return markers.some(m => m.type === type && markerIsCorrect(m));
+      }
+
+      if (Array.isArray(targets)) {
+        const span = xMax - xMin;
+        const targetTol = span * 0.075;
+
+        return targets.every(tx =>
+          markers.some(m => m.type === type && Math.abs(m.x - tx) <= targetTol)
+        );
+      }
+
+      return false;
+    }
+
+    function updateFeatureList() {
+      featureList.innerHTML = "";
+
+      const featureDescriptions = [
+        {
+          type: "increasing",
+          label: "Place an increasing marker where A rises."
+        },
+        {
+          type: "decreasing",
+          label: "Place a decreasing marker where A falls."
+        },
+        {
+          type: "max",
+          label: "Mark each local maximum of A."
+        },
+        {
+          type: "min",
+          label: "Mark each local minimum of A."
+        },
+        {
+          type: "inflection",
+          label: "Mark each inflection point of A, if any."
+        }
+      ];
+
+      for (const item of featureDescriptions) {
+        const needed = featureNeeded(item.type);
+
+        const li = document.createElement("li");
+
+        if (!needed) {
+          li.classList.add("done");
+          li.textContent = `✓ ${item.label} None needed for this level.`;
+        } else if (featureSatisfied(item.type)) {
+          li.classList.add("done");
+          li.textContent = `✓ ${item.label}`;
+        } else {
+          li.textContent = `○ ${item.label}`;
+        }
+
+        featureList.appendChild(li);
+      }
+    }
+
+    function featureNeeded(type) {
+      if (type === "increasing") return !!level.features.increasing;
+      if (type === "decreasing") return !!level.features.decreasing;
+      return Array.isArray(level.features[type]) && level.features[type].length > 0;
+    }
+
+    document.querySelectorAll(".marker-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const type = btn.dataset.marker;
+
+        if (selectedMarker === type) {
+          selectedMarker = null;
+          btn.classList.remove("active");
+          return;
+        }
+
+        selectedMarker = type;
+        document.querySelectorAll(".marker-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+      });
+    });
+
+    document.getElementById("checkBtn").addEventListener("click", checkBridge);
+    document.getElementById("resetBtn").addEventListener("click", resetCurve);
+
+    document.getElementById("clearMarkersBtn").addEventListener("click", () => {
+      markers = [];
+      renderAll();
+    });
+
+    levelSelect.addEventListener("change", e => initializeLevel(e.target.value));
+    guideToggle.addEventListener("change", renderAll);
+
+    setupLevelOptions();
+    initializeLevel(0);
+  </script>
+    <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#f6f6f6"
+    }
+  </script>
+</body>
+</html>

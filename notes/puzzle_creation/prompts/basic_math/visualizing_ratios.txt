@@ -1,0 +1,419 @@
+create an activity using html, css, and javascript. in the center of the screen have a ratio a:b, where a is a random integer between 1 and 10 (inclusive) and b is a random integer between 1 and 10 (inclusive) and the ratio cannot be simplified (written in an equivalent way with smaller integers). To the left of a show a blue circles and to the right of b show b red circles. below this ratio show an incomplete ratio c:d, where either c or d is blank and left for user input. c:d must be equivalent to a:b but not the same. on the side that is not blank, include the appropriate number of blue or red circles. when the user enters a number into the input, display that number of either blue or red circles on that side of the ratio. if the entered number completes the equivalent ratio, temporarily freeze the screen for the user to see their correct answer, then show a green checkmark over the screen, then present a new question, then advance a progress bar, such that after 10 correct answers the progress bar is full, at which point a function activityComplete() is called.
+
+Below is a complete single-file activity using **HTML, CSS, and JavaScript**. You can copy this into an `.html` file and open it in a browser.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Equivalent Ratios Activity</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: #f4f7fb;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    .activity {
+      width: min(900px, 95vw);
+      min-height: 600px;
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    h1 {
+      margin: 0 0 20px;
+      color: #333;
+      font-size: 28px;
+    }
+
+    .progress-container {
+      width: 100%;
+      height: 24px;
+      background: #ddd;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 40px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #2ecc71, #27ae60);
+      transition: width 0.4s ease;
+    }
+
+    .ratio-section {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 50px;
+    }
+
+    .ratio-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto 1fr;
+      align-items: center;
+      gap: 18px;
+      width: 100%;
+    }
+
+    .circle-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      max-width: 260px;
+    }
+
+    .left-circles {
+      justify-self: end;
+    }
+
+    .right-circles {
+      justify-self: start;
+    }
+
+    .circle {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      flex: 0 0 auto;
+    }
+
+    .blue {
+      background: #3498db;
+    }
+
+    .red {
+      background: #e74c3c;
+    }
+
+    .ratio-number,
+    .colon {
+      font-size: 56px;
+      font-weight: bold;
+      color: #222;
+      min-width: 50px;
+      text-align: center;
+    }
+
+    .colon {
+      min-width: 20px;
+    }
+
+    input {
+      width: 100px;
+      font-size: 44px;
+      font-weight: bold;
+      text-align: center;
+      border: 4px solid #888;
+      border-radius: 14px;
+      padding: 6px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #3498db;
+    }
+
+    .instruction {
+      margin-top: 30px;
+      font-size: 20px;
+      color: #555;
+      text-align: center;
+    }
+
+    .check-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.75);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      border-radius: 24px;
+      z-index: 10;
+    }
+
+    .checkmark {
+      font-size: 160px;
+      color: #2ecc71;
+      animation: pop 0.35s ease;
+    }
+
+    @keyframes pop {
+      0% {
+        transform: scale(0.4);
+        opacity: 0;
+      }
+      70% {
+        transform: scale(1.15);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    .frozen {
+      pointer-events: none;
+    }
+
+    .complete-message {
+      display: none;
+      font-size: 36px;
+      font-weight: bold;
+      color: #27ae60;
+      text-align: center;
+      margin-top: 40px;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="activity" id="activity">
+    <h1>Equivalent Ratios</h1>
+
+    <div class="progress-container">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <section class="ratio-section" id="ratioSection">
+      <!-- Original ratio -->
+      <div class="ratio-row">
+        <div class="circle-group left-circles" id="originalBlueCircles"></div>
+        <div class="ratio-number" id="aValue"></div>
+        <div class="colon">:</div>
+        <div class="ratio-number" id="bValue"></div>
+        <div class="circle-group right-circles" id="originalRedCircles"></div>
+      </div>
+
+      <!-- Equivalent ratio with one blank -->
+      <div class="ratio-row">
+        <div class="circle-group left-circles" id="answerBlueCircles"></div>
+        <div class="ratio-number" id="cSide"></div>
+        <div class="colon">:</div>
+        <div class="ratio-number" id="dSide"></div>
+        <div class="circle-group right-circles" id="answerRedCircles"></div>
+      </div>
+    </section>
+
+    <p class="instruction">
+      Complete the equivalent ratio.
+    </p>
+
+    <div class="complete-message" id="completeMessage">
+      Activity complete!
+    </div>
+
+    <div class="check-overlay" id="checkOverlay">
+      <div class="checkmark">✓</div>
+    </div>
+  </main>
+
+  <script>
+    const totalQuestions = 10;
+    let correctAnswers = 0;
+
+    let currentAnswer = null;
+    let blankSide = null;
+    let isFrozen = false;
+
+    const activity = document.getElementById("activity");
+    const progressBar = document.getElementById("progressBar");
+
+    const originalBlueCircles = document.getElementById("originalBlueCircles");
+    const originalRedCircles = document.getElementById("originalRedCircles");
+    const answerBlueCircles = document.getElementById("answerBlueCircles");
+    const answerRedCircles = document.getElementById("answerRedCircles");
+
+    const aValue = document.getElementById("aValue");
+    const bValue = document.getElementById("bValue");
+    const cSide = document.getElementById("cSide");
+    const dSide = document.getElementById("dSide");
+
+    const checkOverlay = document.getElementById("checkOverlay");
+    const ratioSection = document.getElementById("ratioSection");
+    const completeMessage = document.getElementById("completeMessage");
+
+    function gcd(x, y) {
+      while (y !== 0) {
+        const temp = y;
+        y = x % y;
+        x = temp;
+      }
+      return x;
+    }
+
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function createCircles(container, count, colorClass) {
+      container.innerHTML = "";
+
+      const maxVisibleCircles = 60;
+
+      for (let i = 0; i < Math.min(count, maxVisibleCircles); i++) {
+        const circle = document.createElement("div");
+        circle.classList.add("circle", colorClass);
+        container.appendChild(circle);
+      }
+
+      if (count > maxVisibleCircles) {
+        const more = document.createElement("span");
+        more.textContent = `+${count - maxVisibleCircles}`;
+        more.style.fontWeight = "bold";
+        more.style.color = "#555";
+        container.appendChild(more);
+      }
+    }
+
+    function createInput() {
+      const input = document.createElement("input");
+      input.type = "number";
+      input.min = "1";
+      input.step = "1";
+      input.autocomplete = "off";
+      input.inputMode = "numeric";
+
+      input.addEventListener("input", () => {
+        if (isFrozen) return;
+
+        const value = Number(input.value);
+
+        if (blankSide === "c") {
+          createCircles(answerBlueCircles, value || 0, "blue");
+        } else {
+          createCircles(answerRedCircles, value || 0, "red");
+        }
+
+        if (value === currentAnswer) {
+          handleCorrectAnswer(input);
+        }
+      });
+
+      return input;
+    }
+
+    function generateSimplifiedRatio() {
+      let a, b;
+
+      do {
+        a = randomInt(1, 10);
+        b = randomInt(1, 10);
+      } while (gcd(a, b) !== 1);
+
+      return { a, b };
+    }
+
+    function generateQuestion() {
+      isFrozen = false;
+      activity.classList.remove("frozen");
+
+      answerBlueCircles.innerHTML = "";
+      answerRedCircles.innerHTML = "";
+      cSide.innerHTML = "";
+      dSide.innerHTML = "";
+
+      const { a, b } = generateSimplifiedRatio();
+
+      // Multiplier must be greater than 1 so the equivalent ratio is not the same.
+      const multiplier = randomInt(2, 5);
+
+      const c = a * multiplier;
+      const d = b * multiplier;
+
+      blankSide = Math.random() < 0.5 ? "c" : "d";
+      currentAnswer = blankSide === "c" ? c : d;
+
+      aValue.textContent = a;
+      bValue.textContent = b;
+
+      createCircles(originalBlueCircles, a, "blue");
+      createCircles(originalRedCircles, b, "red");
+
+      const input = createInput();
+
+      if (blankSide === "c") {
+        cSide.appendChild(input);
+        dSide.textContent = d;
+
+        createCircles(answerBlueCircles, 0, "blue");
+        createCircles(answerRedCircles, d, "red");
+      } else {
+        cSide.textContent = c;
+        dSide.appendChild(input);
+
+        createCircles(answerBlueCircles, c, "blue");
+        createCircles(answerRedCircles, 0, "red");
+      }
+
+      setTimeout(() => input.focus(), 50);
+    }
+
+    function handleCorrectAnswer(input) {
+      isFrozen = true;
+      input.disabled = true;
+      activity.classList.add("frozen");
+
+      // Pause briefly so the user can see the completed correct ratio.
+      setTimeout(() => {
+        checkOverlay.style.display = "flex";
+
+        setTimeout(() => {
+          checkOverlay.style.display = "none";
+
+          correctAnswers++;
+          updateProgressBar();
+
+          if (correctAnswers >= totalQuestions) {
+            activityComplete();
+          } else {
+            generateQuestion();
+          }
+        }, 750);
+      }, 700);
+    }
+
+    function updateProgressBar() {
+      const percent = (correctAnswers / totalQuestions) * 100;
+      progressBar.style.width = `${percent}%`;
+    }
+
+    function activityComplete() {
+      ratioSection.style.display = "none";
+      document.querySelector(".instruction").style.display = "none";
+      completeMessage.style.display = "block";
+
+      // Add any completion logic here.
+      // For example: send a score, unlock the next activity, etc.
+      console.log("activityComplete() called");
+    }
+
+    generateQuestion();
+  </script>
+</body>
+</html>
+```

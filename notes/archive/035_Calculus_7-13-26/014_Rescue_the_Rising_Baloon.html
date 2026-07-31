@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rescue the Rising Balloon</title>
+<style>
+  :root{
+    --bg:#071827;
+    --panel:#10263a;
+    --panel2:#15344f;
+    --text:#f4fbff;
+    --muted:#b6c9d8;
+    --blue:#55c7ff;
+    --green:#56e39f;
+    --yellow:#ffd166;
+    --red:#ff6b6b;
+    --purple:#b892ff;
+    --orange:#ff9f43;
+    --line:#dff6ff;
+  }
+
+  *{box-sizing:border-box}
+
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    background:
+      radial-gradient(circle at top left, #1d4f70 0, transparent 34%),
+      linear-gradient(135deg,#06111d,#0b2033 55%,#06111d);
+    color:var(--text);
+    min-height:100vh;
+  }
+
+  header{
+    padding:18px 22px 10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+
+  h1{
+    margin:0;
+    font-size:clamp(1.5rem,3vw,2.6rem);
+    letter-spacing:.4px;
+  }
+
+  .subtitle{
+    color:var(--muted);
+    margin-top:4px;
+    font-size:.98rem;
+  }
+
+  .scoreboard{
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.16);
+    border-radius:16px;
+    padding:10px 14px;
+    min-width:220px;
+    box-shadow:0 10px 30px rgba(0,0,0,.25);
+  }
+
+  .scoreboard strong{color:var(--yellow)}
+
+  main{
+    display:grid;
+    grid-template-columns:minmax(360px,1.35fr) minmax(330px,.85fr);
+    gap:16px;
+    padding:0 18px 18px;
+  }
+
+  @media(max-width:900px){
+    main{grid-template-columns:1fr}
+  }
+
+  .stageCard,.controlCard{
+    background:rgba(16,38,58,.88);
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:22px;
+    box-shadow:0 18px 45px rgba(0,0,0,.35);
+    overflow:hidden;
+  }
+
+  .stageTop{
+    padding:12px 16px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    background:rgba(255,255,255,.05);
+    border-bottom:1px solid rgba(255,255,255,.1);
+  }
+
+  .levelTitle{
+    font-weight:800;
+    color:var(--yellow);
+  }
+
+  .svgWrap{
+    position:relative;
+    width:100%;
+    min-height:430px;
+    background:
+      linear-gradient(#103351,#10263a 54%,#18331f 54%,#143018);
+  }
+
+  svg{
+    width:100%;
+    height:430px;
+    display:block;
+  }
+
+  .dropZone{
+    position:absolute;
+    min-width:92px;
+    min-height:34px;
+    padding:6px 8px;
+    border:2px dashed rgba(255,255,255,.6);
+    border-radius:12px;
+    background:rgba(7,24,39,.7);
+    color:#fff;
+    font-size:.82rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    backdrop-filter:blur(4px);
+    transition:.15s;
+    user-select:none;
+  }
+
+  .dropZone.good{
+    border-color:var(--green);
+    background:rgba(86,227,159,.2);
+  }
+
+  .dropZone.bad{
+    border-color:var(--red);
+    background:rgba(255,107,107,.18);
+  }
+
+  .dropZone.hover{
+    transform:scale(1.04);
+    border-color:var(--yellow);
+  }
+
+  .liveValues{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
+    gap:8px;
+    padding:12px;
+    background:#071827;
+    border-top:1px solid rgba(255,255,255,.1);
+  }
+
+  .valueBox{
+    background:rgba(255,255,255,.07);
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:14px;
+    padding:8px 10px;
+    font-size:.88rem;
+  }
+
+  .valueBox span{
+    display:block;
+    color:var(--muted);
+    font-size:.74rem;
+  }
+
+  .valueBox strong{
+    color:#fff;
+    font-size:1rem;
+  }
+
+  .controlCard{
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+
+  .levels{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:6px;
+  }
+
+  .levelBtn{
+    border:0;
+    border-radius:12px;
+    padding:9px 4px;
+    cursor:pointer;
+    color:#fff;
+    background:#23445e;
+    font-weight:800;
+  }
+
+  .levelBtn.active{
+    background:var(--blue);
+    color:#052033;
+  }
+
+  .levelBtn:disabled{
+    opacity:.35;
+    cursor:not-allowed;
+  }
+
+  .section{
+    background:rgba(255,255,255,.055);
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:18px;
+    padding:12px;
+  }
+
+  .section h2{
+    font-size:.98rem;
+    margin:0 0 9px;
+    color:var(--yellow);
+  }
+
+  .mini{
+    color:var(--muted);
+    font-size:.82rem;
+    margin:3px 0 8px;
+  }
+
+  .chips,.labels,.equations{
+    display:flex;
+    flex-wrap:wrap;
+    gap:7px;
+  }
+
+  .chip,.eqBtn,.dragLabel{
+    border:1px solid rgba(255,255,255,.16);
+    background:#183954;
+    color:#fff;
+    border-radius:999px;
+    padding:7px 10px;
+    cursor:pointer;
+    font-weight:700;
+    font-size:.88rem;
+  }
+
+  .chip.selected{
+    background:var(--green);
+    color:#062217;
+  }
+
+  .eqBtn.selected{
+    background:var(--purple);
+    color:#160b2d;
+  }
+
+  .dragLabel{
+    background:#071827;
+    cursor:grab;
+    box-shadow:0 6px 14px rgba(0,0,0,.2);
+  }
+
+  .dragLabel:active{cursor:grabbing}
+
+  .row{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+
+  select,input[type="number"]{
+    width:100%;
+    background:#071827;
+    color:#fff;
+    border:1px solid rgba(255,255,255,.2);
+    border-radius:12px;
+    padding:10px;
+    font-size:1rem;
+  }
+
+  input[type="range"]{width:100%}
+
+  button.action{
+    border:0;
+    border-radius:14px;
+    padding:10px 12px;
+    cursor:pointer;
+    font-weight:850;
+    color:#062033;
+    background:var(--yellow);
+  }
+
+  button.action.secondary{
+    background:#274963;
+    color:#fff;
+    border:1px solid rgba(255,255,255,.14);
+  }
+
+  button.action.good{
+    background:var(--green);
+  }
+
+  button.action.danger{
+    background:var(--red);
+    color:#310606;
+  }
+
+  button.action:disabled{
+    opacity:.45;
+    cursor:not-allowed;
+  }
+
+  .feedback{
+    min-height:50px;
+    border-radius:16px;
+    padding:10px 12px;
+    background:rgba(0,0,0,.22);
+    border:1px solid rgba(255,255,255,.1);
+    color:#e9f7ff;
+    line-height:1.35;
+  }
+
+  .feedback.good{border-color:var(--green)}
+  .feedback.bad{border-color:var(--red)}
+  .feedback.warn{border-color:var(--yellow)}
+
+  .hint{
+    color:#d7edff;
+  }
+
+  .lockedMoment{
+    color:var(--green);
+    font-weight:800;
+  }
+
+  .smallFormula{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    color:#fff;
+  }
+
+  .pill{
+    display:inline-block;
+    border-radius:999px;
+    padding:2px 8px;
+    background:rgba(255,255,255,.1);
+    color:var(--muted);
+    font-size:.75rem;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>🎈 Rescue the Rising Balloon</h1>
+    <div class="subtitle">A visual related-rates mission: identify variables, choose the relationship, then launch the rescue drone.</div>
+  </div>
+  <div class="scoreboard">
+    <div>Accuracy score: <strong id="score">0</strong></div>
+    <div>Attempts: <strong id="attempts">0</strong></div>
+    <div>Unlocked levels: <strong id="unlockedText">1/5</strong></div>
+  </div>
+</header>
+
+<main>
+  <section class="stageCard">
+    <div class="stageTop">
+      <div>
+        <div class="levelTitle" id="levelTitle"></div>
+        <div class="mini" id="levelGoal"></div>
+      </div>
+      <div id="momentStatus" class="pill">animation running</div>
+    </div>
+
+    <div class="svgWrap" id="svgWrap">
+      <svg id="scene" viewBox="0 0 760 430" role="img" aria-label="Animated related rates diagram"></svg>
+    </div>
+
+    <div class="liveValues" id="liveValues"></div>
+  </section>
+
+  <aside class="controlCard">
+    <div class="levels" id="levelButtons"></div>
+
+    <div class="section">
+      <h2>1. Which quantities are changing?</h2>
+      <div class="mini">Tap all variables that change with time.</div>
+      <div class="chips" id="varChips"></div>
+    </div>
+
+    <div class="section">
+      <h2>2. Drag rate labels onto the diagram</h2>
+      <div class="mini">Match each rate to the moving length, area, or volume.</div>
+      <div class="labels" id="dragLabels"></div>
+    </div>
+
+    <div class="section">
+      <h2>3. Choose the relationship equation</h2>
+      <div class="equations" id="equations"></div>
+    </div>
+
+    <div class="section">
+      <h2>4. Concept check</h2>
+      <div class="mini" id="conceptPrompt"></div>
+      <select id="conceptSelect">
+        <option value="">Choose one...</option>
+        <option value="positive">positive</option>
+        <option value="negative">negative</option>
+        <option value="increasing">increasing</option>
+        <option value="decreasing">decreasing</option>
+        <option value="depends">depends on the current moment</option>
+      </select>
+    </div>
+
+    <div class="section">
+      <h2>5. Lock the moment, enter the rescue rate</h2>
+      <div class="mini">The final answer is checked at the locked instant. Related rates are moment-by-moment!</div>
+      <button class="action" id="checkSetupBtn">Check setup and lock moment</button>
+      <div style="height:8px"></div>
+      <label class="mini" id="rateLabel"></label>
+      <input id="rateInput" type="number" step="0.001" disabled />
+      <input id="rateSlider" type="range" min="-10" max="10" step="0.001" value="0" disabled />
+      <div class="row" style="margin-top:8px">
+        <button class="action good" id="testBtn" disabled>Launch drone</button>
+        <button class="action secondary" id="hintBtn">Hint</button>
+        <button class="action secondary" id="replayBtn">Replay slow</button>
+        <button class="action danger" id="resetBtn">Reset</button>
+      </div>
+    </div>
+
+    <div class="feedback" id="feedback">
+      Start with Level 1. The drone is waiting. No pressure — except atmospheric pressure, which the balloon is ignoring.
+    </div>
+  </aside>
+</main>
+
+<script>
+(() => {
+  const svg = document.getElementById("scene");
+  const svgWrap = document.getElementById("svgWrap");
+  const liveValues = document.getElementById("liveValues");
+  const levelTitle = document.getElementById("levelTitle");
+  const levelGoal = document.getElementById("levelGoal");
+  const momentStatus = document.getElementById("momentStatus");
+  const levelButtons = document.getElementById("levelButtons");
+  const varChips = document.getElementById("varChips");
+  const dragLabels = document.getElementById("dragLabels");
+  const equationsDiv = document.getElementById("equations");
+  const conceptPrompt = document.getElementById("conceptPrompt");
+  const conceptSelect = document.getElementById("conceptSelect");
+  const checkSetupBtn = document.getElementById("checkSetupBtn");
+  const rateInput = document.getElementById("rateInput");
+  const rateSlider = document.getElementById("rateSlider");
+  const rateLabel = document.getElementById("rateLabel");
+  const testBtn = document.getElementById("testBtn");
+  const hintBtn = document.getElementById("hintBtn");
+  const replayBtn = document.getElementById("replayBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const feedback = document.getElementById("feedback");
+  const scoreEl = document.getElementById("score");
+  const attemptsEl = document.getElementById("attempts");
+  const unlockedText = document.getElementById("unlockedText");
+
+  const PI = Math.PI;
+
+  const levels = [
+    {
+      title:"Level 1: Fixed observer, rising balloon",
+      goal:"Find dz/dt from x² + y² = z².",
+      variables:["x","y","z"],
+      changing:["y","z"],
+      rateLabels:["dx/dt","dy/dt","dz/dt"],
+      requiredDrops:{
+        "dx/dt":"Fixed horizontal x",
+        "dy/dt":"Rising height y",
+        "dz/dt":"Changing sight line z"
+      },
+      equations:[
+        "x² + y² = z²",
+        "x + y = z",
+        "xy = z²"
+      ],
+      correctEquation:0,
+      conceptPrompt:"With fixed x and rising y, dz/dt should be...",
+      concept:"positive",
+      target:"dz/dt",
+      slider:[0,8],
+      hint:"Differentiate x² + y² = z²: 2x(dx/dt)+2y(dy/dt)=2z(dz/dt). Here dx/dt = 0.",
+      values(t){
+        const x=50, dy=5, dx=0;
+        const y=20 + dy*t;
+        const z=Math.hypot(x,y);
+        const dz=(x*dx+y*dy)/z;
+        return {x,y,z,dx,dy,dz};
+      },
+      duration:14,
+      type:"triangleFixed"
+    },
+    {
+      title:"Level 2: Moving observer and rising balloon",
+      goal:"Both dx/dt and dy/dt affect dz/dt.",
+      variables:["x","y","z"],
+      changing:["x","y","z"],
+      rateLabels:["dx/dt","dy/dt","dz/dt"],
+      requiredDrops:{
+        "dx/dt":"Moving horizontal x",
+        "dy/dt":"Rising height y",
+        "dz/dt":"Changing sight line z"
+      },
+      equations:[
+        "x² + y² = z²",
+        "x² - y² = z²",
+        "dx/dt + dy/dt = dz/dt"
+      ],
+      correctEquation:0,
+      conceptPrompt:"At the locked moment, dz/dt is...",
+      concept:"dynamicSign",
+      target:"dz/dt",
+      slider:[-6,6],
+      hint:"Use the same triangle equation, but this time dx/dt is not zero: dz/dt = [x(dx/dt)+y(dy/dt)]/z.",
+      values(t){
+        const dx=-2.2, dy=4;
+        const x=130 + dx*t;
+        const y=28 + dy*t;
+        const z=Math.hypot(x,y);
+        const dz=(x*dx+y*dy)/z;
+        return {x,y,z,dx,dy,dz};
+      },
+      duration:22,
+      type:"triangleMoving"
+    },
+    {
+      title:"Level 3: Expanding circular ripple",
+      goal:"Relate dA/dt and dr/dt.",
+      variables:["r","A"],
+      changing:["r","A"],
+      rateLabels:["dr/dt","dA/dt"],
+      requiredDrops:{
+        "dr/dt":"Radius r",
+        "dA/dt":"Area A"
+      },
+      equations:[
+        "A = πr²",
+        "A = 2πr",
+        "A = πr³"
+      ],
+      correctEquation:0,
+      conceptPrompt:"If dA/dt is constant, then dr/dt is...",
+      concept:"decreasing",
+      target:"dr/dt",
+      slider:[0,4],
+      hint:"Differentiate A = πr²: dA/dt = 2πr(dr/dt). Solve for dr/dt.",
+      values(t){
+        const dA=14;
+        const r=Math.sqrt(2.5*2.5 + dA*t/PI);
+        const A=PI*r*r;
+        const dr=dA/(2*PI*r);
+        return {r,A,dA,dr};
+      },
+      duration:12,
+      type:"ripple"
+    },
+    {
+      title:"Level 4: Sliding ladder",
+      goal:"A fixed ladder length connects dx/dt and dy/dt.",
+      variables:["x","y","L"],
+      changing:["x","y"],
+      rateLabels:["dx/dt","dy/dt"],
+      requiredDrops:{
+        "dx/dt":"Base x",
+        "dy/dt":"Top height y"
+      },
+      equations:[
+        "x² + y² = L²",
+        "x + y = L",
+        "xy = L²"
+      ],
+      correctEquation:0,
+      conceptPrompt:"As the ladder base slides away from the wall, dy/dt is...",
+      concept:"negative",
+      target:"dy/dt",
+      slider:[-8,0],
+      hint:"L is constant. Differentiate x² + y² = L²: 2x(dx/dt)+2y(dy/dt)=0.",
+      values(t){
+        const L=10, dx=0.7;
+        const x=3 + dx*t;
+        const y=Math.sqrt(Math.max(0.01,L*L-x*x));
+        const dy=-(x*dx)/y;
+        return {x,y,L,dx,dy};
+      },
+      duration:8.8,
+      type:"ladder"
+    },
+    {
+      title:"Level 5: Cone filling with water",
+      goal:"Use similar triangles, then relate dV/dt and dh/dt.",
+      variables:["V","h","r"],
+      changing:["V","h","r"],
+      rateLabels:["dV/dt","dh/dt","dr/dt"],
+      requiredDrops:{
+        "dV/dt":"Volume V",
+        "dh/dt":"Water height h",
+        "dr/dt":"Surface radius r"
+      },
+      equations:[
+        "V = (π/3)(R/H)²h³",
+        "V = πrh",
+        "V = πh²"
+      ],
+      correctEquation:0,
+      conceptPrompt:"If dV/dt is constant, then dh/dt is...",
+      concept:"decreasing",
+      target:"dh/dt",
+      slider:[0,3],
+      hint:"Similar triangles give r/h = R/H. Substitute r=(R/H)h into V=(1/3)πr²h.",
+      values(t){
+        const R=3, H=9, dV=2.2;
+        const h=Math.cbrt(2.0**3 + (3*dV/(PI*(R/H)**2))*t);
+        const r=(R/H)*h;
+        const V=(PI/3)*r*r*h;
+        const dh=dV / (PI*(R/H)**2*h*h);
+        const dr=(R/H)*dh;
+        return {R,H,h,r,V,dV,dh,dr};
+      },
+      duration:15,
+      type:"cone"
+    }
+  ];
+
+  let currentLevel = 0;
+  let unlocked = 1;
+  let score = 0;
+  let attempts = 0;
+
+  let selectedVars = new Set();
+  let selectedEquation = null;
+  let drops = {};
+  let dragValue = null;
+
+  let t = 0;
+  let lastTime = performance.now();
+  let playing = true;
+  let speed = 1;
+  let setupLocked = false;
+  let lockedValues = null;
+  let setupPassed = false;
+
+  let lastGeom = null;
+  let rescue = null;
+
+  function fmt(n, places=2){
+    if(!Number.isFinite(n)) return "—";
+    return Number(n).toFixed(places);
+  }
+
+  function currentValues(){
+    return setupLocked && lockedValues ? lockedValues : levels[currentLevel].values(t);
+  }
+
+  function correctRate(){
+    const v = currentValues();
+    const L = levels[currentLevel];
+    if(L.target === "dz/dt") return v.dz;
+    if(L.target === "dr/dt") return v.dr;
+    if(L.target === "dy/dt") return v.dy;
+    if(L.target === "dh/dt") return v.dh;
+    return 0;
+  }
+
+  function setFeedback(msg, cls=""){
+    feedback.className = "feedback " + cls;
+    feedback.innerHTML = msg;
+  }
+
+  function updateScoreboard(){
+    scoreEl.textContent = score;
+    attemptsEl.textContent = attempts;
+    unlockedText.textContent = `${unlocked}/5`;
+  }
+
+  function renderLevelButtons(){
+    levelButtons.innerHTML = "";
+    levels.forEach((L,i)=>{
+      const b=document.createElement("button");
+      b.className="levelBtn" + (i===currentLevel ? " active" : "");
+      b.textContent = i < unlocked ? `${i+1}` : "🔒";
+      b.disabled = i >= unlocked;
+      b.title = L.title;
+      b.addEventListener("click",()=>switchLevel(i));
+      levelButtons.appendChild(b);
+    });
+  }
+
+  function switchLevel(i){
+    currentLevel=i;
+    resetLevel(false);
+    renderAllControls();
+  }
+
+  function resetLevel(message=true){
+    selectedVars = new Set();
+    selectedEquation = null;
+    drops = {};
+    dragValue = null;
+    t=0;
+    playing=true;
+    speed=1;
+    setupLocked=false;
+    lockedValues=null;
+    setupPassed=false;
+    rescue=null;
+    rateInput.value="";
+    rateInput.disabled=true;
+    rateSlider.disabled=true;
+    testBtn.disabled=true;
+    conceptSelect.value="";
+    if(message) setFeedback("Reset complete. The drone has been gently returned to its charging pad.", "warn");
+    renderAllControls();
+  }
+
+  function renderAllControls(){
+    const L=levels[currentLevel];
+    levelTitle.textContent = L.title;
+    levelGoal.textContent = L.goal;
+    conceptPrompt.textContent = L.conceptPrompt;
+    rateLabel.textContent = `Enter ${L.target}`;
+    rateSlider.min = L.slider[0];
+    rateSlider.max = L.slider[1];
+    rateSlider.value = 0;
+
+    renderLevelButtons();
+    renderVarChips();
+    renderLabels();
+    renderEquations();
+    renderDropZones();
+    updateMomentStatus();
+    updateScoreboard();
+  }
+
+  function renderVarChips(){
+    varChips.innerHTML="";
+    levels[currentLevel].variables.forEach(v=>{
+      const b=document.createElement("button");
+      b.className="chip" + (selectedVars.has(v) ? " selected" : "");
+      b.textContent=v;
+      b.addEventListener("click",()=>{
+        if(selectedVars.has(v)) selectedVars.delete(v);
+        else selectedVars.add(v);
+        renderVarChips();
+      });
+      varChips.appendChild(b);
+    });
+  }
+
+  function renderLabels(){
+    dragLabels.innerHTML="";
+    levels[currentLevel].rateLabels.forEach(r=>{
+      const d=document.createElement("div");
+      d.className="dragLabel";
+      d.draggable=true;
+      d.textContent=r;
+      d.dataset.rate=r;
+      d.addEventListener("dragstart",e=>{
+        dragValue=r;
+        e.dataTransfer.setData("text/plain",r);
+      });
+      dragLabels.appendChild(d);
+    });
+  }
+
+  function renderEquations(){
+    equationsDiv.innerHTML="";
+    levels[currentLevel].equations.forEach((eq,i)=>{
+      const b=document.createElement("button");
+      b.className="eqBtn" + (selectedEquation===i ? " selected" : "");
+      b.innerHTML=eq;
+      b.addEventListener("click",()=>{
+        selectedEquation=i;
+        renderEquations();
+      });
+      equationsDiv.appendChild(b);
+    });
+  }
+
+  function renderDropZones(){
+    [...svgWrap.querySelectorAll(".dropZone")].forEach(z=>z.remove());
+    const L=levels[currentLevel];
+    const pos = dropPositions(L.type);
+    Object.entries(L.requiredDrops).forEach(([rate,label])=>{
+      const dz=document.createElement("div");
+      dz.className="dropZone";
+      dz.dataset.expected=rate;
+      dz.style.left=pos[rate].left;
+      dz.style.top=pos[rate].top;
+      dz.innerHTML=drops[rate] ? `<strong>${rate}</strong>` : label;
+      if(drops[rate]) dz.classList.add("good");
+
+      dz.addEventListener("dragover",e=>{
+        e.preventDefault();
+        dz.classList.add("hover");
+      });
+      dz.addEventListener("dragleave",()=>dz.classList.remove("hover"));
+      dz.addEventListener("drop",e=>{
+        e.preventDefault();
+        dz.classList.remove("hover");
+        const got=e.dataTransfer.getData("text/plain") || dragValue;
+        if(got === rate){
+          drops[rate]=true;
+          dz.classList.add("good");
+          dz.classList.remove("bad");
+          dz.innerHTML=`<strong>${rate}</strong>`;
+        } else {
+          dz.classList.add("bad");
+          setTimeout(()=>dz.classList.remove("bad"),600);
+        }
+      });
+      svgWrap.appendChild(dz);
+    });
+  }
+
+  function dropPositions(type){
+    if(type==="triangleFixed") return {
+      "dx/dt":{left:"20%",top:"74%"},
+      "dy/dt":{left:"63%",top:"42%"},
+      "dz/dt":{left:"40%",top:"39%"}
+    };
+    if(type==="triangleMoving") return {
+      "dx/dt":{left:"23%",top:"74%"},
+      "dy/dt":{left:"59%",top:"42%"},
+      "dz/dt":{left:"39%",top:"36%"}
+    };
+    if(type==="ripple") return {
+      "dr/dt":{left:"57%",top:"47%"},
+      "dA/dt":{left:"40%",top:"35%"}
+    };
+    if(type==="ladder") return {
+      "dx/dt":{left:"52%",top:"75%"},
+      "dy/dt":{left:"78%",top:"42%"}
+    };
+    return {
+      "dV/dt":{left:"43%",top:"19%"},
+      "dh/dt":{left:"61%",top:"51%"},
+      "dr/dt":{left:"47%",top:"47%"}
+    };
+  }
+
+  function updateMomentStatus(){
+    if(setupLocked) {
+      momentStatus.textContent = "moment locked";
+      momentStatus.className = "pill lockedMoment";
+    } else if(speed < 1) {
+      momentStatus.textContent = "slow replay";
+      momentStatus.className = "pill";
+    } else {
+      momentStatus.textContent = playing ? "animation running" : "paused";
+      momentStatus.className = "pill";
+    }
+  }
+
+  function checkSetup(){
+    const L=levels[currentLevel];
+    const need = new Set(L.changing);
+
+    let varsOK = selectedVars.size === need.size && [...need].every(v=>selectedVars.has(v));
+    let dropsOK = Object.keys(L.requiredDrops).every(r=>drops[r]);
+    let eqOK = selectedEquation === L.correctEquation;
+
+    const v = currentValues();
+    let conceptOK = false;
+    if(L.concept === "dynamicSign"){
+      const r = correctRate();
+      const wanted = r >= 0 ? "positive" : "negative";
+      conceptOK = conceptSelect.value === wanted;
+    } else {
+      conceptOK = conceptSelect.value === L.concept;
+    }
+
+    if(!varsOK){
+      setFeedback("Check the changing quantities. Ask: does this variable depend on time right now?", "bad");
+      return;
+    }
+    if(!dropsOK){
+      setFeedback("Drag each rate label onto the matching moving part of the diagram.", "bad");
+      return;
+    }
+    if(!eqOK){
+      setFeedback("Choose the geometric relationship first. The derivative comes after the relationship.", "bad");
+      return;
+    }
+    if(!conceptOK){
+      setFeedback("Concept check is not quite right. Think about the direction or how the rate changes at this moment.", "bad");
+      return;
+    }
+
+    setupLocked = true;
+    lockedValues = {...v};
+    playing = false;
+    setupPassed = true;
+    rateInput.disabled=false;
+    rateSlider.disabled=false;
+    testBtn.disabled=false;
+
+    const r=correctRate();
+    rateSlider.min = Math.min(levels[currentLevel].slider[0], r-4);
+    rateSlider.max = Math.max(levels[currentLevel].slider[1], r+4);
+
+    setFeedback(`Setup locked. Now compute <span class="smallFormula">${L.target}</span> at this exact moment.`, "good");
+    updateMomentStatus();
+  }
+
+  function testLaunch(){
+    if(!setupPassed) return;
+    attempts++;
+
+    const guess = parseFloat(rateInput.value);
+    const truth = correctRate();
+    const tolerance = Math.max(0.035, Math.abs(truth)*0.04);
+    const error = Math.abs(guess-truth);
+    const success = Number.isFinite(guess) && error <= tolerance;
+
+    const accuracy = Number.isFinite(guess)
+      ? Math.max(0, Math.round(100 - 100*error/Math.max(tolerance*5,0.2)))
+      : 0;
+
+    if(success){
+      score += 100;
+      if(currentLevel + 1 === unlocked && unlocked < levels.length){
+        unlocked++;
+      }
+      setFeedback(
+        `🚁 Intercept! Correct rate: <span class="smallFormula">${levels[currentLevel].target} ≈ ${fmt(truth,3)}</span>. Level ${Math.min(currentLevel+2,5)} unlocked.`,
+        "good"
+      );
+    } else {
+      score += accuracy;
+      setFeedback(
+        `Missed the balloon. Your rate was <span class="smallFormula">${Number.isFinite(guess)?fmt(guess,3):"blank"}</span>; the rescue computer needed about <span class="smallFormula">${fmt(truth,3)}</span>. Try again.`,
+        "bad"
+      );
+    }
+
+    startRescueAnimation(success);
+    renderLevelButtons();
+    updateScoreboard();
+  }
+
+  function startRescueAnimation(success){
+    if(!lastGeom) return;
+    const offset = success ? {x:0,y:0} : {x:60,y:-45};
+    rescue = {
+      start:lastGeom.start,
+      end:{
+        x:lastGeom.target.x + offset.x,
+        y:lastGeom.target.y + offset.y
+      },
+      target:lastGeom.target,
+      success,
+      p:0
+    };
+  }
+
+  function showHint(){
+    setFeedback(`<span class="hint">Hint:</span> ${levels[currentLevel].hint}`, "warn");
+  }
+
+  function replaySlow(){
+    setupLocked=false;
+    lockedValues=null;
+    setupPassed=false;
+    playing=true;
+    speed=.32;
+    rateInput.disabled=true;
+    rateSlider.disabled=true;
+    testBtn.disabled=true;
+    setFeedback("Slow replay started. Watch which lengths or regions change.", "warn");
+    updateMomentStatus();
+  }
+
+  rateInput.addEventListener("input",()=>{
+    if(rateInput.value !== "") rateSlider.value = rateInput.value;
+  });
+  rateSlider.addEventListener("input",()=>{
+    rateInput.value = Number(rateSlider.value).toFixed(3);
+  });
+  checkSetupBtn.addEventListener("click",checkSetup);
+  testBtn.addEventListener("click",testLaunch);
+  hintBtn.addEventListener("click",showHint);
+  replayBtn.addEventListener("click",replaySlow);
+  resetBtn.addEventListener("click",()=>resetLevel(true));
+
+  function E(tag, attrs={}, parent=svg){
+    const el=document.createElementNS("http://www.w3.org/2000/svg",tag);
+    for(const [k,v] of Object.entries(attrs)){
+      el.setAttribute(k,v);
+    }
+    parent.appendChild(el);
+    return el;
+  }
+
+  function line(x1,y1,x2,y2,color="white",w=4,dash=""){
+    return E("line",{x1,y1,x2,y2,stroke:color,"stroke-width":w,"stroke-linecap":"round","stroke-dasharray":dash});
+  }
+
+  function text(x,y,content,color="#fff",size=18,anchor="middle"){
+    const t=E("text",{x,y,fill:color,"font-size":size,"font-weight":"800","text-anchor":anchor});
+    t.textContent=content;
+    return t;
+  }
+
+  function arrow(x1,y1,x2,y2,color){
+    line(x1,y1,x2,y2,color,4);
+    const ang=Math.atan2(y2-y1,x2-x1);
+    const len=12;
+    const a1=ang-Math.PI/7, a2=ang+Math.PI/7;
+    line(x2,y2,x2-len*Math.cos(a1),y2-len*Math.sin(a1),color,4);
+    line(x2,y2,x2-len*Math.cos(a2),y2-len*Math.sin(a2),color,4);
+  }
+
+  function draw(){
+    svg.innerHTML="";
+    const L=levels[currentLevel];
+    const v=currentValues();
+
+    E("rect",{x:0,y:0,width:760,height:430,fill:"transparent"});
+    E("circle",{cx:70,cy:55,r:26,fill:"#ffd166",opacity:.95});
+    text(70,62,"☀","#4a3300",20);
+
+    if(L.type.startsWith("triangle")){
+      drawTriangle(v,L.type==="triangleMoving");
+    } else if(L.type==="ripple"){
+      drawRipple(v);
+    } else if(L.type==="ladder"){
+      drawLadder(v);
+    } else {
+      drawCone(v);
+    }
+
+    if(rescue) drawRescue();
+    renderLiveValues(v);
+  }
+
+  function drawTriangle(v,moving){
+    const baseY=350, left=90, sx=3.25, sy=2.35;
+    const xPix=v.x*sx, yPix=v.y*sy;
+    const obs={x:left,y:baseY};
+    const foot={x:left+xPix,y:baseY};
+    const balloon={x:foot.x,y:baseY-yPix};
+
+    lastGeom={start:obs,target:balloon};
+
+    line(40,baseY,720,baseY,"#6ee7a8",5);
+    line(obs.x,obs.y,foot.x,foot.y,"#55c7ff",6);
+    line(foot.x,foot.y,balloon.x,balloon.y,"#56e39f",6);
+    line(obs.x,obs.y,balloon.x,balloon.y,"#ffd166",5);
+
+    E("polygon",{points:`${foot.x},${baseY} ${foot.x-22},${baseY} ${foot.x},${baseY-22}`,fill:"none",stroke:"#fff","stroke-width":3});
+
+    E("circle",{cx:obs.x,cy:obs.y-12,r:12,fill:"#e9f7ff"});
+    E("rect",{x:obs.x-10,y:obs.y,y:obs.y,width:20,height:28,rx:7,fill:"#e9f7ff"});
+    text(obs.x,obs.y+45,moving ? "observer moving" : "observer","#d7edff",14);
+
+    E("ellipse",{cx:balloon.x,cy:balloon.y-20,rx:23,ry:30,fill:"#ff6b6b"});
+    E("polygon",{points:`${balloon.x-7},${balloon.y+7} ${balloon.x+7},${balloon.y+7} ${balloon.x},${balloon.y+20}`,fill:"#ff6b6b"});
+    line(balloon.x,balloon.y+20,foot.x,foot.y,"rgba(255,255,255,.38)",1,"5 6");
+
+    text((obs.x+foot.x)/2,baseY+28,`x = ${fmt(v.x)} m`,"#55c7ff",16);
+    text(foot.x+36,(foot.y+balloon.y)/2,`y = ${fmt(v.y)} m`,"#56e39f",16,"start");
+    text((obs.x+balloon.x)/2-20,(obs.y+balloon.y)/2-18,`z = ${fmt(v.z)} m`,"#ffd166",16);
+
+    if(moving) arrow(obs.x+45,baseY+36,obs.x+5,baseY+36,"#55c7ff");
+    arrow(foot.x+58,balloon.y+45,foot.x+58,balloon.y-20,"#56e39f");
+    arrow(obs.x+40,obs.y-18,balloon.x-32,balloon.y-18,"#ffd166");
+  }
+
+  function drawRipple(v){
+    const c={x:380,y:225};
+    const rp=Math.min(170,v.r*31);
+    lastGeom={start:c,target:{x:c.x+rp,y:c.y}};
+
+    E("rect",{x:0,y:0,width:760,height:430,fill:"#0d2c43"});
+    E("circle",{cx:c.x,cy:c.y,r:rp,fill:"rgba(85,199,255,.25)",stroke:"#55c7ff","stroke-width":5});
+    E("circle",{cx:c.x,cy:c.y,r:Math.max(5,rp*.66),fill:"none",stroke:"rgba(85,199,255,.35)","stroke-width":3});
+    E("circle",{cx:c.x,cy:c.y,r:Math.max(3,rp*.33),fill:"none",stroke:"rgba(85,199,255,.25)","stroke-width":3});
+    E("circle",{cx:c.x,cy:c.y,r:6,fill:"#ffd166"});
+
+    line(c.x,c.y,c.x+rp,c.y,"#ffd166",5);
+    arrow(c.x+rp-45,c.y-30,c.x+rp+20,c.y-30,"#ffd166");
+    text(c.x+rp/2,c.y-12,`r = ${fmt(v.r)} m`,"#ffd166",16);
+    text(c.x,c.y+rp+30,`A = ${fmt(v.A)} m²`,"#55c7ff",18);
+
+    E("path",{d:`M 70 335 Q 155 300 240 335 T 410 335 T 580 335 T 735 335`,fill:"none",stroke:"rgba(255,255,255,.18)","stroke-width":4});
+  }
+
+  function drawLadder(v){
+    const floorY=350, wallX=620, scale=28;
+    const base={x:wallX-v.x*scale,y:floorY};
+    const top={x:wallX,y:floorY-v.y*scale};
+    lastGeom={start:base,target:top};
+
+    line(80,floorY,700,floorY,"#6ee7a8",6);
+    line(wallX,70,wallX,floorY,"#d7edff",7);
+    line(base.x,base.y,top.x,top.y,"#ffd166",12);
+    line(base.x,base.y,top.x,top.y,"#7a4c00",3);
+
+    E("circle",{cx:base.x,cy:base.y+8,r:15,fill:"#222"});
+    E("circle",{cx:top.x+8,cy:top.y,r:12,fill:"#222"});
+
+    line(wallX,floorY,base.x,floorY,"#55c7ff",6);
+    line(wallX,floorY,wallX,top.y,"#56e39f",6);
+    text((wallX+base.x)/2,floorY+30,`x = ${fmt(v.x)} ft`,"#55c7ff",16);
+    text(wallX+36,(floorY+top.y)/2,`y = ${fmt(v.y)} ft`,"#56e39f",16,"start");
+    text((base.x+top.x)/2-22,(base.y+top.y)/2-14,`L = ${fmt(v.L)} ft`,"#ffd166",16);
+
+    arrow(base.x-45,floorY+36,base.x+20,floorY+36,"#55c7ff");
+    arrow(wallX+45,top.y-10,wallX+45,top.y+55,"#56e39f");
+  }
+
+  function drawCone(v){
+    const topY=80, bottomY=350, cx=380, maxR=145;
+    const H=9;
+    const frac=Math.min(.97,v.h/H);
+    const waterY=bottomY-frac*(bottomY-topY);
+    const waterR=maxR*frac;
+
+    lastGeom={start:{x:cx,y:45},target:{x:cx,y:waterY}};
+
+    E("rect",{x:0,y:0,width:760,height:430,fill:"#10263a"});
+    E("polygon",{points:`${cx-maxR},${topY} ${cx+maxR},${topY} ${cx},${bottomY}`,fill:"rgba(255,255,255,.06)",stroke:"#d7edff","stroke-width":4});
+    E("ellipse",{cx,cy:topY,rx:maxR,ry:22,fill:"none",stroke:"#d7edff","stroke-width":4});
+
+    E("polygon",{points:`${cx-waterR},${waterY} ${cx+waterR},${waterY} ${cx},${bottomY}`,fill:"rgba(85,199,255,.45)",stroke:"#55c7ff","stroke-width":3});
+    E("ellipse",{cx,cy:waterY,rx:waterR,ry:Math.max(4,22*frac),fill:"rgba(85,199,255,.65)",stroke:"#55c7ff","stroke-width":3});
+
+    arrow(cx,45,cx,waterY-12,"#55c7ff");
+    text(cx+20,62,"dV/dt","#55c7ff",16,"start");
+
+    line(cx+waterR,waterY,cx,waterY,"#ffd166",5);
+    line(cx+maxR+45,bottomY,cx+maxR+45,waterY,"#56e39f",5);
+    arrow(cx+maxR+68,waterY+45,cx+maxR+68,waterY-18,"#56e39f");
+
+    text(cx+waterR/2,waterY-14,`r = ${fmt(v.r)} m`,"#ffd166",16);
+    text(cx+maxR+78,(bottomY+waterY)/2,`h = ${fmt(v.h)} m`,"#56e39f",16,"start");
+    text(cx,bottomY+32,`V = ${fmt(v.V)} m³`,"#55c7ff",17);
+  }
+
+  function drawRescue(){
+    rescue.p += 0.025;
+    if(rescue.p > 1) rescue.p = 1;
+
+    const p = ease(rescue.p);
+    const x = rescue.start.x + (rescue.end.x-rescue.start.x)*p;
+    const y = rescue.start.y + (rescue.end.y-rescue.start.y)*p;
+
+    line(rescue.start.x,rescue.start.y,x,y,rescue.success ? "rgba(86,227,159,.45)" : "rgba(255,107,107,.45)",3,"8 8");
+
+    E("circle",{cx:x,cy:y,r:16,fill:rescue.success ? "#56e39f" : "#ff6b6b"});
+    text(x,y+6,"🚁","#071827",20);
+
+    if(rescue.p >= 1){
+      E("circle",{cx:rescue.target.x,cy:rescue.target.y,r:30,fill:"none",stroke:rescue.success ? "#56e39f" : "#ff6b6b","stroke-width":5,opacity:.9});
+    }
+  }
+
+  function ease(p){
+    return p<.5 ? 2*p*p : 1 - Math.pow(-2*p+2,2)/2;
+  }
+
+  function renderLiveValues(v){
+    const L=levels[currentLevel];
+    let items=[];
+    if(L.type.startsWith("triangle")){
+      items=[
+        ["x",fmt(v.x)+" m"],["y",fmt(v.y)+" m"],["z",fmt(v.z)+" m"],
+        ["dx/dt",fmt(v.dx)+" m/s"],["dy/dt",fmt(v.dy)+" m/s"],["dz/dt",fmt(v.dz,3)+" m/s"]
+      ];
+    } else if(L.type==="ripple"){
+      items=[
+        ["r",fmt(v.r)+" m"],["A",fmt(v.A)+" m²"],
+        ["dA/dt",fmt(v.dA)+" m²/s"],["dr/dt",fmt(v.dr,3)+" m/s"]
+      ];
+    } else if(L.type==="ladder"){
+      items=[
+        ["x",fmt(v.x)+" ft"],["y",fmt(v.y)+" ft"],["L",fmt(v.L)+" ft"],
+        ["dx/dt",fmt(v.dx)+" ft/s"],["dy/dt",fmt(v.dy,3)+" ft/s"]
+      ];
+    } else {
+      items=[
+        ["h",fmt(v.h)+" m"],["r",fmt(v.r)+" m"],["V",fmt(v.V)+" m³"],
+        ["dV/dt",fmt(v.dV)+" m³/s"],["dh/dt",fmt(v.dh,3)+" m/s"]
+      ];
+    }
+
+    liveValues.innerHTML = items.map(([k,val]) =>
+      `<div class="valueBox"><span>${k}</span><strong>${val}</strong></div>`
+    ).join("");
+  }
+
+  function loop(now){
+    const dt=(now-lastTime)/1000;
+    lastTime=now;
+
+    if(playing && !setupLocked){
+      const L=levels[currentLevel];
+      t += dt*speed;
+      if(t > L.duration){
+        t = 0;
+        if(speed < 1) speed = 1;
+      }
+    }
+
+    draw();
+    updateMomentStatus();
+    requestAnimationFrame(loop);
+  }
+
+  renderAllControls();
+  updateScoreboard();
+  requestAnimationFrame(loop);
+})();
+</script>
+  <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#ececec"
+    }
+  </script>
+</body>
+</html>

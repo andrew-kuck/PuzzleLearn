@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Limit Gate</title>
+<style>
+body{margin:0;font-family:system-ui;background:#101827;color:white;display:flex;justify-content:center}
+.app{max-width:900px;padding:20px}
+canvas{background:#fff;border-radius:14px;width:100%;max-width:850px}
+.panel{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0}
+button,input{font-size:18px;border-radius:10px;border:0;padding:10px}
+button{background:#ffcb05;color:#00274c;font-weight:700;cursor:pointer}
+input{width:120px}
+.badge{background:#253858;border-radius:999px;padding:8px 14px}
+.small{color:#b9c7dd}
+</style>
+</head>
+<body>
+<div class="app">
+<h1>Limit Gate</h1>
+<p class="small">Move the probe near the glowing wall. Enter the limit value. Use <b>DNE</b>, <b>INF</b>, or <b>-INF</b> when appropriate.</p>
+<canvas id="c" width="850" height="430"></canvas>
+<div class="panel">
+<span class="badge" id="lvl"></span>
+<label>Probe x <input id="probe" type="range" min="-4" max="4" step=".001" value="0"></label>
+<input id="ans" placeholder="limit">
+<button onclick="check()">Open Gate</button>
+<button onclick="next()">Skip / Next</button>
+<span class="badge" id="msg"></span>
+</div>
+</div>
+<script>
+const cvs=document.getElementById("c"),ctx=cvs.getContext("2d");
+const L=[
+ {t:"(x²-1)/(x-1) as x→1",c:1,a:"2",f:x=>(x*x-1)/(x-1)},
+ {t:"sin(x)/x as x→0",c:0,a:"1",f:x=>Math.sin(x)/x},
+ {t:"(√(x+4)-2)/x as x→0",c:0,a:".25",f:x=>(Math.sqrt(x+4)-2)/x},
+ {t:"|x|/x as x→0",c:0,a:"DNE",f:x=>Math.abs(x)/x},
+ {t:"(x²-4)/(x-2) as x→2",c:2,a:"4",f:x=>(x*x-4)/(x-2)},
+ {t:"1/(x-1)² as x→1",c:1,a:"INF",f:x=>1/((x-1)*(x-1))},
+ {t:"1/(x+2) as x→-2",c:-2,a:"DNE",f:x=>1/(x+2)}
+];
+let i=0,score=0;
+const X=x=>425+x*90,Y=y=>215-y*35;
+function draw(){
+ let o=L[i];document.getElementById("lvl").textContent=`Level ${i+1}/${L.length}: lim ${o.t}`;
+ ctx.clearRect(0,0,850,430);
+ ctx.strokeStyle="#d8dee9";ctx.lineWidth=1;
+ for(let x=-4;x<=4;x++){ctx.beginPath();ctx.moveTo(X(x),0);ctx.lineTo(X(x),430);ctx.stroke()}
+ for(let y=-5;y<=5;y++){ctx.beginPath();ctx.moveTo(0,Y(y));ctx.lineTo(850,Y(y));ctx.stroke()}
+ ctx.strokeStyle="#00274c";ctx.lineWidth=2;
+ ctx.beginPath();ctx.moveTo(0,Y(0));ctx.lineTo(850,Y(0));ctx.moveTo(X(0),0);ctx.lineTo(X(0),430);ctx.stroke();
+ ctx.strokeStyle="#ffcb05";ctx.lineWidth=4;ctx.setLineDash([8,8]);
+ ctx.beginPath();ctx.moveTo(X(o.c),0);ctx.lineTo(X(o.c),430);ctx.stroke();ctx.setLineDash([]);
+ ctx.strokeStyle="#0066cc";ctx.lineWidth=3;ctx.beginPath();
+ let started=false,px,py;
+ for(let k=0;k<=1600;k++){
+   let x=-4+8*k/1600;if(Math.abs(x-o.c)<.01) {started=false;continue}
+   let y=o.f(x); if(!isFinite(y)||Math.abs(y)>6){started=false;continue}
+   if(!started){ctx.moveTo(X(x),Y(y));started=true}else ctx.lineTo(X(x),Y(y));
+ }
+ ctx.stroke();
+ let pxv=+probe.value;if(Math.abs(pxv-o.c)<.03)pxv=o.c+(pxv<o.c?-.03:.03);
+ let y=o.f(pxv);
+ if(isFinite(y)&&Math.abs(y)<6){
+  ctx.fillStyle="#e84a5f";ctx.beginPath();ctx.arc(X(pxv),Y(y),8,0,7);ctx.fill();
+  ctx.fillStyle="#111";ctx.fillText(`(${pxv.toFixed(2)}, ${y.toFixed(2)})`,X(pxv)+10,Y(y)-10);
+ }
+}
+probe.oninput=draw;
+function ok(a,b){
+ a=a.trim().toUpperCase();b=b.toUpperCase();
+ if(["DNE","INF","-INF"].includes(b))return a==b;
+ return Math.abs(parseFloat(a)-parseFloat(b))<.04;
+}
+function check(){
+ let m=document.getElementById("msg");
+ if(ok(ans.value,L[i].a)){score++;m.textContent="Gate opened! Score "+score;next(true)}
+ else m.textContent="Still locked. Compare left and right behavior.";
+}
+function next(auto){i=(i+1)%L.length;ans.value="";probe.value=L[i].c-.8;draw()}
+probe.value=L[0].c-.8;draw();
+</script>
+  <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#e1e1e1"
+    }
+  </script>
+</body>
+</html>

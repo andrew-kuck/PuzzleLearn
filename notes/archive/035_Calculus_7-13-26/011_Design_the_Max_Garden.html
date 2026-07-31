@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Design the Maximum Garden</title>
+<style>
+  :root{
+    --blue:#1f5eff;
+    --maize:#ffcb05;
+    --ink:#152238;
+    --muted:#667085;
+    --panel:#ffffff;
+    --bg:#f4f7fb;
+    --green:#13a866;
+    --red:#d94343;
+    --orange:#f59f00;
+    --purple:#7c3aed;
+    --line:#d7dfec;
+  }
+
+  *{box-sizing:border-box}
+
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    background:linear-gradient(180deg,#eef4ff 0%,#f8fbff 45%,#f4f7fb 100%);
+    color:var(--ink);
+  }
+
+  header{
+    padding:24px 18px 16px;
+    text-align:center;
+    background:linear-gradient(135deg,#00274c,#1f5eff);
+    color:white;
+  }
+
+  header h1{
+    margin:0;
+    font-size:clamp(1.8rem,4vw,3rem);
+    letter-spacing:.2px;
+  }
+
+  header p{
+    margin:8px auto 0;
+    max-width:900px;
+    color:#e6eefc;
+    line-height:1.45;
+  }
+
+  main{
+    max-width:1250px;
+    margin:18px auto 40px;
+    padding:0 16px;
+  }
+
+  .topbar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:14px;
+  }
+
+  .level-buttons{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+
+  button{
+    border:0;
+    border-radius:12px;
+    padding:10px 14px;
+    font-weight:700;
+    cursor:pointer;
+    background:#e8eef9;
+    color:#17324d;
+    transition:.15s transform,.15s box-shadow,.15s background;
+  }
+
+  button:hover{
+    transform:translateY(-1px);
+    box-shadow:0 6px 16px rgba(16,24,40,.12);
+  }
+
+  button.active{
+    background:var(--maize);
+    color:#102a43;
+  }
+
+  button.primary{
+    background:var(--blue);
+    color:white;
+  }
+
+  button.secondary{
+    background:#e8eef9;
+  }
+
+  button.danger{
+    background:#ffe3e3;
+    color:#8b1e1e;
+  }
+
+  .layout{
+    display:grid;
+    grid-template-columns:1.05fr .95fr;
+    gap:16px;
+  }
+
+  @media(max-width:950px){
+    .layout{grid-template-columns:1fr}
+  }
+
+  .panel{
+    background:rgba(255,255,255,.94);
+    border:1px solid #dfe7f3;
+    border-radius:18px;
+    box-shadow:0 12px 30px rgba(31,42,68,.08);
+    padding:16px;
+  }
+
+  .panel h2,.panel h3{
+    margin:0 0 10px;
+  }
+
+  .client-card{
+    border-left:6px solid var(--maize);
+    background:#fffbea;
+    padding:12px 14px;
+    border-radius:14px;
+    margin-bottom:14px;
+    line-height:1.45;
+  }
+
+  .badge-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin:12px 0;
+  }
+
+  .badge{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:8px 10px;
+    border-radius:999px;
+    font-weight:800;
+    font-size:.9rem;
+    background:#eef2f7;
+    color:#536170;
+    border:1px solid #d7dfec;
+  }
+
+  .badge.on{
+    background:#dcfce7;
+    color:#11633b;
+    border-color:#97e5b9;
+  }
+
+  .score-wrap{
+    margin:12px 0;
+  }
+
+  .score-label{
+    display:flex;
+    justify-content:space-between;
+    font-weight:800;
+    margin-bottom:5px;
+  }
+
+  .scorebar{
+    height:16px;
+    background:#e8eef9;
+    border-radius:999px;
+    overflow:hidden;
+  }
+
+  .scorefill{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg,var(--red),var(--orange),var(--green));
+    transition:width .25s;
+  }
+
+  .control-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:12px;
+  }
+
+  label.small{
+    font-weight:800;
+    color:#344054;
+  }
+
+  input[type="range"]{
+    width:100%;
+    accent-color:var(--blue);
+  }
+
+  .value-pill{
+    display:inline-block;
+    margin-left:8px;
+    padding:3px 8px;
+    border-radius:999px;
+    background:#eef4ff;
+    color:#1849a9;
+    font-weight:800;
+  }
+
+  .stat-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+    margin-top:8px;
+  }
+
+  .stat{
+    padding:10px;
+    border-radius:14px;
+    background:#f6f8fc;
+    border:1px solid #dfe7f3;
+  }
+
+  .stat .k{
+    font-size:.82rem;
+    color:var(--muted);
+    font-weight:700;
+  }
+
+  .stat .v{
+    font-size:1.2rem;
+    font-weight:900;
+    margin-top:2px;
+  }
+
+  .svgbox{
+    width:100%;
+    min-height:260px;
+    border-radius:16px;
+    border:1px solid #dfe7f3;
+    background:#fbfdff;
+    overflow:hidden;
+  }
+
+  svg{
+    width:100%;
+    height:auto;
+    display:block;
+  }
+
+  .graph-note{
+    font-size:.9rem;
+    color:var(--muted);
+    margin-top:8px;
+  }
+
+  .model-options,.reason-options{
+    display:grid;
+    gap:8px;
+  }
+
+  .option{
+    display:flex;
+    gap:8px;
+    align-items:flex-start;
+    padding:9px 10px;
+    background:#f8fafc;
+    border:1px solid #dfe7f3;
+    border-radius:12px;
+    line-height:1.35;
+  }
+
+  .option input{
+    margin-top:2px;
+  }
+
+  .formula-box{
+    margin-top:10px;
+    padding:10px;
+    border-radius:12px;
+    background:#f3f7ff;
+    border:1px solid #d7e4ff;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+    font-size:.95rem;
+    overflow:auto;
+  }
+
+  .meter{
+    display:grid;
+    grid-template-columns:70px 1fr;
+    gap:10px;
+    align-items:center;
+    margin:12px 0;
+    padding:12px;
+    background:#f8fafc;
+    border:1px solid #dfe7f3;
+    border-radius:14px;
+  }
+
+  .meter-icon{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    height:54px;
+    border-radius:14px;
+    font-size:2rem;
+    font-weight:900;
+    background:#eef2f7;
+  }
+
+  .meter-icon.pos{background:#dcfce7;color:var(--green)}
+  .meter-icon.neg{background:#fee2e2;color:var(--red)}
+  .meter-icon.zero{background:#fff4cc;color:#a16207}
+
+  select{
+    width:100%;
+    padding:10px;
+    border-radius:12px;
+    border:1px solid #ccd6e5;
+    background:white;
+    font-weight:700;
+    color:#25364d;
+  }
+
+  .actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:12px;
+  }
+
+  .feedback{
+    margin-top:12px;
+    padding:12px;
+    border-radius:14px;
+    background:#eef4ff;
+    border:1px solid #c7d7fe;
+    line-height:1.45;
+  }
+
+  .feedback.good{
+    background:#dcfce7;
+    border-color:#97e5b9;
+  }
+
+  .feedback.bad{
+    background:#fff1f2;
+    border-color:#fecdd3;
+  }
+
+  .hint{
+    margin-top:10px;
+    padding:10px 12px;
+    border-radius:12px;
+    background:#fffbea;
+    border:1px solid #fde68a;
+    display:none;
+    line-height:1.4;
+  }
+
+  .hint.show{display:block}
+
+  .muted{
+    color:var(--muted);
+  }
+
+  .mini-title{
+    font-weight:900;
+    color:#23374d;
+    margin-bottom:6px;
+  }
+
+  .graph-cursor{
+    cursor:crosshair;
+  }
+
+  .footer-note{
+    text-align:center;
+    color:#667085;
+    font-size:.9rem;
+    margin-top:18px;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Design the Maximum Garden</h1>
+  <p>
+    Use derivatives to satisfy a client’s design request. Drag a dimension, study the graph,
+    place the optimum marker, and justify your answer with derivative behavior.
+  </p>
+</header>
+
+<main>
+  <div class="topbar">
+    <div class="level-buttons" aria-label="Choose level">
+      <button class="levelBtn active" data-level="1">Level 1: Fixed Perimeter</button>
+      <button class="levelBtn" data-level="2">Level 2: River</button>
+      <button class="levelBtn" data-level="3">Level 3: Open Box</button>
+      <button class="levelBtn" data-level="4">Level 4: Minimize Material</button>
+      <button class="levelBtn" data-level="5">Level 5: Mixed</button>
+    </div>
+    <div class="actions">
+      <button id="resetBtn" class="secondary">Reset</button>
+      <button id="hintBtn" class="secondary">Hint</button>
+      <button id="newBtn" class="primary">New Challenge</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <section class="panel">
+      <h2 id="challengeTitle">Challenge</h2>
+      <div class="client-card" id="clientText"></div>
+
+      <div class="badge-row">
+        <span id="badgeModel" class="badge">□ Modeled</span>
+        <span id="badgeCritical" class="badge">□ Critical point found</span>
+        <span id="badgeVerified" class="badge">□ Verified optimum</span>
+      </div>
+
+      <div class="score-wrap">
+        <div class="score-label">
+          <span>Design score</span>
+          <span id="scoreText">0%</span>
+        </div>
+        <div class="scorebar"><div id="scoreFill" class="scorefill"></div></div>
+      </div>
+
+      <div class="control-grid">
+        <div>
+          <label class="small" for="xSlider">
+            Drag the design variable:
+            <span id="variableName">width</span>
+            <span id="xValue" class="value-pill"></span>
+          </label>
+          <input id="xSlider" type="range" min="1" max="10" step="0.01" value="5"/>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat">
+            <div class="k" id="dim1Label">Dimension 1</div>
+            <div class="v" id="dim1Value">—</div>
+          </div>
+          <div class="stat">
+            <div class="k" id="dim2Label">Dimension 2</div>
+            <div class="v" id="dim2Value">—</div>
+          </div>
+          <div class="stat">
+            <div class="k" id="objectiveLabel">Objective</div>
+            <div class="v" id="objectiveValue">—</div>
+          </div>
+          <div class="stat">
+            <div class="k">Derivative at current point</div>
+            <div class="v" id="derivativeValue">—</div>
+          </div>
+        </div>
+
+        <div class="meter">
+          <div id="meterIcon" class="meter-icon zero">→</div>
+          <div>
+            <div class="mini-title">Derivative sign meter</div>
+            <div id="meterText" class="muted">
+              If the derivative is positive, the objective increases as the variable increases.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3>1. Model the situation</h3>
+      <p class="muted">Choose the correct one-variable objective function after using the constraint.</p>
+      <div id="modelOptions" class="model-options"></div>
+      <button id="checkModelBtn" class="secondary" style="margin-top:8px;">Check model</button>
+      <div id="formulaBox" class="formula-box"></div>
+
+      <h3 style="margin-top:16px;">2. Justify the optimum</h3>
+      <p class="muted">
+        Slider guessing is not enough. The client wants graph evidence and derivative evidence.
+      </p>
+
+      <label class="small" for="reasonSelect">Derivative sign classification</label>
+      <select id="reasonSelect">
+        <option value="">Choose one…</option>
+        <option value="max">Derivative changes from positive to negative, so this is a maximum.</option>
+        <option value="min">Derivative changes from negative to positive, so this is a minimum.</option>
+        <option value="inc">Derivative stays positive, so no interior optimum occurs.</option>
+        <option value="guess">The graph looked good, so that is enough.</option>
+      </select>
+
+      <div style="height:10px"></div>
+
+      <label class="small" for="endpointSelect">Why are endpoints not optimal?</label>
+      <select id="endpointSelect">
+        <option value="">Choose one…</option>
+        <option value="maxEndpoints">At the endpoints, one dimension collapses or the objective is lower than the interior critical value.</option>
+        <option value="minEndpoints">Near the endpoint/edge designs, the material or objective value is larger than at the interior critical value.</option>
+        <option value="ignore">Endpoints never matter in optimization problems.</option>
+        <option value="same">The endpoints give exactly the same result as the optimum.</option>
+      </select>
+
+      <div class="actions">
+        <button id="reviewBtn" class="primary">Client Review</button>
+      </div>
+
+      <div id="feedback" class="feedback">
+        Place your design, choose a model, click the graph to place your optimum marker, and justify the result.
+      </div>
+
+      <div id="hintBox" class="hint"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Live design</h2>
+      <div class="svgbox">
+        <svg id="diagramSvg" viewBox="0 0 560 300" role="img" aria-label="Design diagram"></svg>
+      </div>
+
+      <h2 style="margin-top:16px;">Area / volume / material vs. design variable</h2>
+      <div class="svgbox graph-cursor">
+        <svg id="graphSvg" viewBox="0 0 560 330" role="img" aria-label="Objective graph"></svg>
+      </div>
+      <div class="graph-note">
+        Click or drag on the graph to place your optimum marker. The moving blue point shows your current slider design.
+      </div>
+    </section>
+  </div>
+
+  <div class="footer-note">
+    Optimization loop: model → reduce to one variable → differentiate → find critical point → verify with signs/endpoints → interpret.
+  </div>
+</main>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const NS = "http://www.w3.org/2000/svg";
+
+  let level = 1;
+  let challenge = null;
+  let markerX = null;
+  let modelCorrect = false;
+  let hintIndex = 0;
+  let draggingGraph = false;
+
+  const slider = $("xSlider");
+  const graphSvg = $("graphSvg");
+
+  function fmt(n, digits=2){
+    if(!isFinite(n)) return "—";
+    return Number(n).toFixed(digits).replace(/\.?0+$/,"");
+  }
+
+  function shuffle(arr){
+    const a = arr.slice();
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]] = [a[j],a[i]];
+    }
+    return a;
+  }
+
+  function randInt(a,b){
+    return Math.floor(a + Math.random()*(b-a+1));
+  }
+
+  function cubeRoot(x){
+    return Math.pow(x,1/3);
+  }
+
+  function makeRect(P, mixed=false){
+    const half = P/2;
+    return {
+      kind:"rect",
+      levelName:mixed ? "Final Mixed Challenge: Fixed Perimeter Garden" : "Level 1: Rectangle with Fixed Perimeter",
+      optimize:"max",
+      variable:"width w",
+      unit:"m",
+      objectiveName:"Area",
+      objectiveUnit:"m²",
+      client:`The client has exactly <b>${P} m</b> of fencing and wants a rectangular garden with the largest possible area. All four sides need fencing.`,
+      domain:[0.5, half-0.5],
+      trueDomain:[0, half],
+      objective:x => x*(half-x),
+      derivative:x => half - 2*x,
+      optimum:() => P/4,
+      dimensions:x => ({
+        d1Label:"Width w",
+        d1:x,
+        d2Label:"Height h",
+        d2:half-x,
+        extra:`Constraint: 2w + 2h = ${P}, so h = ${half} − w`
+      }),
+      modelCorrect:`A(w) = w(${half} − w)`,
+      modelOptions:shuffle([
+        {text:`A(w) = w(${half} − w)`, correct:true},
+        {text:`A(w) = w(${P} − 2w)`, correct:false},
+        {text:`A(w) = 2w(${half} − w)`, correct:false},
+        {text:`A(w) = ${P}w`, correct:false}
+      ]),
+      derivativeText:`A′(w) = ${half} − 2w`,
+      hints:[
+        "Start with the perimeter constraint: 2w + 2h = fixed fencing.",
+        "Solve the constraint for h in terms of w, then substitute into A = wh.",
+        "The optimum occurs where A′(w) = 0, but you must also check the derivative changes sign.",
+        "At the extreme endpoints, the rectangle collapses into zero area."
+      ]
+    };
+  }
+
+  function makeRiver(F, mixed=false){
+    return {
+      kind:"river",
+      levelName:mixed ? "Final Mixed Challenge: River Garden" : "Level 2: Rectangle Against a River",
+      optimize:"max",
+      variable:"depth x",
+      unit:"m",
+      objectiveName:"Area",
+      objectiveUnit:"m²",
+      client:`A river forms one side of the garden, so the client only needs fencing for <b>three sides</b>. There are <b>${F} m</b> of fencing available.`,
+      domain:[0.5, F/2-0.5],
+      trueDomain:[0, F/2],
+      objective:x => x*(F-2*x),
+      derivative:x => F - 4*x,
+      optimum:() => F/4,
+      dimensions:x => ({
+        d1Label:"Depth x",
+        d1:x,
+        d2Label:"River-side length y",
+        d2:F-2*x,
+        extra:`Constraint: 2x + y = ${F}, so y = ${F} − 2x`
+      }),
+      modelCorrect:`A(x) = x(${F} − 2x)`,
+      modelOptions:shuffle([
+        {text:`A(x) = x(${F} − 2x)`, correct:true},
+        {text:`A(x) = x(${F} − x)`, correct:false},
+        {text:`A(x) = 2x(${F} − 2x)`, correct:false},
+        {text:`A(x) = ${F}x`, correct:false}
+      ]),
+      derivativeText:`A′(x) = ${F} − 4x`,
+      hints:[
+        "The river side does not need fencing.",
+        "Use 2x + y = fixed fencing, not 2x + 2y.",
+        "Write area as A = xy, then replace y using the constraint.",
+        "At an endpoint, either the depth or river-side length collapses, so area is not largest there."
+      ]
+    };
+  }
+
+  function makeOpenBox(L,W,mixed=false){
+    const S = L + W;
+    const disc = S*S - 3*L*W;
+    const opt = (S - Math.sqrt(disc))/6;
+    return {
+      kind:"openbox",
+      levelName:mixed ? "Final Mixed Challenge: Open-Top Box" : "Level 3: Open-Top Box from a Sheet",
+      optimize:"max",
+      variable:"cut size x",
+      unit:"cm",
+      objectiveName:"Volume",
+      objectiveUnit:"cm³",
+      client:`The client has a <b>${L} cm × ${W} cm</b> sheet. Cut equal squares from the corners and fold up the sides to make an open-top box with maximum volume.`,
+      domain:[0.2, Math.min(L,W)/2 - 0.2],
+      trueDomain:[0, Math.min(L,W)/2],
+      objective:x => x*(L-2*x)*(W-2*x),
+      derivative:x => L*W - 4*(L+W)*x + 12*x*x,
+      optimum:() => opt,
+      dimensions:x => ({
+        d1Label:"Cut size x",
+        d1:x,
+        d2Label:"Base dimensions",
+        d2Text:`${fmt(L-2*x)} × ${fmt(W-2*x)}`,
+        extra:`Volume: height × length × width = x(${L} − 2x)(${W} − 2x)`
+      }),
+      modelCorrect:`V(x) = x(${L} − 2x)(${W} − 2x)`,
+      modelOptions:shuffle([
+        {text:`V(x) = x(${L} − 2x)(${W} − 2x)`, correct:true},
+        {text:`V(x) = x(${L} − x)(${W} − x)`, correct:false},
+        {text:`V(x) = (${L} − 2x)(${W} − 2x)`, correct:false},
+        {text:`V(x) = 4x(${L})(${W})`, correct:false}
+      ]),
+      derivativeText:`V′(x) = ${L*W} − ${4*(L+W)}x + 12x²`,
+      hints:[
+        "After cutting out squares of side x, each base dimension loses 2x.",
+        "The box height is the cut size x.",
+        "Model volume as height × base length × base width.",
+        "Both endpoint cases give zero volume: no height, or no base."
+      ]
+    };
+  }
+
+  function makeContainer(V,mixed=false){
+    const opt = cubeRoot(V);
+    return {
+      kind:"container",
+      levelName:mixed ? "Final Mixed Challenge: Fixed-Volume Container" : "Level 4: Minimize Surface Material",
+      optimize:"min",
+      variable:"base side x",
+      unit:"cm",
+      objectiveName:"Surface area",
+      objectiveUnit:"cm²",
+      client:`The client needs a closed square-base container with volume <b>${V} cm³</b>. Choose the base side and height to use the least surface material.`,
+      domain:[Math.max(1,opt/4), opt*2.7],
+      trueDomain:[0, Infinity],
+      objective:x => 2*x*x + 4*V/x,
+      derivative:x => 4*x - 4*V/(x*x),
+      optimum:() => opt,
+      dimensions:x => ({
+        d1Label:"Base side x",
+        d1:x,
+        d2Label:"Height h",
+        d2:V/(x*x),
+        extra:`Constraint: x²h = ${V}, so h = ${V}/x²`
+      }),
+      modelCorrect:`S(x) = 2x² + ${4*V}/x`,
+      modelOptions:shuffle([
+        {text:`S(x) = 2x² + ${4*V}/x`, correct:true},
+        {text:`S(x) = x² + ${4*V}/x`, correct:false},
+        {text:`S(x) = 2x² + 4x`, correct:false},
+        {text:`S(x) = ${V}/x²`, correct:false}
+      ]),
+      derivativeText:`S′(x) = 4x − ${4*V}/x²`,
+      hints:[
+        "For a square-base box, volume is x²h.",
+        "Solve x²h = fixed volume for h, then substitute into surface area.",
+        "A closed square-base box has top and bottom area 2x² plus four side faces.",
+        "For a minimum, look for the derivative changing from negative to positive."
+      ]
+    };
+  }
+
+  function makeChallenge(lvl, fresh=false){
+    if(lvl === 1) return makeRect(80);
+    if(lvl === 2) return makeRiver(96);
+    if(lvl === 3) return makeOpenBox(30,20);
+    if(lvl === 4) return makeContainer(1000);
+    const pick = randInt(1,4);
+    if(pick === 1) return makeRect(randInt(60,120), true);
+    if(pick === 2) return makeRiver(randInt(70,130), true);
+    if(pick === 3){
+      const L = randInt(24,42);
+      const W = randInt(16,30);
+      return makeOpenBox(Math.max(L,W), Math.min(L,W), true);
+    }
+    const V = [512,729,1000,1331,1728,2197][randInt(0,5)];
+    return makeContainer(V, true);
+  }
+
+  function initChallenge(lvl){
+    level = lvl;
+    challenge = makeChallenge(level, true);
+    markerX = null;
+    modelCorrect = false;
+    hintIndex = 0;
+
+    document.querySelectorAll(".levelBtn").forEach(btn=>{
+      btn.classList.toggle("active", Number(btn.dataset.level) === level);
+    });
+
+    const [lo,hi] = challenge.domain;
+    slider.min = lo;
+    slider.max = hi;
+    slider.step = (hi-lo)/700;
+    slider.value = lo + 0.35*(hi-lo);
+
+    $("challengeTitle").textContent = challenge.levelName;
+    $("clientText").innerHTML = challenge.client;
+    $("variableName").textContent = challenge.variable;
+    $("objectiveLabel").textContent = challenge.objectiveName;
+    $("reasonSelect").value = "";
+    $("endpointSelect").value = "";
+    $("feedback").className = "feedback";
+    $("feedback").textContent = "Place your design, choose a model, click the graph to place your optimum marker, and justify the result.";
+    $("hintBox").className = "hint";
+    $("hintBox").textContent = "";
+
+    renderModelOptions();
+    updateAll();
+  }
+
+  function renderModelOptions(){
+    const box = $("modelOptions");
+    box.innerHTML = "";
+    challenge.modelOptions.forEach((opt,i)=>{
+      const label = document.createElement("label");
+      label.className = "option";
+      const input = document.createElement("input");
+      input.type = "radio";
+      input.name = "model";
+      input.value = opt.correct ? "correct" : "wrong";
+      input.id = "model_" + i;
+      const span = document.createElement("span");
+      span.textContent = opt.text;
+      label.appendChild(input);
+      label.appendChild(span);
+      box.appendChild(label);
+    });
+    $("formulaBox").innerHTML =
+      `<b>Live derivative:</b> ${challenge.derivativeText}<br>` +
+      `<span class="muted">Choose the model above to earn the modeled badge.</span>`;
+  }
+
+  function currentX(){
+    return Number(slider.value);
+  }
+
+  function tolerance(){
+    const [lo,hi] = challenge.domain;
+    return Math.max((hi-lo)*0.025, 0.08);
+  }
+
+  function nearOpt(x){
+    return Math.abs(x - challenge.optimum()) <= tolerance();
+  }
+
+  function getScore(){
+    const x = currentX();
+    const opt = challenge.optimum();
+    const [lo,hi] = challenge.domain;
+    const scale = hi-lo;
+    const dimClose = Math.max(0, 1 - Math.abs(x-opt)/(scale*0.18));
+    const markerClose = markerX === null ? 0 : Math.max(0, 1 - Math.abs(markerX-opt)/(scale*0.18));
+
+    let score = 0;
+    score += dimClose * 35;
+    score += markerClose * 20;
+    score += modelCorrect ? 15 : 0;
+    score += isReasonCorrect() ? 20 : 0;
+    score += isEndpointCorrect() ? 10 : 0;
+    return Math.round(Math.min(100, score));
+  }
+
+  function isReasonCorrect(){
+    const val = $("reasonSelect").value;
+    return challenge.optimize === "max" ? val === "max" : val === "min";
+  }
+
+  function isEndpointCorrect(){
+    const val = $("endpointSelect").value;
+    return challenge.optimize === "max" ? val === "maxEndpoints" : val === "minEndpoints";
+  }
+
+  function updateAll(){
+    const x = currentX();
+    const q = challenge.objective(x);
+    const d = challenge.derivative(x);
+    const dims = challenge.dimensions(x);
+
+    $("xValue").textContent = `${fmt(x)} ${challenge.unit}`;
+    $("dim1Label").textContent = dims.d1Label;
+    $("dim1Value").textContent = `${fmt(dims.d1)} ${challenge.unit}`;
+    $("dim2Label").textContent = dims.d2Label;
+    $("dim2Value").textContent = dims.d2Text || `${fmt(dims.d2)} ${challenge.unit}`;
+    $("objectiveValue").textContent = `${fmt(q)} ${challenge.objectiveUnit}`;
+    $("derivativeValue").textContent = fmt(d,3);
+
+    updateMeter(d);
+    renderDiagram();
+    renderGraph();
+    updateBadgesAndScore();
+  }
+
+  function updateMeter(d){
+    const icon = $("meterIcon");
+    icon.className = "meter-icon";
+    if(Math.abs(d) < 0.08){
+      icon.classList.add("zero");
+      icon.textContent = "≈0";
+      $("meterText").innerHTML =
+        `The derivative is nearly zero. This is a <b>critical-point candidate</b>. Now verify the sign change and endpoints.`;
+    } else if(d > 0){
+      icon.classList.add("pos");
+      icon.textContent = "↗";
+      $("meterText").innerHTML =
+        `Positive derivative: as ${challenge.variable} increases, ${challenge.objectiveName.toLowerCase()} is <b>increasing</b>.`;
+    } else {
+      icon.classList.add("neg");
+      icon.textContent = "↘";
+      $("meterText").innerHTML =
+        `Negative derivative: as ${challenge.variable} increases, ${challenge.objectiveName.toLowerCase()} is <b>decreasing</b>.`;
+    }
+  }
+
+  function updateBadgesAndScore(){
+    const critical = markerX !== null && nearOpt(markerX) && nearOpt(currentX());
+    const verified = critical && modelCorrect && isReasonCorrect() && isEndpointCorrect();
+
+    $("badgeModel").className = "badge" + (modelCorrect ? " on" : "");
+    $("badgeModel").textContent = (modelCorrect ? "✓" : "□") + " Modeled";
+
+    $("badgeCritical").className = "badge" + (critical ? " on" : "");
+    $("badgeCritical").textContent = (critical ? "✓" : "□") + " Critical point found";
+
+    $("badgeVerified").className = "badge" + (verified ? " on" : "");
+    $("badgeVerified").textContent = (verified ? "✓" : "□") + " Verified optimum";
+
+    const score = getScore();
+    $("scoreText").textContent = score + "%";
+    $("scoreFill").style.width = score + "%";
+  }
+
+  function renderDiagram(){
+    const svg = $("diagramSvg");
+    const x = currentX();
+    const dims = challenge.dimensions(x);
+    let html = "";
+
+    if(challenge.kind === "rect" || challenge.kind === "river"){
+      const a = dims.d1;
+      const b = dims.d2;
+      const maxDim = Math.max(a,b);
+      const scale = 190 / maxDim;
+      const rw = Math.max(30, a*scale);
+      const rh = Math.max(30, b*scale);
+      const cx = 280 - rw/2;
+      const cy = 150 - rh/2;
+
+      if(challenge.kind === "river"){
+        html += `<rect x="0" y="15" width="560" height="55" fill="#dbeafe"/>
+                 <path d="M0,55 C70,25 120,75 190,45 S330,65 420,38 S520,55 560,35" fill="none" stroke="#38bdf8" stroke-width="7"/>
+                 <text x="24" y="42" font-size="18" font-weight="800" fill="#0369a1">River: no fence needed here</text>`;
+      }
+
+      html += `
+        <rect x="${cx}" y="${cy}" width="${rw}" height="${rh}" rx="8" fill="#d9f99d" stroke="#166534" stroke-width="4"/>
+        <rect x="${cx+8}" y="${cy+8}" width="${Math.max(1,rw-16)}" height="${Math.max(1,rh-16)}" rx="6" fill="#bef264" opacity=".55"/>
+      `;
+
+      if(challenge.kind === "river"){
+        html += `<line x1="${cx}" y1="${cy}" x2="${cx+rw}" y2="${cy}" stroke="#0284c7" stroke-width="7"/>
+                 <line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy+rh}" stroke="#92400e" stroke-width="6"/>
+                 <line x1="${cx+rw}" y1="${cy}" x2="${cx+rw}" y2="${cy+rh}" stroke="#92400e" stroke-width="6"/>
+                 <line x1="${cx}" y1="${cy+rh}" x2="${cx+rw}" y2="${cy+rh}" stroke="#92400e" stroke-width="6"/>`;
+      } else {
+        html += `<rect x="${cx}" y="${cy}" width="${rw}" height="${rh}" rx="8" fill="none" stroke="#92400e" stroke-width="7"/>`;
+      }
+
+      html += `
+        <text x="280" y="${cy+rh+28}" text-anchor="middle" font-size="16" font-weight="800" fill="#1f2937">${dims.d1Label}: ${fmt(a)} ${challenge.unit}</text>
+        <text x="${cx+rw+18}" y="150" transform="rotate(90 ${cx+rw+18},150)" text-anchor="middle" font-size="16" font-weight="800" fill="#1f2937">${dims.d2Label}: ${fmt(b)} ${challenge.unit}</text>
+        <text x="280" y="282" text-anchor="middle" font-size="15" fill="#475467">${dims.extra}</text>
+      `;
+    }
+
+    if(challenge.kind === "openbox"){
+      const xcut = currentX();
+      const parts = dims.d2Text;
+      html += `
+        <rect x="120" y="55" width="320" height="190" fill="#e0f2fe" stroke="#075985" stroke-width="3" rx="6"/>
+        <rect x="120" y="55" width="55" height="55" fill="#fff" stroke="#ef4444" stroke-width="3" stroke-dasharray="6 4"/>
+        <rect x="385" y="55" width="55" height="55" fill="#fff" stroke="#ef4444" stroke-width="3" stroke-dasharray="6 4"/>
+        <rect x="120" y="190" width="55" height="55" fill="#fff" stroke="#ef4444" stroke-width="3" stroke-dasharray="6 4"/>
+        <rect x="385" y="190" width="55" height="55" fill="#fff" stroke="#ef4444" stroke-width="3" stroke-dasharray="6 4"/>
+        <rect x="175" y="110" width="210" height="80" fill="#bae6fd" stroke="#075985" stroke-width="3"/>
+        <path d="M175 110 L210 80 L420 80 L385 110 Z" fill="#dbeafe" stroke="#075985" stroke-width="2"/>
+        <path d="M385 110 L420 80 L420 160 L385 190 Z" fill="#93c5fd" stroke="#075985" stroke-width="2"/>
+        <text x="280" y="32" text-anchor="middle" font-size="18" font-weight="900" fill="#0f172a">Cut out four squares, then fold</text>
+        <text x="280" y="272" text-anchor="middle" font-size="15" fill="#475467">cut size x = ${fmt(xcut)} ${challenge.unit}; base = ${parts}</text>
+      `;
+    }
+
+    if(challenge.kind === "container"){
+      const side = dims.d1;
+      const h = dims.d2;
+      const maxDim = Math.max(side,h);
+      const s = Math.max(70, Math.min(150, 150*side/maxDim + 25));
+      const hh = Math.max(55, Math.min(170, 170*h/maxDim + 20));
+      const x0 = 250 - s/2;
+      const y0 = 205 - hh;
+      html += `
+        <polygon points="${x0},${y0} ${x0+35},${y0-30} ${x0+s+35},${y0-30} ${x0+s},${y0}" fill="#dbeafe" stroke="#1e40af" stroke-width="3"/>
+        <polygon points="${x0+s},${y0} ${x0+s+35},${y0-30} ${x0+s+35},${y0+hh-30} ${x0+s},${y0+hh}" fill="#93c5fd" stroke="#1e40af" stroke-width="3"/>
+        <rect x="${x0}" y="${y0}" width="${s}" height="${hh}" fill="#bfdbfe" stroke="#1e40af" stroke-width="3"/>
+        <text x="280" y="32" text-anchor="middle" font-size="18" font-weight="900" fill="#0f172a">Closed square-base container</text>
+        <text x="280" y="270" text-anchor="middle" font-size="15" fill="#475467">${dims.extra}</text>
+        <text x="${x0+s/2}" y="${y0+hh+24}" text-anchor="middle" font-size="15" font-weight="800">x = ${fmt(side)} cm</text>
+        <text x="${x0+s+52}" y="${y0+hh/2}" transform="rotate(90 ${x0+s+52},${y0+hh/2})" text-anchor="middle" font-size="15" font-weight="800">h = ${fmt(h)} cm</text>
+      `;
+    }
+
+    svg.innerHTML = html;
+  }
+
+  function graphData(){
+    const [lo,hi] = challenge.domain;
+    const samples = [];
+    let ymin = Infinity, ymax = -Infinity;
+    for(let i=0;i<=220;i++){
+      const x = lo + (hi-lo)*i/220;
+      const y = challenge.objective(x);
+      samples.push([x,y]);
+      ymin = Math.min(ymin,y);
+      ymax = Math.max(ymax,y);
+    }
+    if(ymin === ymax){ ymin -= 1; ymax += 1; }
+    const pad = (ymax-ymin)*0.12;
+    return {samples, xmin:lo, xmax:hi, ymin:ymin-pad, ymax:ymax+pad};
+  }
+
+  function renderGraph(){
+    const svg = graphSvg;
+    const g = graphData();
+    const W = 560, H = 330;
+    const m = {l:58,r:24,t:24,b:54};
+    const pw = W-m.l-m.r, ph = H-m.t-m.b;
+
+    const X = x => m.l + (x-g.xmin)/(g.xmax-g.xmin)*pw;
+    const Y = y => m.t + (g.ymax-y)/(g.ymax-g.ymin)*ph;
+
+    let path = "";
+    g.samples.forEach((p,i)=>{
+      path += (i ? " L " : "M ") + X(p[0]).toFixed(2) + " " + Y(p[1]).toFixed(2);
+    });
+
+    const x = currentX();
+    const y = challenge.objective(x);
+    const d = challenge.derivative(x);
+
+    let markerHtml = "";
+    if(markerX !== null){
+      const my = challenge.objective(markerX);
+      markerHtml = `
+        <line x1="${X(markerX)}" y1="${m.t}" x2="${X(markerX)}" y2="${m.t+ph}" stroke="#7c3aed" stroke-width="2" stroke-dasharray="5 5"/>
+        <circle cx="${X(markerX)}" cy="${Y(my)}" r="8" fill="#7c3aed" stroke="white" stroke-width="3"/>
+        <text x="${X(markerX)}" y="${Y(my)-14}" text-anchor="middle" font-size="13" font-weight="900" fill="#6d28d9">marker</text>
+      `;
+    }
+
+    const zeroY = (0>=g.ymin && 0<=g.ymax) ? Y(0) : m.t+ph;
+
+    svg.innerHTML = `
+      <rect x="0" y="0" width="${W}" height="${H}" fill="#fbfdff"/>
+      <line x1="${m.l}" y1="${m.t}" x2="${m.l}" y2="${m.t+ph}" stroke="#344054" stroke-width="2"/>
+      <line x1="${m.l}" y1="${m.t+ph}" x2="${m.l+pw}" y2="${m.t+ph}" stroke="#344054" stroke-width="2"/>
+      <line x1="${m.l}" y1="${zeroY}" x2="${m.l+pw}" y2="${zeroY}" stroke="#d0d5dd" stroke-width="1"/>
+
+      <text x="${m.l}" y="${H-18}" text-anchor="start" font-size="13" fill="#475467">${fmt(g.xmin)}</text>
+      <text x="${m.l+pw}" y="${H-18}" text-anchor="end" font-size="13" fill="#475467">${fmt(g.xmax)}</text>
+      <text x="${m.l+pw/2}" y="${H-12}" text-anchor="middle" font-size="15" font-weight="800" fill="#344054">${challenge.variable}</text>
+
+      <text x="18" y="${m.t+ph/2}" transform="rotate(-90 18,${m.t+ph/2})" text-anchor="middle" font-size="15" font-weight="800" fill="#344054">${challenge.objectiveName}</text>
+      <text x="${m.l-8}" y="${Y(g.ymax)+8}" text-anchor="end" font-size="12" fill="#475467">${fmt(g.ymax)}</text>
+      <text x="${m.l-8}" y="${Y(g.ymin)}" text-anchor="end" font-size="12" fill="#475467">${fmt(g.ymin)}</text>
+
+      <path d="${path}" fill="none" stroke="#1f5eff" stroke-width="4" stroke-linecap="round"/>
+      ${markerHtml}
+
+      <circle cx="${X(x)}" cy="${Y(y)}" r="8" fill="#0ea5e9" stroke="white" stroke-width="3"/>
+      <text x="${X(x)}" y="${Y(y)+24}" text-anchor="middle" font-size="12" font-weight="800" fill="#0369a1">current</text>
+
+      <rect x="${m.l}" y="${m.t}" width="${pw}" height="${ph}" fill="transparent" id="plotArea"/>
+      <text x="${m.l+10}" y="${m.t+20}" font-size="13" fill="#475467">d/dx = ${fmt(d,3)}</text>
+    `;
+  }
+
+  function graphEventToX(evt){
+    const rect = graphSvg.getBoundingClientRect();
+    const px = (evt.clientX - rect.left) * 560 / rect.width;
+    const g = graphData();
+    const m = {l:58,r:24,t:24,b:54};
+    const pw = 560-m.l-m.r;
+    const clamped = Math.max(m.l, Math.min(m.l+pw, px));
+    return g.xmin + (clamped-m.l)/pw*(g.xmax-g.xmin);
+  }
+
+  function setMarkerFromEvent(evt){
+    markerX = graphEventToX(evt);
+    updateAll();
+  }
+
+  slider.addEventListener("input", updateAll);
+
+  graphSvg.addEventListener("mousedown", evt=>{
+    draggingGraph = true;
+    setMarkerFromEvent(evt);
+  });
+  window.addEventListener("mousemove", evt=>{
+    if(draggingGraph) setMarkerFromEvent(evt);
+  });
+  window.addEventListener("mouseup", ()=> draggingGraph = false);
+  graphSvg.addEventListener("click", setMarkerFromEvent);
+
+  $("checkModelBtn").addEventListener("click", ()=>{
+    const selected = document.querySelector('input[name="model"]:checked');
+    modelCorrect = !!selected && selected.value === "correct";
+    if(modelCorrect){
+      $("formulaBox").innerHTML =
+        `<b>Correct model:</b> ${challenge.modelCorrect}<br>` +
+        `<b>Derivative:</b> ${challenge.derivativeText}`;
+      $("feedback").className = "feedback good";
+      $("feedback").textContent = "Model accepted. Now use the graph marker and derivative sign behavior to justify the optimum.";
+    } else {
+      $("feedback").className = "feedback bad";
+      $("feedback").textContent = "Not quite. Use the constraint to eliminate one variable before writing the objective.";
+    }
+    updateBadgesAndScore();
+  });
+
+  $("reasonSelect").addEventListener("change", updateBadgesAndScore);
+  $("endpointSelect").addEventListener("change", updateBadgesAndScore);
+
+  $("reviewBtn").addEventListener("click", ()=>{
+    const x = currentX();
+    const opt = challenge.optimum();
+    const pieces = [];
+
+    if(!modelCorrect) pieces.push("choose the correct one-variable model");
+    if(!nearOpt(x)) pieces.push("move the design dimension closer to the critical point");
+    if(markerX === null) pieces.push("place a marker on the graph");
+    else if(!nearOpt(markerX)) pieces.push("place the graph marker closer to the optimum");
+    if(!isReasonCorrect()) pieces.push("choose the correct derivative sign-change classification");
+    if(!isEndpointCorrect()) pieces.push("explain why endpoints are not optimal");
+
+    if(pieces.length === 0){
+      $("feedback").className = "feedback good";
+      const dims = challenge.dimensions(opt);
+      const obj = challenge.objective(opt);
+      const word = challenge.optimize === "max" ? "maximum" : "minimum";
+      $("feedback").innerHTML =
+        `<b>Client accepted!</b> You found and verified the ${word}.<br>` +
+        `Optimal ${challenge.variable} ≈ <b>${fmt(opt)}</b> ${challenge.unit}; ` +
+        `${challenge.objectiveName.toLowerCase()} ≈ <b>${fmt(obj)}</b> ${challenge.objectiveUnit}.<br>` +
+        `Reason: the derivative sign change and endpoint comparison agree with the graph.`;
+    } else {
+      $("feedback").className = "feedback bad";
+      $("feedback").innerHTML =
+        `<b>Client needs more evidence.</b> To finish, please: ${pieces.join("; ")}.`;
+    }
+    updateBadgesAndScore();
+  });
+
+  $("resetBtn").addEventListener("click", ()=> initChallenge(level));
+
+  $("hintBtn").addEventListener("click", ()=>{
+    const hint = challenge.hints[Math.min(hintIndex, challenge.hints.length-1)];
+    $("hintBox").className = "hint show";
+    $("hintBox").textContent = hint;
+    hintIndex++;
+  });
+
+  $("newBtn").addEventListener("click", ()=>{
+    if(level === 5){
+      initChallenge(5);
+    } else {
+      initChallenge(5);
+    }
+  });
+
+  document.querySelectorAll(".levelBtn").forEach(btn=>{
+    btn.addEventListener("click", ()=> initChallenge(Number(btn.dataset.level)));
+  });
+
+  initChallenge(1);
+})();
+</script>
+  <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#ececec"
+    }
+  </script>
+</body>
+</html>

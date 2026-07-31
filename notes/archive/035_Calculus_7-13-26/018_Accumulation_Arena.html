@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Accumulation Arena: Building Area from Tiny Pieces</title>
+  <style>
+    :root {
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --ink: #1d2433;
+      --muted: #667085;
+      --blue: #2563eb;
+      --blue-soft: rgba(37, 99, 235, 0.25);
+      --red: #dc2626;
+      --red-soft: rgba(220, 38, 38, 0.25);
+      --green: #16a34a;
+      --yellow: #f59e0b;
+      --border: #d0d5dd;
+      --shadow: 0 10px 25px rgba(16, 24, 40, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    header {
+      padding: 24px;
+      background: linear-gradient(135deg, #00274c, #2563eb);
+      color: white;
+    }
+
+    header h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.7rem, 3vw, 2.5rem);
+    }
+
+    header p {
+      margin: 0;
+      max-width: 900px;
+      opacity: 0.95;
+      line-height: 1.5;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 20px;
+      padding: 20px;
+      max-width: 1300px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 950px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .stage-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .stage-tabs button,
+    .btn {
+      border: 1px solid var(--border);
+      background: white;
+      color: var(--ink);
+      padding: 10px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 650;
+      transition: 0.15s ease;
+    }
+
+    .stage-tabs button:hover,
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(16, 24, 40, 0.1);
+    }
+
+    .stage-tabs button.active {
+      background: #00274c;
+      color: white;
+      border-color: #00274c;
+    }
+
+    .btn.primary {
+      background: var(--blue);
+      color: white;
+      border-color: var(--blue);
+    }
+
+    .btn.danger {
+      background: #fff5f5;
+      color: var(--red);
+      border-color: #fecaca;
+    }
+
+    .btn.success {
+      background: #f0fdf4;
+      color: var(--green);
+      border-color: #bbf7d0;
+    }
+
+    #graph {
+      width: 100%;
+      height: auto;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+      cursor: crosshair;
+      display: block;
+    }
+
+    .stage-title {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+      margin-bottom: 12px;
+    }
+
+    .stage-title h2 {
+      margin: 0;
+      font-size: 1.35rem;
+    }
+
+    .stage-title .formula {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: #eef4ff;
+      color: #1e40af;
+      font-weight: 700;
+    }
+
+    .instructions {
+      color: var(--muted);
+      line-height: 1.5;
+      margin: 0 0 14px;
+    }
+
+    .controls {
+      display: grid;
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .control-row {
+      display: grid;
+      grid-template-columns: 140px 1fr 70px;
+      align-items: center;
+      gap: 12px;
+    }
+
+    @media (max-width: 620px) {
+      .control-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    label {
+      font-weight: 700;
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+
+    output {
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    @media (max-width: 700px) {
+      .stats {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .stat {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fcfcfd;
+    }
+
+    .stat .label {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+    }
+
+    .stat .value {
+      font-size: 1.2rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    aside {
+      display: grid;
+      gap: 20px;
+      align-content: start;
+    }
+
+    .tank-wrap h3 {
+      margin-top: 0;
+    }
+
+    .tank {
+      position: relative;
+      height: 310px;
+      border: 4px solid #475467;
+      border-radius: 18px 18px 28px 28px;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,0.25) 0 12%, transparent 12% 100%),
+        #f8fafc;
+      overflow: hidden;
+      margin: 14px auto;
+      max-width: 190px;
+    }
+
+    .zero-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      border-top: 2px dashed #344054;
+      z-index: 4;
+    }
+
+    .zero-label {
+      position: absolute;
+      right: 6px;
+      top: calc(50% + 4px);
+      z-index: 5;
+      font-size: 0.8rem;
+      color: #344054;
+      font-weight: 800;
+      background: rgba(255,255,255,0.8);
+      border-radius: 6px;
+      padding: 1px 5px;
+    }
+
+    .positive-fill {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 50%;
+      height: 0%;
+      background: linear-gradient(180deg, rgba(22,163,74,0.75), rgba(22,163,74,0.95));
+      transition: height 0.2s ease;
+      z-index: 2;
+    }
+
+    .negative-fill {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 0%;
+      background: linear-gradient(180deg, rgba(220,38,38,0.95), rgba(220,38,38,0.65));
+      transition: height 0.2s ease;
+      z-index: 2;
+    }
+
+    .target-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      border-top: 3px solid var(--yellow);
+      z-index: 6;
+      display: none;
+    }
+
+    .target-line::after {
+      content: "target";
+      position: absolute;
+      right: 4px;
+      top: -22px;
+      background: #fffbeb;
+      color: #92400e;
+      border: 1px solid #fde68a;
+      border-radius: 6px;
+      padding: 1px 5px;
+      font-size: 0.75rem;
+      font-weight: 800;
+    }
+
+    .tank-readout {
+      text-align: center;
+      font-size: 1.2rem;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hint-box {
+      border-left: 5px solid var(--blue);
+      background: #eff6ff;
+      padding: 12px;
+      border-radius: 12px;
+      color: #1e3a8a;
+      line-height: 1.45;
+    }
+
+    .feedback {
+      min-height: 48px;
+      border: 1px solid var(--border);
+      background: #fcfcfd;
+      border-radius: 12px;
+      padding: 12px;
+      line-height: 1.45;
+    }
+
+    .feedback.good {
+      border-color: #bbf7d0;
+      background: #f0fdf4;
+      color: #166534;
+    }
+
+    .feedback.bad {
+      border-color: #fecaca;
+      background: #fff5f5;
+      color: #991b1b;
+    }
+
+    .feedback.warn {
+      border-color: #fde68a;
+      background: #fffbeb;
+      color: #92400e;
+    }
+
+    .compare-buttons,
+    .puzzle-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .interval-list {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.5;
+      max-height: 150px;
+      overflow: auto;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .swatch {
+      display: inline-block;
+      width: 16px;
+      height: 10px;
+      border-radius: 3px;
+      margin-right: 5px;
+      vertical-align: middle;
+    }
+
+    .swatch.blue {
+      background: var(--blue-soft);
+      border: 1px solid var(--blue);
+    }
+
+    .swatch.red {
+      background: var(--red-soft);
+      border: 1px solid var(--red);
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Accumulation Arena: Building Area from Tiny Pieces</h1>
+    <p>
+      Sweep across a rate graph, watch a signed accumulation tank change, and build exact net area from positive and negative pieces.
+    </p>
+  </header>
+
+  <main>
+    <section class="card">
+      <nav class="stage-tabs" aria-label="Activity stages">
+        <button class="active" data-stage="1">Stage 1: Positive Area</button>
+        <button data-stage="2">Stage 2: Signed Area</button>
+        <button data-stage="3">Stage 3: Compare</button>
+        <button data-stage="4">Stage 4: Build Target</button>
+      </nav>
+
+      <div class="stage-title">
+        <div>
+          <h2 id="stageName">Stage 1: Positive area</h2>
+          <p id="instructions" class="instructions">
+            Drag the scanner from left to right. Each thin rectangle adds positive area to the tank.
+          </p>
+        </div>
+        <div id="formula" class="formula">f(x) = x + 1</div>
+      </div>
+
+      <canvas id="graph" width="900" height="460" aria-label="Graph of function with shaded signed area"></canvas>
+
+      <div class="legend">
+        <span><span class="swatch blue"></span>positive contribution</span>
+        <span><span class="swatch red"></span>negative contribution</span>
+      </div>
+
+      <div class="controls">
+        <div id="scannerControls">
+          <div class="control-row">
+            <label for="scanSlider">Scanner x-position</label>
+            <input id="scanSlider" type="range" min="0" max="4" step="0.01" value="0" />
+            <output id="scanOut">0.00</output>
+          </div>
+        </div>
+
+        <div id="endpointControls" hidden>
+          <div class="control-row">
+            <label for="aSlider">Left endpoint</label>
+            <input id="aSlider" type="range" min="-3" max="3" step="1" value="0" />
+            <output id="aOut">0</output>
+          </div>
+          <div class="control-row">
+            <label for="bSlider">Right endpoint</label>
+            <input id="bSlider" type="range" min="-3" max="3" step="1" value="1" />
+            <output id="bOut">1</output>
+          </div>
+          <p class="small">
+            Stage 4 snaps to integer interval endpoints so you can reason from whole rectangular pieces.
+          </p>
+        </div>
+
+        <div id="compareControls" hidden>
+          <p>
+            Which interval has the greater <strong>net accumulation</strong>?
+          </p>
+          <p>
+            A: <strong>∫<sub>-2</sub><sup>0</sup> x dx</strong>
+            &nbsp;&nbsp; versus &nbsp;&nbsp;
+            B: <strong>∫<sub>0</sub><sup>2</sup> x dx</strong>
+          </p>
+          <div class="compare-buttons">
+            <button class="btn" data-answer="A">A is greater</button>
+            <button class="btn" data-answer="B">B is greater</button>
+            <button class="btn" data-answer="equal">They are equal</button>
+          </div>
+        </div>
+
+        <div id="puzzleControls" hidden>
+          <div class="puzzle-buttons">
+            <button id="addInterval" class="btn primary">Add selected interval</button>
+            <button id="clearIntervals" class="btn danger">Clear intervals</button>
+            <button id="checkTarget" class="btn success">Check target</button>
+          </div>
+          <ol id="intervalList" class="interval-list"></ol>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="label">Current interval</div>
+          <div id="intervalStat" class="value">[0.00, 0.00]</div>
+        </div>
+        <div class="stat">
+          <div class="label">Selected interval accumulation</div>
+          <div id="areaStat" class="value">0.000</div>
+        </div>
+        <div class="stat">
+          <div class="label">Total net accumulation</div>
+          <div id="totalStat" class="value">0.000</div>
+        </div>
+      </div>
+    </section>
+
+    <aside>
+      <section class="card tank-wrap">
+        <h3>Signed Accumulation Tank</h3>
+        <div class="tank" aria-label="Signed accumulation tank">
+          <div id="positiveFill" class="positive-fill"></div>
+          <div id="negativeFill" class="negative-fill"></div>
+          <div class="zero-line"></div>
+          <div class="zero-label">0</div>
+          <div id="targetLine" class="target-line"></div>
+        </div>
+        <div id="tankReadout" class="tank-readout">0.000</div>
+      </section>
+
+      <section class="card">
+        <h3>Refinery Feedback</h3>
+        <div id="feedback" class="feedback" aria-live="polite">
+          Start by dragging the scanner. The tank measures accumulated signed area.
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>Key idea</h3>
+        <div class="hint-box">
+          A definite integral accumulates tiny signed pieces:
+          <br><br>
+          <strong>Above</strong> the x-axis adds.
+          <br>
+          <strong>Below</strong> the x-axis subtracts.
+          <br><br>
+          Net area can cancel even when total geometric area is not zero.
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <script>
+    const canvas = document.getElementById("graph");
+    const ctx = canvas.getContext("2d");
+
+    const stageButtons = document.querySelectorAll("[data-stage]");
+    const stageName = document.getElementById("stageName");
+    const instructions = document.getElementById("instructions");
+    const formula = document.getElementById("formula");
+
+    const scannerControls = document.getElementById("scannerControls");
+    const endpointControls = document.getElementById("endpointControls");
+    const compareControls = document.getElementById("compareControls");
+    const puzzleControls = document.getElementById("puzzleControls");
+
+    const scanSlider = document.getElementById("scanSlider");
+    const scanOut = document.getElementById("scanOut");
+    const aSlider = document.getElementById("aSlider");
+    const bSlider = document.getElementById("bSlider");
+    const aOut = document.getElementById("aOut");
+    const bOut = document.getElementById("bOut");
+
+    const intervalStat = document.getElementById("intervalStat");
+    const areaStat = document.getElementById("areaStat");
+    const totalStat = document.getElementById("totalStat");
+    const tankReadout = document.getElementById("tankReadout");
+    const positiveFill = document.getElementById("positiveFill");
+    const negativeFill = document.getElementById("negativeFill");
+    const targetLine = document.getElementById("targetLine");
+    const feedback = document.getElementById("feedback");
+    const intervalList = document.getElementById("intervalList");
+
+    const addIntervalBtn = document.getElementById("addInterval");
+    const clearIntervalsBtn = document.getElementById("clearIntervals");
+    const checkTargetBtn = document.getElementById("checkTarget");
+
+    const margin = { left: 62, right: 24, top: 28, bottom: 52 };
+
+    let stage = 1;
+    let scannerX = 0;
+    let selectedA = 0;
+    let selectedB = 1;
+    let puzzleIntervals = [];
+    let dragging = null;
+
+    const functions = {
+      xplus1: {
+        label: "f(x) = x + 1",
+        value: x => x + 1,
+        integral: (a, b) => 0.5 * (b * b - a * a) + (b - a)
+      },
+      x: {
+        label: "f(x) = x",
+        value: x => x,
+        integral: (a, b) => 0.5 * (b * b - a * a)
+      },
+      piecewise: {
+        label: "piecewise constant refinery rate",
+        breaks: [-3, -2, -1, 0, 1, 2, 3],
+        heights: [-2, 1, -1, 2, 1, -1],
+        value(x) {
+          if (x <= -3) return -2;
+          if (x >= 3) return -1;
+          const br = this.breaks;
+          for (let i = 0; i < br.length - 1; i++) {
+            if (x >= br[i] && x < br[i + 1]) return this.heights[i];
+          }
+          return 0;
+        },
+        integral(a, b) {
+          if (a === b) return 0;
+          let sign = 1;
+          if (a > b) {
+            [a, b] = [b, a];
+            sign = -1;
+          }
+
+          let total = 0;
+          const br = this.breaks;
+          for (let i = 0; i < br.length - 1; i++) {
+            const left = Math.max(a, br[i]);
+            const right = Math.min(b, br[i + 1]);
+            if (right > left) {
+              total += this.heights[i] * (right - left);
+            }
+          }
+          return sign * total;
+        }
+      }
+    };
+
+    const stages = {
+      1: {
+        name: "Stage 1: Positive area",
+        instructions:
+          "Drag the scanner from left to right. Since f(x) = x + 1 stays above the x-axis here, every thin rectangle adds to the tank.",
+        fn: "xplus1",
+        domain: [0, 4],
+        range: [-0.5, 5.5],
+        start: 0,
+        tankMax: 12,
+        target: null
+      },
+      2: {
+        name: "Stage 2: Signed area",
+        instructions:
+          "Drag from -2 to 2. Below the x-axis, the tank drains because the rate is negative. Above the x-axis, it fills again.",
+        fn: "x",
+        domain: [-2, 2],
+        range: [-2.5, 2.5],
+        start: -2,
+        tankMax: 2.2,
+        target: null
+      },
+      3: {
+        name: "Stage 3: Compare intervals",
+        instructions:
+          "Compare two signed areas. Be careful: the left interval is below the x-axis, so its net accumulation is negative.",
+        fn: "x",
+        domain: [-2.4, 2.4],
+        range: [-2.5, 2.5],
+        tankMax: 2.2,
+        target: null
+      },
+      4: {
+        name: "Stage 4: Construct an integral",
+        instructions:
+          "Operate the accumulation refinery. Select integer-width intervals and add their signed areas until the tank reaches the target.",
+        fn: "piecewise",
+        domain: [-3, 3],
+        range: [-2.6, 2.6],
+        tankMax: 5,
+        target: 3
+      }
+    };
+
+    function currentConfig() {
+      return stages[stage];
+    }
+
+    function currentFunction() {
+      return functions[currentConfig().fn];
+    }
+
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
+    }
+
+    function fmt(n, digits = 3) {
+      return Number(n).toFixed(digits);
+    }
+
+    function getPlotRect() {
+      return {
+        x: margin.left,
+        y: margin.top,
+        w: canvas.width - margin.left - margin.right,
+        h: canvas.height - margin.top - margin.bottom
+      };
+    }
+
+    function xToPx(x) {
+      const cfg = currentConfig();
+      const [xmin, xmax] = cfg.domain;
+      const plot = getPlotRect();
+      return plot.x + ((x - xmin) / (xmax - xmin)) * plot.w;
+    }
+
+    function yToPx(y) {
+      const cfg = currentConfig();
+      const [ymin, ymax] = cfg.range;
+      const plot = getPlotRect();
+      return plot.y + plot.h - ((y - ymin) / (ymax - ymin)) * plot.h;
+    }
+
+    function pxToX(px) {
+      const cfg = currentConfig();
+      const [xmin, xmax] = cfg.domain;
+      const plot = getPlotRect();
+      return xmin + ((px - plot.x) / plot.w) * (xmax - xmin);
+    }
+
+    function niceTicks(min, max) {
+      const ticks = [];
+      const start = Math.ceil(min);
+      const end = Math.floor(max);
+      for (let v = start; v <= end; v++) ticks.push(v);
+      return ticks;
+    }
+
+    function clearCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawGridAndAxes() {
+      const cfg = currentConfig();
+      const plot = getPlotRect();
+      const [xmin, xmax] = cfg.domain;
+      const [ymin, ymax] = cfg.range;
+
+      ctx.save();
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = "#eaecf0";
+      ctx.lineWidth = 1;
+      ctx.font = "13px system-ui";
+      ctx.fillStyle = "#667085";
+
+      for (const x of niceTicks(xmin, xmax)) {
+        const px = xToPx(x);
+        ctx.beginPath();
+        ctx.moveTo(px, plot.y);
+        ctx.lineTo(px, plot.y + plot.h);
+        ctx.stroke();
+
+        ctx.fillText(String(x), px - 4, plot.y + plot.h + 24);
+      }
+
+      for (const y of niceTicks(ymin, ymax)) {
+        const py = yToPx(y);
+        ctx.beginPath();
+        ctx.moveTo(plot.x, py);
+        ctx.lineTo(plot.x + plot.w, py);
+        ctx.stroke();
+
+        if (y !== 0) ctx.fillText(String(y), plot.x - 34, py + 4);
+      }
+
+      ctx.strokeStyle = "#344054";
+      ctx.lineWidth = 2;
+
+      const yAxisX = xToPx(0);
+      if (yAxisX >= plot.x && yAxisX <= plot.x + plot.w) {
+        ctx.beginPath();
+        ctx.moveTo(yAxisX, plot.y);
+        ctx.lineTo(yAxisX, plot.y + plot.h);
+        ctx.stroke();
+      }
+
+      const xAxisY = yToPx(0);
+      if (xAxisY >= plot.y && xAxisY <= plot.y + plot.h) {
+        ctx.beginPath();
+        ctx.moveTo(plot.x, xAxisY);
+        ctx.lineTo(plot.x + plot.w, xAxisY);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = "#344054";
+      ctx.font = "bold 14px system-ui";
+      ctx.fillText("x", plot.x + plot.w - 10, yToPx(0) - 8);
+      ctx.fillText("f(x)", xToPx(0) + 8, plot.y + 16);
+
+      ctx.restore();
+    }
+
+    function drawFunction() {
+      const cfg = currentConfig();
+      const fn = currentFunction();
+      const [xmin, xmax] = cfg.domain;
+
+      ctx.save();
+
+      if (cfg.fn === "piecewise") {
+        drawPiecewiseFunction();
+        ctx.restore();
+        return;
+      }
+
+      ctx.strokeStyle = "#111827";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+
+      const samples = 500;
+      for (let i = 0; i <= samples; i++) {
+        const x = xmin + (i / samples) * (xmax - xmin);
+        const y = fn.value(x);
+        const px = xToPx(x);
+        const py = yToPx(y);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawPiecewiseFunction() {
+      const fn = functions.piecewise;
+      const br = fn.breaks;
+      const h = fn.heights;
+
+      ctx.save();
+      ctx.strokeStyle = "#111827";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+
+      for (let i = 0; i < h.length; i++) {
+        const x1 = br[i];
+        const x2 = br[i + 1];
+        const y = h[i];
+
+        if (i === 0) ctx.moveTo(xToPx(x1), yToPx(y));
+        else ctx.lineTo(xToPx(x1), yToPx(y));
+
+        ctx.lineTo(xToPx(x2), yToPx(y));
+      }
+
+      ctx.stroke();
+
+      ctx.setLineDash([5, 5]);
+      ctx.strokeStyle = "#98a2b3";
+      ctx.lineWidth = 1.5;
+
+      for (let i = 1; i < br.length - 1; i++) {
+        const x = br[i];
+        ctx.beginPath();
+        ctx.moveTo(xToPx(x), yToPx(-2.5));
+        ctx.lineTo(xToPx(x), yToPx(2.5));
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    function drawShadedInterval(a, b, alpha = 0.35) {
+      const cfg = currentConfig();
+      const fn = currentFunction();
+      const left = Math.min(a, b);
+      const right = Math.max(a, b);
+      if (left === right) return;
+
+      const [xmin, xmax] = cfg.domain;
+      const L = clamp(left, xmin, xmax);
+      const R = clamp(right, xmin, xmax);
+      const n = Math.max(20, Math.ceil((R - L) * 40));
+      const dx = (R - L) / n;
+      const y0 = yToPx(0);
+
+      ctx.save();
+
+      for (let i = 0; i < n; i++) {
+        const x1 = L + i * dx;
+        const x2 = x1 + dx;
+        const mid = (x1 + x2) / 2;
+        const y = fn.value(mid);
+        const px1 = xToPx(x1);
+        const px2 = xToPx(x2);
+        const py = yToPx(y);
+
+        ctx.fillStyle = y >= 0
+          ? `rgba(37, 99, 235, ${alpha})`
+          : `rgba(220, 38, 38, ${alpha})`;
+
+        ctx.strokeStyle = y >= 0
+          ? "rgba(37, 99, 235, 0.28)"
+          : "rgba(220, 38, 38, 0.28)";
+
+        const top = Math.min(py, y0);
+        const height = Math.abs(y0 - py);
+
+        ctx.fillRect(px1, top, Math.max(1, px2 - px1), height);
+        ctx.strokeRect(px1, top, Math.max(1, px2 - px1), height);
+      }
+
+      ctx.restore();
+    }
+
+    function drawScannerLine(x, color = "#f59e0b") {
+      const plot = getPlotRect();
+      const px = xToPx(x);
+
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(px, plot.y);
+      ctx.lineTo(px, plot.y + plot.h);
+      ctx.stroke();
+
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(px, plot.y - 2, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawEndpointHandle(x, label) {
+      const plot = getPlotRect();
+      const px = xToPx(x);
+
+      ctx.save();
+      ctx.strokeStyle = "#f59e0b";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(px, plot.y);
+      ctx.lineTo(px, plot.y + plot.h);
+      ctx.stroke();
+
+      ctx.fillStyle = "#f59e0b";
+      ctx.beginPath();
+      ctx.arc(px, plot.y + plot.h + 4, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#111827";
+      ctx.font = "bold 14px system-ui";
+      ctx.fillText(label, px - 4, plot.y + plot.h + 34);
+      ctx.restore();
+    }
+
+    function drawStage3Labels() {
+      ctx.save();
+      ctx.font = "bold 18px system-ui";
+      ctx.fillStyle = "#1e40af";
+      ctx.fillText("B", xToPx(1), yToPx(1.2));
+
+      ctx.fillStyle = "#991b1b";
+      ctx.fillText("A", xToPx(-1), yToPx(-1.2));
+      ctx.restore();
+    }
+
+    function draw() {
+      clearCanvas();
+      drawGridAndAxes();
+
+      if (stage === 1 || stage === 2) {
+        const cfg = currentConfig();
+        drawShadedInterval(cfg.start, scannerX, 0.45);
+      }
+
+      if (stage === 3) {
+        drawShadedInterval(-2, 0, 0.45);
+        drawShadedInterval(0, 2, 0.45);
+      }
+
+      if (stage === 4) {
+        for (const item of puzzleIntervals) {
+          drawShadedInterval(item.a, item.b, 0.22);
+        }
+        drawShadedInterval(selectedA, selectedB, 0.55);
+      }
+
+      drawFunction();
+
+      if (stage === 1 || stage === 2) {
+        drawScannerLine(scannerX);
+      }
+
+      if (stage === 3) {
+        drawStage3Labels();
+      }
+
+      if (stage === 4) {
+        drawEndpointHandle(selectedA, "a");
+        drawEndpointHandle(selectedB, "b");
+      }
+    }
+
+    function updateTank(value, tankMax, target = null) {
+      const posPercent = clamp(value / tankMax, 0, 1) * 50;
+      const negPercent = clamp(-value / tankMax, 0, 1) * 50;
+
+      positiveFill.style.height = `${posPercent}%`;
+      negativeFill.style.height = `${negPercent}%`;
+      tankReadout.textContent = fmt(value, 3);
+
+      if (target === null || target === undefined) {
+        targetLine.style.display = "none";
+      } else {
+        targetLine.style.display = "block";
+        if (target >= 0) {
+          targetLine.style.bottom = `${50 + clamp(target / tankMax, 0, 1) * 50}%`;
+        } else {
+          targetLine.style.bottom = `${50 - clamp(-target / tankMax, 0, 1) * 50}%`;
+        }
+      }
+    }
+
+    function setFeedback(message, type = "") {
+      feedback.className = "feedback";
+      if (type) feedback.classList.add(type);
+      feedback.innerHTML = message;
+    }
+
+    function selectedIntervalArea() {
+      const fn = currentFunction();
+      return fn.integral(Math.min(selectedA, selectedB), Math.max(selectedA, selectedB));
+    }
+
+    function puzzleTotal() {
+      return puzzleIntervals.reduce((sum, item) => sum + item.area, 0);
+    }
+
+    function updateStats() {
+      const cfg = currentConfig();
+      const fn = currentFunction();
+
+      if (stage === 1 || stage === 2) {
+        const a = cfg.start;
+        const b = scannerX;
+        const area = fn.integral(a, b);
+
+        intervalStat.textContent = `[${fmt(a, 2)}, ${fmt(b, 2)}]`;
+        areaStat.textContent = fmt(area, 3);
+        totalStat.textContent = fmt(area, 3);
+
+        updateTank(area, cfg.tankMax, cfg.target);
+
+        if (stage === 1) {
+          setFeedback(
+            `Every slice is above the x-axis, so each tiny rectangle adds. Current accumulation: <strong>${fmt(area, 3)}</strong>.`
+          );
+        } else {
+          if (scannerX < 0) {
+            setFeedback(
+              `You are still sweeping through negative rates. The tank drains because f(x) < 0. Current net accumulation: <strong>${fmt(area, 3)}</strong>.`,
+              "warn"
+            );
+          } else if (Math.abs(area) < 0.05 && scannerX > 1.8) {
+            setFeedback(
+              `Nice cancellation! The negative area from [-2, 0] and positive area from [0, 2] cancel, so the net accumulation is about zero.`,
+              "good"
+            );
+          } else {
+            setFeedback(
+              `Now positive slices are adding back to the tank. Watch the previous negative accumulation get canceled.`
+            );
+          }
+        }
+      }
+
+      if (stage === 3) {
+        intervalStat.textContent = "A: [-2, 0], B: [0, 2]";
+        areaStat.textContent = "Choose";
+        totalStat.textContent = "—";
+        updateTank(0, cfg.tankMax, cfg.target);
+      }
+
+      if (stage === 4) {
+        const a = Math.min(selectedA, selectedB);
+        const b = Math.max(selectedA, selectedB);
+        const currentArea = selectedIntervalArea();
+        const total = puzzleTotal();
+
+        intervalStat.textContent = `[${a}, ${b}]`;
+        areaStat.textContent = fmt(currentArea, 3);
+        totalStat.textContent = fmt(total, 3);
+
+        updateTank(total, cfg.tankMax, cfg.target);
+
+        if (total > cfg.tankMax) {
+          setFeedback(
+            `Overflow! Your net accumulation is above tank capacity. Clear or choose negative intervals to bring it down.`,
+            "bad"
+          );
+        } else if (total < -cfg.tankMax) {
+          setFeedback(
+            `The tank dropped too far below zero. Add positive intervals or clear the refinery.`,
+            "bad"
+          );
+        } else {
+          setFeedback(
+            `Target net accumulation: <strong>${cfg.target}</strong>. Current selected interval contributes <strong>${fmt(currentArea, 3)}</strong>.`
+          );
+        }
+      }
+
+      draw();
+    }
+
+    function setupStage(newStage) {
+      stage = Number(newStage);
+      const cfg = currentConfig();
+
+      stageButtons.forEach(btn => {
+        btn.classList.toggle("active", Number(btn.dataset.stage) === stage);
+      });
+
+      stageName.textContent = cfg.name;
+      instructions.textContent = cfg.instructions;
+      formula.textContent = currentFunction().label;
+
+      scannerControls.hidden = !(stage === 1 || stage === 2);
+      endpointControls.hidden = stage !== 4;
+      compareControls.hidden = stage !== 3;
+      puzzleControls.hidden = stage !== 4;
+
+      targetLine.style.display = cfg.target == null ? "none" : "block";
+
+      if (stage === 1 || stage === 2) {
+        scannerX = cfg.start;
+        scanSlider.min = cfg.domain[0];
+        scanSlider.max = cfg.domain[1];
+        scanSlider.step = "0.01";
+        scanSlider.value = scannerX;
+        scanOut.textContent = fmt(scannerX, 2);
+      }
+
+      if (stage === 3) {
+        setFeedback(
+          `Think signed area: A lies below the x-axis, while B lies above it. Which net value is greater?`
+        );
+      }
+
+      if (stage === 4) {
+        selectedA = 0;
+        selectedB = 1;
+        puzzleIntervals = [];
+        aSlider.min = cfg.domain[0];
+        aSlider.max = cfg.domain[1];
+        bSlider.min = cfg.domain[0];
+        bSlider.max = cfg.domain[1];
+        aSlider.step = 1;
+        bSlider.step = 1;
+        aSlider.value = selectedA;
+        bSlider.value = selectedB;
+        aOut.textContent = selectedA;
+        bOut.textContent = selectedB;
+        renderIntervalList();
+      }
+
+      updateStats();
+    }
+
+    function renderIntervalList() {
+      intervalList.innerHTML = "";
+
+      if (puzzleIntervals.length === 0) {
+        const li = document.createElement("li");
+        li.textContent = "No intervals added yet.";
+        intervalList.appendChild(li);
+        return;
+      }
+
+      puzzleIntervals.forEach((item, index) => {
+        const li = document.createElement("li");
+        li.textContent = `${index + 1}. [${item.a}, ${item.b}] contributes ${fmt(item.area, 3)}`;
+        intervalList.appendChild(li);
+      });
+    }
+
+    stageButtons.forEach(btn => {
+      btn.addEventListener("click", () => setupStage(btn.dataset.stage));
+    });
+
+    scanSlider.addEventListener("input", () => {
+      scannerX = Number(scanSlider.value);
+      scanOut.textContent = fmt(scannerX, 2);
+      updateStats();
+    });
+
+    aSlider.addEventListener("input", () => {
+      selectedA = Number(aSlider.value);
+      aOut.textContent = selectedA;
+      updateStats();
+    });
+
+    bSlider.addEventListener("input", () => {
+      selectedB = Number(bSlider.value);
+      bOut.textContent = selectedB;
+      updateStats();
+    });
+
+    document.querySelectorAll("[data-answer]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const answer = btn.dataset.answer;
+        const left = functions.x.integral(-2, 0);
+        const right = functions.x.integral(0, 2);
+
+        if (answer === "B") {
+          setFeedback(
+            `Correct. A = ∫<sub>-2</sub><sup>0</sup> x dx = ${fmt(left, 3)}, while B = ∫<sub>0</sub><sup>2</sup> x dx = ${fmt(right, 3)}. Since ${fmt(right, 3)} > ${fmt(left, 3)}, B has greater net accumulation.`,
+            "good"
+          );
+        } else {
+          setFeedback(
+            `Not quite. The left interval is below the x-axis, so A is negative: ${fmt(left, 3)}. The right interval is positive: ${fmt(right, 3)}. Therefore B is greater.`,
+            "bad"
+          );
+        }
+      });
+    });
+
+    addIntervalBtn.addEventListener("click", () => {
+      const a = Math.min(selectedA, selectedB);
+      const b = Math.max(selectedA, selectedB);
+
+      if (a === b) {
+        setFeedback(`That interval has zero width, so it contributes no area. Try a wider interval.`, "warn");
+        return;
+      }
+
+      const area = currentFunction().integral(a, b);
+      puzzleIntervals.push({ a, b, area });
+      renderIntervalList();
+
+      const total = puzzleTotal();
+      const cfg = currentConfig();
+
+      if (total > cfg.tankMax) {
+        setFeedback(
+          `Overflow! You added [${a}, ${b}], contributing ${fmt(area, 3)}. The tank is above capacity.`,
+          "bad"
+        );
+      } else if (total < -cfg.tankMax) {
+        setFeedback(
+          `The refinery went too negative after adding [${a}, ${b}]. Try adding positive area or clearing.`,
+          "bad"
+        );
+      } else {
+        setFeedback(
+          `Added [${a}, ${b}], contributing <strong>${fmt(area, 3)}</strong>. New net accumulation: <strong>${fmt(total, 3)}</strong>.`
+        );
+      }
+
+      updateStats();
+    });
+
+    clearIntervalsBtn.addEventListener("click", () => {
+      puzzleIntervals = [];
+      renderIntervalList();
+      setFeedback(`Intervals cleared. Build the tank back up to the target.`, "warn");
+      updateStats();
+    });
+
+    checkTargetBtn.addEventListener("click", () => {
+      const cfg = currentConfig();
+      const total = puzzleTotal();
+      const tolerance = 0.001;
+
+      if (Math.abs(total - cfg.target) <= tolerance) {
+        setFeedback(
+          `Perfect! Net accumulation is <strong>${fmt(total, 3)}</strong>, exactly matching the target of <strong>${cfg.target}</strong>. The refinery is humming beautifully.`,
+          "good"
+        );
+      } else {
+        const diff = cfg.target - total;
+        setFeedback(
+          `Not yet. Current net accumulation is <strong>${fmt(total, 3)}</strong>. You need <strong>${fmt(diff, 3)}</strong> more signed area to reach the target.`,
+          "warn"
+        );
+      }
+    });
+
+    function canvasMouseX(evt) {
+      const rect = canvas.getBoundingClientRect();
+      return (evt.clientX - rect.left) * (canvas.width / rect.width);
+    }
+
+    canvas.addEventListener("mousedown", evt => {
+      const px = canvasMouseX(evt);
+      const x = pxToX(px);
+      const cfg = currentConfig();
+
+      if (stage === 1 || stage === 2) {
+        dragging = "scanner";
+        scannerX = clamp(x, cfg.domain[0], cfg.domain[1]);
+        scanSlider.value = scannerX;
+        scanOut.textContent = fmt(scannerX, 2);
+        updateStats();
+      }
+
+      if (stage === 4) {
+        const distA = Math.abs(px - xToPx(selectedA));
+        const distB = Math.abs(px - xToPx(selectedB));
+        dragging = distA <= distB ? "a" : "b";
+
+        const snapped = Math.round(clamp(x, cfg.domain[0], cfg.domain[1]));
+
+        if (dragging === "a") {
+          selectedA = snapped;
+          aSlider.value = selectedA;
+          aOut.textContent = selectedA;
+        } else {
+          selectedB = snapped;
+          bSlider.value = selectedB;
+          bOut.textContent = selectedB;
+        }
+
+        updateStats();
+      }
+    });
+
+    canvas.addEventListener("mousemove", evt => {
+      if (!dragging) return;
+
+      const px = canvasMouseX(evt);
+      const x = pxToX(px);
+      const cfg = currentConfig();
+
+      if (dragging === "scanner") {
+        scannerX = clamp(x, cfg.domain[0], cfg.domain[1]);
+        scanSlider.value = scannerX;
+        scanOut.textContent = fmt(scannerX, 2);
+        updateStats();
+      }
+
+      if (stage === 4 && (dragging === "a" || dragging === "b")) {
+        const snapped = Math.round(clamp(x, cfg.domain[0], cfg.domain[1]));
+
+        if (dragging === "a") {
+          selectedA = snapped;
+          aSlider.value = selectedA;
+          aOut.textContent = selectedA;
+        } else {
+          selectedB = snapped;
+          bSlider.value = selectedB;
+          bOut.textContent = selectedB;
+        }
+
+        updateStats();
+      }
+    });
+
+    window.addEventListener("mouseup", () => {
+      dragging = null;
+    });
+
+    canvas.addEventListener("mouseleave", () => {
+      dragging = null;
+    });
+
+    setupStage(1);
+  </script>
+    <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#f6f6f6"
+    }
+  </script>
+</body>
+</html>

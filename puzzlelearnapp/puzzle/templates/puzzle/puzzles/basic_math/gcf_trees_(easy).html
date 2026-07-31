@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ puzzle_name }}</title>
+
+  <style>
+    :root {
+      --node-size: clamp(42px, 5.1vw, 58px);
+      --root-size: clamp(56px, 6.4vw, 76px);
+      --child-gap: clamp(18px, 3vw, 42px);
+      --level-gap: clamp(28px, 4.2vh, 44px);
+      --line-color: #555;
+      --green: #56c271;
+      --red: #d62828;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f7f9fc;
+      color: #111;
+      overflow: hidden;
+    }
+
+    .app {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 10px 18px 8px;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      z-index: 10;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(18px, 2.4vw, 28px);
+      text-align: center;
+    }
+
+    .instructions {
+      text-align: center;
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: #333;
+    }
+
+    .progress-wrap {
+      width: min(720px, 92vw);
+      height: 18px;
+      margin: 0 auto;
+      border: 2px solid #222;
+      border-radius: 999px;
+      background: #eee;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #1a73e8, #56c271);
+      transition: width 300ms ease;
+    }
+
+    .score {
+      text-align: center;
+      margin-top: 4px;
+      font-size: 13px;
+      color: #333;
+    }
+
+    .forest {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 10px;
+    }
+
+    .tree-panel {
+      min-width: 0;
+      min-height: 0;
+      background: white;
+      border: 2px solid #d9dee8;
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-title {
+      text-align: center;
+      font-weight: bold;
+      padding: 6px;
+      background: #edf2fb;
+      border-bottom: 1px solid #d9dee8;
+      font-size: 14px;
+    }
+
+    .tree-scroller {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding: 8px;
+    }
+
+    .tree-content {
+      position: relative;
+      display: inline-block;
+      min-width: 100%;
+      min-height: 100%;
+      padding: 14px 18px 30px;
+    }
+
+    .line-layer {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      overflow: visible;
+    }
+
+    .tree-root-row {
+      position: relative;
+      z-index: 1;
+      min-width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .tree-node-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 0 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    .children {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      gap: var(--child-gap);
+      margin-top: var(--level-gap);
+    }
+
+    .node {
+      width: var(--node-size);
+      height: var(--node-size);
+      border-radius: 50%;
+      border: 3px solid #222;
+      background: #fff;
+      color: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-weight: 700;
+      font-size: clamp(13px, 1.8vw, 18px);
+      user-select: none;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    }
+
+    .node.root {
+      width: var(--root-size);
+      height: var(--root-size);
+      font-size: clamp(22px, 3.4vw, 36px);
+      border-width: 4px;
+    }
+
+    .node input {
+      width: 86%;
+      border: none;
+      outline: none;
+      background: transparent;
+      text-align: center;
+      font: inherit;
+      color: inherit;
+    }
+
+    .node.blank input::placeholder {
+      color: #aaa;
+    }
+
+    .node.red,
+    .node.red input {
+      color: var(--red);
+    }
+
+    .node.green {
+      background: var(--green);
+    }
+
+    .node.green input {
+      color: #111;
+    }
+
+    .node.small-text {
+      font-size: clamp(11px, 1.35vw, 15px);
+    }
+
+    .node.tiny-text {
+      font-size: clamp(9px, 1.1vw, 12px);
+    }
+
+    .node.root.small-text {
+      font-size: clamp(17px, 2.4vw, 28px);
+    }
+
+    .node.root.tiny-text {
+      font-size: clamp(14px, 2vw, 22px);
+    }
+
+    .checkmark {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.55);
+      z-index: 999;
+      font-size: min(30vw, 220px);
+      color: #1aa64a;
+      font-weight: 900;
+      text-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+      pointer-events: none;
+    }
+
+    .checkmark.show {
+      display: flex;
+      animation: pop 650ms ease;
+    }
+
+    @keyframes pop {
+      0% {
+        transform: scale(0.4);
+        opacity: 0;
+      }
+      55% {
+        transform: scale(1.15);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    @media (max-width: 720px) {
+      body {
+        overflow: auto;
+      }
+
+      .app {
+        min-height: 100vh;
+        height: auto;
+      }
+
+      .forest {
+        grid-template-columns: 1fr;
+        height: 75vh;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <header>
+      <h1>Find the Greatest Common Factor</h1>
+      <div class="instructions">
+        Enter factors in the circles. On each side, double-click the GCF on both sides.
+        Right-click a node to clear its children.
+      </div>
+
+      <div class="progress-wrap" aria-label="Progress">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <div style="display: none;" class="score" id="scoreText">0 / 5 correct</div>
+    </header>
+
+    <main class="forest">
+      <section class="tree-panel">
+        <div class="panel-title">Left Factor Tree</div>
+        <div class="tree-scroller" id="leftScroller">
+          <div class="tree-content" id="leftContent">
+            <svg class="line-layer" id="leftLines"></svg>
+            <div class="tree-root-row" id="leftTree"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="tree-panel">
+        <div class="panel-title">Right Factor Tree</div>
+        <div class="tree-scroller" id="rightScroller">
+          <div class="tree-content" id="rightContent">
+            <svg class="line-layer" id="rightLines"></svg>
+            <div class="tree-root-row" id="rightTree"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="checkmark" id="checkmark">✓</div>
+
+  <script>
+    /************************************************************
+     * If your LMS or host page already defines activityComplete,
+     * remove this placeholder.
+     ************************************************************/
+    function activityComplete() {
+      alert("Activity complete!");
+    }
+
+    const GOAL = 5;
+
+    const NUMBER_MIN = 2;
+    const NUMBER_MAX = 99;
+
+    let correctCount = 0;
+    let currentGCF = 1;
+    let locked = false;
+
+    let leftRoot = null;
+    let rightRoot = null;
+
+    let selectedGreen = {
+      left: null,
+      right: null
+    };
+
+    const els = {
+      leftTree: document.getElementById("leftTree"),
+      rightTree: document.getElementById("rightTree"),
+      leftContent: document.getElementById("leftContent"),
+      rightContent: document.getElementById("rightContent"),
+      leftLines: document.getElementById("leftLines"),
+      rightLines: document.getElementById("rightLines"),
+      progressBar: document.getElementById("progressBar"),
+      scoreText: document.getElementById("scoreText"),
+      checkmark: document.getElementById("checkmark")
+    };
+
+    function gcd(a, b) {
+      a = Math.abs(a);
+      b = Math.abs(b);
+      while (b) {
+        [a, b] = [b, a % b];
+      }
+      return a;
+    }
+
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function makeNode(value = null, side, parent = null) {
+      return {
+        id: crypto.randomUUID(),
+        value,
+        side,
+        parent,
+        children: null
+      };
+    }
+
+    function generateNumbers() {
+      let a, b, g;
+
+      do {
+        a = randomInt(NUMBER_MIN, NUMBER_MAX);
+        b = randomInt(NUMBER_MIN, NUMBER_MAX);
+        g = gcd(a, b);
+      } while (g <= 1);
+      console.log(g);
+      return { a, b, g };
+    }
+
+    function newQuestion() {
+      locked = false;
+      selectedGreen.left = null;
+      selectedGreen.right = null;
+
+      const nums = generateNumbers();
+      currentGCF = nums.g;
+
+      leftRoot = makeNode(nums.a, "left");
+      rightRoot = makeNode(nums.b, "right");
+
+      ensureChildren(leftRoot);
+      ensureChildren(rightRoot);
+
+      renderAll();
+    }
+
+    function ensureChildren(node) {
+      if (!node.children) {
+        node.children = [
+          makeNode(null, node.side, node),
+          makeNode(null, node.side, node)
+        ];
+      }
+    }
+
+    function clearSelectedIfInside(node) {
+      for (const side of ["left", "right"]) {
+        if (selectedGreen[side] && containsNode(node, selectedGreen[side])) {
+          selectedGreen[side] = null;
+        }
+      }
+    }
+
+    function containsNode(root, target) {
+      if (!root || !target) return false;
+      if (root === target) return true;
+      if (!root.children) return false;
+      return root.children.some(child => containsNode(child, target));
+    }
+
+    function resetChildren(node) {
+      clearSelectedIfInsideChildren(node);
+
+      node.children = [
+        makeNode(null, node.side, node),
+        makeNode(null, node.side, node)
+      ];
+    }
+
+    function clearSelectedIfInsideChildren(node) {
+      if (!node.children) return;
+
+      for (const child of node.children) {
+        clearSelectedIfInside(child);
+      }
+    }
+
+    function pruneDescendants(node) {
+      if (!node) return;
+      clearSelectedIfInside(node);
+      node.children = null;
+    }
+
+    function parseNodeValue(text) {
+      if (text === null || text === undefined) return null;
+      const trimmed = String(text).trim();
+      if (trimmed === "") return null;
+
+      const value = Number(trimmed);
+      return Number.isFinite(value) ? value : null;
+    }
+
+    function isIntegerValue(value) {
+      return Number.isInteger(value);
+    }
+
+    function displayValue(value) {
+      if (value === null || value === undefined || !Number.isFinite(value)) {
+        return "";
+      }
+
+      return isIntegerValue(value) ? String(value) : value.toFixed(2);
+    }
+
+    function fitTextClass(value) {
+      const text = displayValue(value);
+
+      if (text.length >= 6) {
+        return "tiny-text";
+      }
+
+      if (text.length >= 3) {
+        return "small-text";
+      }
+
+      return "";
+    }
+
+    function valueClass(value) {
+      if (value === null || value === undefined || !Number.isFinite(value)) {
+        return "";
+      }
+
+      return isIntegerValue(value) ? "" : "red";
+    }
+
+    function renderAll() {
+      renderTree(leftRoot, els.leftTree);
+      renderTree(rightRoot, els.rightTree);
+
+      requestAnimationFrame(() => {
+        drawLines(leftRoot, els.leftContent, els.leftLines);
+        drawLines(rightRoot, els.rightContent, els.rightLines);
+      });
+    }
+
+    function renderTree(root, container) {
+      container.innerHTML = "";
+      container.appendChild(renderNode(root));
+    }
+
+    function renderNode(node) {
+      const wrap = document.createElement("div");
+      wrap.className = "tree-node-wrap";
+
+      const circle = document.createElement("div");
+      circle.className = [
+        "node",
+        node.parent ? "" : "root",
+        node.value === null ? "blank" : "",
+        valueClass(node.value),
+        fitTextClass(node.value),
+        selectedGreen[node.side] === node ? "green" : ""
+      ].join(" ").trim();
+
+      circle.dataset.nodeId = node.id;
+
+      const input = document.createElement("input");
+      input.value = displayValue(node.value);
+      input.placeholder = "";
+      input.inputMode = "decimal";
+      input.autocomplete = "off";
+      input.spellcheck = false;
+
+      if (!node.parent) {
+        input.readOnly = true;
+        input.tabIndex = -1;
+      }
+
+      input.addEventListener("focus", () => {
+        if (!input.readOnly) input.select();
+      });
+
+      input.addEventListener("blur", () => {
+        if (locked || !node.parent) return;
+        handleNodeBlur(node, input.value);
+      });
+
+      input.addEventListener("keydown", event => {
+        if (event.key === "Enter") {
+          input.blur();
+        }
+      });
+
+      circle.addEventListener("contextmenu", event => {
+        event.preventDefault();
+        if (locked) return;
+
+        resetChildren(node);
+        renderAll();
+      });
+
+      circle.addEventListener("dblclick", event => {
+        event.preventDefault();
+        if (locked) return;
+
+        toggleGreen(node);
+      });
+
+      circle.appendChild(input);
+      wrap.appendChild(circle);
+
+      if (node.children) {
+        const children = document.createElement("div");
+        children.className = "children";
+
+        for (const child of node.children) {
+          children.appendChild(renderNode(child));
+        }
+
+        wrap.appendChild(children);
+      }
+
+      return wrap;
+    }
+
+    function handleNodeBlur(node, rawValue) {
+      const newValue = parseNodeValue(rawValue);
+
+      node.value = newValue;
+
+      /*
+       * Editing a node changes the math below it, so remove any old
+       * descendants from this node.
+       */
+      if (node.children) {
+        pruneDescendants(node);
+      }
+
+      const parent = node.parent;
+      if (!parent || !parent.children || parent.value === null) {
+        renderAll();
+        return;
+      }
+
+      const sibling = parent.children[0] === node
+        ? parent.children[1]
+        : parent.children[0];
+
+      if (newValue !== null && newValue !== 0) {
+        sibling.value = parent.value / newValue;
+
+        /*
+         * The sibling's old descendants are no longer trustworthy after
+         * recalculation.
+         */
+        if (sibling.children) {
+          pruneDescendants(sibling);
+        }
+      }
+
+      /*
+       * Once both children have values, each child gets its own blank pair
+       * so the process can continue on the next row.
+       */
+      if (
+        parent.children[0].value !== null &&
+        parent.children[1].value !== null
+      ) {
+        ensureChildren(parent.children[0]);
+        ensureChildren(parent.children[1]);
+      }
+
+      renderAll();
+    }
+
+    function toggleGreen(node) {
+      const side = node.side;
+
+      if (selectedGreen[side] === node) {
+        selectedGreen[side] = null;
+      } else {
+        selectedGreen[side] = node;
+      }
+
+      renderAll();
+      checkAnswer();
+    }
+
+    function checkAnswer() {
+      const left = selectedGreen.left;
+      const right = selectedGreen.right;
+
+      if (!left || !right) return;
+      if (left.value === null || right.value === null) return;
+
+      const leftMatches = Math.abs(left.value - currentGCF) < 0.000001;
+      const rightMatches = Math.abs(right.value - currentGCF) < 0.000001;
+      const sameValue = Math.abs(left.value - right.value) < 0.000001;
+
+      if (leftMatches && rightMatches && sameValue) {
+        handleCorrect();
+      }
+    }
+
+    function handleCorrect() {
+      if (locked) return;
+      locked = true;
+
+      correctCount++;
+      updateProgress();
+
+      els.checkmark.classList.add("show");
+
+      setTimeout(() => {
+        els.checkmark.classList.remove("show");
+
+        if (correctCount >= GOAL) {
+          activityComplete();
+        } else {
+          newQuestion();
+        }
+      }, 800);
+    }
+
+    function updateProgress() {
+      const percent = Math.min(100, (correctCount / GOAL) * 100);
+      els.progressBar.style.width = `${percent}%`;
+      els.scoreText.textContent = `${correctCount} / ${GOAL} correct`;
+    }
+
+    function drawLines(root, contentEl, svgEl) {
+      const width = contentEl.scrollWidth;
+      const height = contentEl.scrollHeight;
+
+      svgEl.setAttribute("width", width);
+      svgEl.setAttribute("height", height);
+      svgEl.setAttribute("viewBox", `0 0 ${width} ${height}`);
+      svgEl.innerHTML = "";
+
+      const contentRect = contentEl.getBoundingClientRect();
+
+      function getNodePoint(node, position) {
+        const el = contentEl.querySelector(`[data-node-id="${node.id}"]`);
+        if (!el) return null;
+
+        const rect = el.getBoundingClientRect();
+
+        const x = rect.left - contentRect.left + rect.width / 2;
+
+        let y;
+        if (position === "bottom") {
+          y = rect.bottom - contentRect.top;
+        } else {
+          y = rect.top - contentRect.top;
+        }
+
+        return { x, y };
+      }
+
+      function drawConnector(parentNode, childNode) {
+        const start = getNodePoint(parentNode, "bottom");
+        const end = getNodePoint(childNode, "top");
+
+        if (!start || !end) return;
+
+        const line = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "line"
+        );
+
+        line.setAttribute("x1", start.x);
+        line.setAttribute("y1", start.y);
+        line.setAttribute("x2", end.x);
+        line.setAttribute("y2", end.y);
+        line.setAttribute("stroke", "#555");
+        line.setAttribute("stroke-width", "3");
+        line.setAttribute("stroke-linecap", "butt");
+
+        svgEl.appendChild(line);
+      }
+
+      function walk(node) {
+        if (!node.children) return;
+
+        for (const child of node.children) {
+          drawConnector(node, child);
+          walk(child);
+        }
+      }
+
+      walk(root);
+    }
+
+    window.addEventListener("resize", () => {
+      requestAnimationFrame(() => {
+        drawLines(leftRoot, els.leftContent, els.leftLines);
+        drawLines(rightRoot, els.rightContent, els.rightLines);
+      });
+    });
+
+    updateProgress();
+    newQuestion();
+
+  </script>
+<script src="/static/puzzle/js/activity.js"></script>
+<!-- <script>autoZoom();</script> -->
+</body>
+</html>

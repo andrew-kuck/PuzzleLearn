@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Related Rates Rescue</title>
+  <style>
+    :root {
+      --blue: #1f6feb;
+      --maize: #ffcb05;
+      --navy: #00274c;
+      --green: #1f883d;
+      --red: #d1242f;
+      --purple: #8250df;
+      --orange: #fb8500;
+      --gray: #6e7781;
+      --light: #f6f8fa;
+      --border: #d0d7de;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, #eef5ff, #fff9df);
+      color: #24292f;
+    }
+
+    header {
+      background: var(--navy);
+      color: white;
+      padding: 1.25rem 1.5rem;
+      border-bottom: 6px solid var(--maize);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: clamp(1.5rem, 3vw, 2.25rem);
+    }
+
+    header p {
+      margin: 0.4rem 0 0;
+      max-width: 900px;
+      line-height: 1.5;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(360px, 1.2fr) minmax(340px, 0.8fr);
+      gap: 1rem;
+      padding: 1rem;
+      max-width: 1300px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(0, 39, 76, 0.12);
+      overflow: hidden;
+    }
+
+    .scene-card {
+      padding: 1rem;
+    }
+
+    .scene-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .scene-title h2 {
+      margin: 0;
+      color: var(--navy);
+      font-size: 1.2rem;
+    }
+
+    .badge {
+      background: #ddf4ff;
+      color: #0969da;
+      border: 1px solid #54aeff;
+      border-radius: 999px;
+      padding: 0.35rem 0.7rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    svg {
+      width: 100%;
+      height: auto;
+      background: #fbfdff;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+
+    .wall,
+    .ground {
+      stroke: #57606a;
+      stroke-width: 8;
+      stroke-linecap: round;
+    }
+
+    .ladder {
+      stroke: #8b5e34;
+      stroke-width: 12;
+      stroke-linecap: round;
+    }
+
+    .ladder-rung {
+      stroke: #c49a6c;
+      stroke-width: 5;
+      stroke-linecap: round;
+    }
+
+    .dimension {
+      stroke: var(--blue);
+      stroke-width: 3;
+      fill: none;
+    }
+
+    .rate-x {
+      stroke: var(--orange);
+      stroke-width: 5;
+      fill: none;
+    }
+
+    .rate-y {
+      stroke: var(--purple);
+      stroke-width: 5;
+      fill: none;
+    }
+
+    .strain {
+      stroke: var(--red);
+      stroke-width: 7;
+      stroke-dasharray: 12 8;
+      stroke-linecap: round;
+      opacity: 0.85;
+    }
+
+    .drop-hit {
+      fill: rgba(31, 111, 235, 0.08);
+      stroke: rgba(31, 111, 235, 0.55);
+      stroke-width: 2;
+      stroke-dasharray: 6 4;
+      rx: 10;
+    }
+
+    .drop-zone.correct .drop-hit {
+      fill: rgba(31, 136, 61, 0.14);
+      stroke: var(--green);
+      stroke-dasharray: none;
+    }
+
+    .svg-label {
+      font-size: 19px;
+      font-weight: 800;
+      fill: var(--navy);
+      paint-order: stroke;
+      stroke: white;
+      stroke-width: 4px;
+      stroke-linejoin: round;
+    }
+
+    .svg-small {
+      font-size: 14px;
+      font-weight: 700;
+      fill: #57606a;
+    }
+
+    .panel-stack {
+      display: grid;
+      gap: 1rem;
+    }
+
+    section.panel {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    section.panel:last-child {
+      border-bottom: none;
+    }
+
+    section.panel h2 {
+      margin: 0 0 0.5rem;
+      color: var(--navy);
+      font-size: 1.15rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .phase-number {
+      background: var(--navy);
+      color: white;
+      width: 1.8rem;
+      height: 1.8rem;
+      border-radius: 50%;
+      display: inline-grid;
+      place-items: center;
+      font-size: 0.9rem;
+      flex: 0 0 auto;
+    }
+
+    .locked {
+      opacity: 0.42;
+      pointer-events: none;
+      filter: grayscale(0.4);
+    }
+
+    .instructions {
+      line-height: 1.5;
+      margin: 0.25rem 0 0.75rem;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+
+    .chip {
+      user-select: none;
+      cursor: grab;
+      border: 2px solid var(--navy);
+      background: white;
+      color: var(--navy);
+      font-weight: 800;
+      border-radius: 999px;
+      padding: 0.45rem 0.75rem;
+      box-shadow: 0 3px 0 var(--maize);
+    }
+
+    .chip:active {
+      cursor: grabbing;
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 var(--maize);
+    }
+
+    .chip.used {
+      opacity: 0.35;
+      pointer-events: none;
+      text-decoration: line-through;
+    }
+
+    .equation-grid,
+    .diff-grid {
+      display: grid;
+      gap: 0.6rem;
+      margin-top: 0.75rem;
+    }
+
+    .equation-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    @media (max-width: 520px) {
+      .equation-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 0.7rem 0.85rem;
+      background: var(--navy);
+      color: white;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 0 rgba(0, 39, 76, 0.25);
+    }
+
+    button:hover {
+      background: #074780;
+    }
+
+    button:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 rgba(0, 39, 76, 0.25);
+    }
+
+    button.secondary {
+      background: #f6f8fa;
+      color: #24292f;
+      border: 1px solid var(--border);
+    }
+
+    button.correct {
+      background: var(--green);
+    }
+
+    button.wrong {
+      background: var(--red);
+    }
+
+    .feedback {
+      margin-top: 0.75rem;
+      padding: 0.75rem;
+      border-radius: 12px;
+      background: var(--light);
+      border: 1px solid var(--border);
+      line-height: 1.45;
+      min-height: 2.7rem;
+    }
+
+    .feedback.good {
+      border-color: #2da44e;
+      background: #dafbe1;
+    }
+
+    .feedback.bad {
+      border-color: #cf222e;
+      background: #ffebe9;
+    }
+
+    .math {
+      font-family: "Times New Roman", Times, serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    .diff-row {
+      display: grid;
+      grid-template-columns: 90px 1fr;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    select,
+    input[type="range"] {
+      width: 100%;
+    }
+
+    select {
+      padding: 0.55rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: white;
+      font-weight: 650;
+    }
+
+    .moment-box {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      margin: 0.75rem 0;
+    }
+
+    .moment-item {
+      background: #f6f8fa;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.6rem;
+      font-weight: 750;
+    }
+
+    .slider-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      font-weight: 800;
+      margin: 0.5rem 0;
+    }
+
+    .value-pill {
+      background: #f0e7ff;
+      color: #6639ba;
+      border: 1px solid #d8b9ff;
+      border-radius: 999px;
+      padding: 0.25rem 0.55rem;
+      white-space: nowrap;
+    }
+
+    .status-bar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 0.75rem;
+    }
+
+    .meter {
+      height: 14px;
+      background: #ffebe9;
+      border: 1px solid #ff8182;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .meter-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--green);
+      transition: width 250ms ease;
+    }
+
+    .small-note {
+      color: var(--gray);
+      font-size: 0.9rem;
+      line-height: 1.45;
+      margin-top: 0.6rem;
+    }
+
+    .formula-box {
+      background: #fff8c5;
+      border: 1px solid #d4a72c;
+      border-radius: 12px;
+      padding: 0.75rem;
+      margin-top: 0.75rem;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Related Rates Rescue: Synchronizing Changing Quantities</h1>
+    <p>
+      Stabilize a sliding ladder by connecting positions, rates, and the equation that keeps the ladder rigid.
+    </p>
+  </header>
+
+  <main>
+    <div class="card scene-card">
+      <div class="scene-title">
+        <h2>Ladder Rescue Scene</h2>
+        <div class="badge" id="sceneBadge">Phase 1</div>
+      </div>
+
+      <svg id="scene" viewBox="0 0 560 390" role="img" aria-label="Animated ladder leaning against a wall">
+        <defs>
+          <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L9,3 z" fill="#1f6feb"></path>
+          </marker>
+          <marker id="arrowOrange" markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto">
+            <path d="M0,0 L0,8 L11,4 z" fill="#fb8500"></path>
+          </marker>
+          <marker id="arrowPurple" markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto">
+            <path d="M0,0 L0,8 L11,4 z" fill="#8250df"></path>
+          </marker>
+        </defs>
+
+        <!-- Static wall and ground -->
+        <line class="wall" x1="90" y1="45" x2="90" y2="330"></line>
+        <line class="ground" x1="55" y1="330" x2="520" y2="330"></line>
+
+        <text x="102" y="62" class="svg-small">wall</text>
+        <text x="465" y="352" class="svg-small">ground</text>
+
+        <!-- Dimension arrows -->
+        <line id="xDim" class="dimension" marker-end="url(#arrowBlue)"></line>
+        <line id="yDim" class="dimension" marker-end="url(#arrowBlue)"></line>
+
+        <!-- Rate arrows -->
+        <line id="dxArrow" class="rate-x" marker-end="url(#arrowOrange)"></line>
+        <line id="dyArrow" class="rate-y" marker-end="url(#arrowPurple)"></line>
+
+        <!-- Optional strain preview -->
+        <line id="strainLine" class="strain" hidden></line>
+
+        <!-- Ladder -->
+        <line id="ladder" class="ladder"></line>
+        <g id="rungs"></g>
+
+        <!-- Drop zones -->
+        <g class="drop-zone" data-zone="x" data-accept="x">
+          <rect class="drop-hit" id="zone-x"></rect>
+        </g>
+
+        <g class="drop-zone" data-zone="y" data-accept="y">
+          <rect class="drop-hit" id="zone-y"></rect>
+        </g>
+
+        <g class="drop-zone" data-zone="L" data-accept="L">
+          <rect class="drop-hit" id="zone-L"></rect>
+        </g>
+
+        <g class="drop-zone" data-zone="dxdt" data-accept="dxdt">
+          <rect class="drop-hit" id="zone-dxdt"></rect>
+        </g>
+
+        <g class="drop-zone" data-zone="dydt" data-accept="dydt">
+          <rect class="drop-hit" id="zone-dydt"></rect>
+        </g>
+
+        <!-- Placed labels -->
+        <text id="label-x" class="svg-label" text-anchor="middle" hidden>x</text>
+        <text id="label-y" class="svg-label" text-anchor="middle" hidden>y</text>
+        <text id="label-L" class="svg-label" text-anchor="middle" hidden>L</text>
+        <text id="label-dxdt" class="svg-label" text-anchor="middle" hidden>dx/dt</text>
+        <text id="label-dydt" class="svg-label" text-anchor="middle" hidden>dy/dt</text>
+      </svg>
+
+      <div class="small-note">
+        Orange arrow: bottom velocity, <math><mrow><mi>d</mi><mi>x</mi><mi>/</mi><mi>d</mi><mi>t</mi></mrow></math>. Purple arrow: top velocity, <math><mrow><mi>d</mi><mi>y</mi><mi>/</mi><mi>d</mi><mi>t</mi></mrow></math>.
+        The ladder length <math><mi>L</mi></math> stays constant.
+      </div>
+    </div>
+
+    <div class="card panel-stack">
+      <section class="panel" id="phase1">
+        <h2><span class="phase-number">1</span> Identify quantities</h2>
+        <p class="instructions">
+          Drag each label onto the correct part of the diagram.
+        </p>
+
+        <div class="chips" aria-label="Draggable labels">
+          <div class="chip" draggable="true" data-label="x">x</div>
+          <div class="chip" draggable="true" data-label="y">y</div>
+          <div class="chip" draggable="true" data-label="L">L</div>
+          <div class="chip" draggable="true" data-label="dxdt">dx/dt</div>
+          <div class="chip" draggable="true" data-label="dydt">dy/dt</div>
+        </div>
+
+        <div id="feedback1" class="feedback">
+          Start by placing the position labels <math><mi>x</mi></math>, <math><mi>y</mi></math>, and <math><mi>L</mi></math>, then the rate labels.
+        </div>
+      </section>
+
+      <section class="panel locked" id="phase2">
+        <h2><span class="phase-number">2</span> Choose the relationship</h2>
+        <p class="instructions">
+          Which equation keeps the ladder length fixed?
+        </p>
+
+        <div class="equation-grid">
+          <button class="equation-choice secondary" data-correct="false">x + y = L</button>
+          <button class="equation-choice secondary" data-correct="true">x² + y² = L²</button>
+          <button class="equation-choice secondary" data-correct="false">xy = L</button>
+          <button class="equation-choice secondary" data-correct="false">y = mx + b</button>
+        </div>
+
+        <div id="feedback2" class="feedback">
+          Think of the wall, ground, and ladder as a right triangle.
+        </div>
+      </section>
+
+      <section class="panel locked" id="phase3">
+        <h2><span class="phase-number">3</span> Differentiate over time</h2>
+        <p class="instructions">
+          Transform each part of <math><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo></mrow><mrow><msup><mi>y</mi><mn>2</mn></msup><mo>=</mo></mrow><mrow><msup><mi>L</mi><mn>2</mn></msup></mrow></math> by differentiating with respect to time.
+        </p>
+
+        <div class="diff-grid">
+          <div class="diff-row">
+            <div class="math">x² →</div>
+            <select id="diff-x">
+              <option value="">Choose...</option>
+              <option value="2x">2x</option>
+              <option value="xDx">x dx/dt</option>
+              <option value="2xDx">2x dx/dt</option>
+              <option value="zero">0</option>
+            </select>
+          </div>
+
+          <div class="diff-row">
+            <div class="math">y² →</div>
+            <select id="diff-y">
+              <option value="">Choose...</option>
+              <option value="2y">2y</option>
+              <option value="yDy">y dy/dt</option>
+              <option value="2yDy">2y dy/dt</option>
+              <option value="zero">0</option>
+            </select>
+          </div>
+
+          <div class="diff-row">
+            <div class="math">L² →</div>
+            <select id="diff-L">
+              <option value="">Choose...</option>
+              <option value="2L">2L</option>
+              <option value="2LDL">2L dL/dt</option>
+              <option value="zero">0, because L is constant</option>
+            </select>
+          </div>
+        </div>
+
+        <button id="checkDiff" style="margin-top: 0.75rem;">Check differentiation</button>
+
+        <div id="feedback3" class="feedback">
+          Remember: <math><mi>x</mi></math> and <math><mi>y</mi></math> change with time, but the ladder length <math><mi>L</mi></math> does not.
+        </div>
+      </section>
+
+      <section class="panel locked" id="phase4">
+        <h2><span class="phase-number">4</span> Solve the missing rate</h2>
+        <p class="instructions">
+          The bottom moves away from the wall at <math><mrow><mi>d</mi><mi>x</mi><mi>/</mi><mi>d</mi><mi>t</mi><mo>=</mo></mrow><mrow><mn>0.80</mn></mrow></math> m/s.
+          Run to the target moment, then adjust <math><mrow><mi>d</mi><mi>y</mi><mi>/</mi><mi>d</mi><mi>t</mi></mrow></math> to stabilize the ladder.
+        </p>
+
+        <button id="runMoment">Run to target moment</button>
+
+        <div class="moment-box">
+          <div class="moment-item">x = <span id="momentX">3.00</span> m</div>
+          <div class="moment-item">y = <span id="momentY">4.00</span> m</div>
+          <div class="moment-item">L = 5.00 m</div>
+          <div class="moment-item">dx/dt = 0.80 m/s</div>
+        </div>
+
+        <div class="slider-label">
+          <span>Top velocity <math><mrow><mi>d</mi><mi>y</mi><mi>/</mi><mi>d</mi><mi>t</mi></mrow></math></span>
+          <span class="value-pill" id="dyValue">-0.20 m/s</span>
+        </div>
+
+        <input
+          id="dySlider"
+          type="range"
+          min="-1.50"
+          max="0"
+          step="0.01"
+          value="-0.20"
+          aria-label="Adjust dy/dt"
+        />
+
+        <button id="checkRate" style="margin-top: 0.75rem;">Stabilize ladder</button>
+
+        <div class="status-bar">
+          <div class="meter" aria-label="Rigidity meter">
+            <div class="meter-fill" id="meterFill"></div>
+          </div>
+          <strong id="meterText">Rigidity: 0%</strong>
+        </div>
+
+        <div id="feedback4" class="feedback">
+          If <math><mrow><mi>d</mi><mi>y</mi><mi>/</mi><mi>d</mi><mi>t</mi></mrow></math> is wrong, the ghost ladder stretches or breaks. If it is right, the ladder remains rigid.
+        </div>
+
+        <div class="formula-box" id="solutionBox" hidden>
+          <strong>Solution:</strong>
+          <div class="math">2x(dx/dt) + 2y(dy/dt) = 0</div>
+          <div class="math">dy/dt = -(x/y)(dx/dt)</div>
+          <div class="math">dy/dt = -(3/4)(0.80) = -0.60 m/s</div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    // -----------------------------
+    // Model constants
+    // -----------------------------
+    const L = 5;
+    const dxdt = 0.8;
+    const targetX = 3;
+    const scale = 50;
+
+    const wallX = 90;
+    const groundY = 330;
+
+    let x = targetX;
+    let phase = 1;
+    let animatingToMoment = false;
+    let lastTime = null;
+    let showStrain = false;
+
+    const filledZones = {
+      x: false,
+      y: false,
+      L: false,
+      dxdt: false,
+      dydt: false
+    };
+
+    // -----------------------------
+    // DOM references
+    // -----------------------------
+    const sceneBadge = document.getElementById("sceneBadge");
+
+    const ladder = document.getElementById("ladder");
+    const rungs = document.getElementById("rungs");
+    const xDim = document.getElementById("xDim");
+    const yDim = document.getElementById("yDim");
+    const dxArrow = document.getElementById("dxArrow");
+    const dyArrow = document.getElementById("dyArrow");
+    const strainLine = document.getElementById("strainLine");
+
+    const dySlider = document.getElementById("dySlider");
+    const dyValue = document.getElementById("dyValue");
+    const meterFill = document.getElementById("meterFill");
+    const meterText = document.getElementById("meterText");
+    const solutionBox = document.getElementById("solutionBox");
+
+    // -----------------------------
+    // Utility helpers
+    // -----------------------------
+    function yFromX(xVal) {
+      return Math.sqrt(Math.max(0, L * L - xVal * xVal));
+    }
+
+    function expectedDydt() {
+      const y = yFromX(x);
+      return -(x / y) * dxdt;
+    }
+
+    function setLine(el, x1, y1, x2, y2) {
+      el.setAttribute("x1", x1);
+      el.setAttribute("y1", y1);
+      el.setAttribute("x2", x2);
+      el.setAttribute("y2", y2);
+    }
+
+    function setRect(id, x, y, w, h) {
+      const rect = document.getElementById(id);
+      rect.setAttribute("x", x);
+      rect.setAttribute("y", y);
+      rect.setAttribute("width", w);
+      rect.setAttribute("height", h);
+    }
+
+    function setText(id, x, y) {
+      const text = document.getElementById(id);
+      text.setAttribute("x", x);
+      text.setAttribute("y", y);
+    }
+
+    function setFeedback(id, message, type = "") {
+      const box = document.getElementById(id);
+      box.innerHTML = message;
+      box.classList.remove("good", "bad");
+
+      if (type) {
+        box.classList.add(type);
+      }
+    }
+
+    function unlockPhase(n) {
+      phase = Math.max(phase, n);
+      sceneBadge.textContent = `Phase ${phase}`;
+
+      for (let i = 1; i <= 4; i++) {
+        const panel = document.getElementById(`phase${i}`);
+        if (i <= phase) {
+          panel.classList.remove("locked");
+        }
+      }
+    }
+
+    function fmt(num) {
+      return Number(num).toFixed(2);
+    }
+
+    // -----------------------------
+    // Draw scene
+    // -----------------------------
+    function drawScene() {
+      const y = yFromX(x);
+
+      const top = {
+        x: wallX,
+        y: groundY - y * scale
+      };
+
+      const bottom = {
+        x: wallX + x * scale,
+        y: groundY
+      };
+
+      // Ladder
+      setLine(ladder, top.x, top.y, bottom.x, bottom.y);
+
+      // Rungs
+      rungs.innerHTML = "";
+      for (let i = 1; i < 6; i++) {
+        const t = i / 6;
+        const cx = top.x + (bottom.x - top.x) * t;
+        const cy = top.y + (bottom.y - top.y) * t;
+
+        // Direction perpendicular to ladder
+        const dx = bottom.x - top.x;
+        const dy = bottom.y - top.y;
+        const len = Math.hypot(dx, dy);
+        const px = -dy / len;
+        const py = dx / len;
+        const rungLength = 34;
+
+        const rung = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        rung.setAttribute("class", "ladder-rung");
+        rung.setAttribute("x1", cx - px * rungLength / 2);
+        rung.setAttribute("y1", cy - py * rungLength / 2);
+        rung.setAttribute("x2", cx + px * rungLength / 2);
+        rung.setAttribute("y2", cy + py * rungLength / 2);
+        rungs.appendChild(rung);
+      }
+
+      // Dimension arrows
+      setLine(xDim, wallX, groundY + 34, bottom.x, groundY + 34);
+      setLine(yDim, wallX - 38, groundY, wallX - 38, top.y);
+
+      // Rate arrows
+      setLine(dxArrow, bottom.x, groundY - 28, bottom.x + dxdt * 85, groundY - 28);
+
+      const dyRate = phase >= 4 ? parseFloat(dySlider.value) : expectedDydt();
+      const dyArrowLength = -dyRate * 90;
+      setLine(dyArrow, wallX + 42, top.y, wallX + 42, top.y + dyArrowLength);
+
+      // Drop zones
+      setRect("zone-x", wallX + x * scale / 2 - 32, groundY + 45, 64, 32);
+      setRect("zone-y", wallX - 82, top.y + y * scale / 2 - 18, 64, 34);
+      setRect("zone-L", (top.x + bottom.x) / 2 - 32, (top.y + bottom.y) / 2 - 22, 64, 36);
+      setRect("zone-dxdt", bottom.x + 28, groundY - 60, 82, 34);
+      setRect("zone-dydt", wallX + 58, top.y + dyArrowLength / 2 - 18, 86, 34);
+
+      // Placed labels
+      setText("label-x", wallX + x * scale / 2, groundY + 70);
+      setText("label-y", wallX - 50, top.y + y * scale / 2 + 6);
+      setText("label-L", (top.x + bottom.x) / 2, (top.y + bottom.y) / 2 - 28);
+      setText("label-dxdt", bottom.x + 72, groundY - 66);
+      setText("label-dydt", wallX + 102, top.y + dyArrowLength / 2 - 22);
+
+      // Moment labels
+      document.getElementById("momentX").textContent = fmt(x);
+      document.getElementById("momentY").textContent = fmt(y);
+
+      // Strain preview
+      if (showStrain) {
+        const trialDy = parseFloat(dySlider.value);
+        const previewTime = 1.0;
+
+        const trialX = x + dxdt * previewTime;
+        const trialY = y + trialDy * previewTime;
+
+        const trialTop = {
+          x: wallX,
+          y: groundY - trialY * scale
+        };
+
+        const trialBottom = {
+          x: wallX + trialX * scale,
+          y: groundY
+        };
+
+        setLine(strainLine, trialTop.x, trialTop.y, trialBottom.x, trialBottom.y);
+        strainLine.hidden = false;
+      } else {
+        strainLine.hidden = true;
+      }
+    }
+
+    // -----------------------------
+    // Animation loop
+    // -----------------------------
+    function animate(timestamp) {
+      if (!lastTime) {
+        lastTime = timestamp;
+      }
+
+      const dt = Math.min(0.04, (timestamp - lastTime) / 1000);
+      lastTime = timestamp;
+
+      if (animatingToMoment) {
+        x += dxdt * dt;
+
+        if (x >= targetX) {
+          x = targetX;
+          animatingToMoment = false;
+          setFeedback(
+            "feedback4",
+            "Paused at the target moment: <strong>x = 3.00 m</strong>, <strong>y = 4.00 m</strong>. Now choose the top velocity.",
+            "good"
+          );
+        }
+      }
+
+      drawScene();
+      requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+
+    // -----------------------------
+    // Phase 1 drag and drop
+    // -----------------------------
+    document.querySelectorAll(".chip").forEach(chip => {
+      chip.addEventListener("dragstart", event => {
+        event.dataTransfer.setData("text/plain", chip.dataset.label);
+      });
+    });
+
+    document.querySelectorAll(".drop-zone").forEach(zone => {
+      zone.addEventListener("dragover", event => {
+        event.preventDefault();
+      });
+
+      zone.addEventListener("drop", event => {
+        event.preventDefault();
+
+        const draggedLabel = event.dataTransfer.getData("text/plain");
+        const acceptedLabel = zone.dataset.accept;
+        const zoneName = zone.dataset.zone;
+
+        if (draggedLabel === acceptedLabel) {
+          filledZones[zoneName] = true;
+          zone.classList.add("correct");
+
+          const label = document.getElementById(`label-${zoneName}`);
+          label.hidden = false;
+
+          const chip = document.querySelector(`.chip[data-label="${draggedLabel}"]`);
+          if (chip) chip.classList.add("used");
+
+          setFeedback(
+            "feedback1",
+            `Correct! You placed <strong>${chip ? chip.textContent : draggedLabel}</strong> in the right spot.`,
+            "good"
+          );
+
+          const allPlaced = Object.values(filledZones).every(Boolean);
+          if (allPlaced) {
+            setFeedback(
+              "feedback1",
+              "Excellent. Positions describe where things are; rates describe how fast those positions change.",
+              "good"
+            );
+            unlockPhase(2);
+          }
+        } else {
+          setFeedback(
+            "feedback1",
+            "Not quite. Ask: is this label a distance, the fixed ladder length, or a velocity arrow?",
+            "bad"
+          );
+        }
+      });
+    });
+
+    // -----------------------------
+    // Phase 2 equation choice
+    // -----------------------------
+    document.querySelectorAll(".equation-choice").forEach(button => {
+      button.addEventListener("click", () => {
+        const correct = button.dataset.correct === "true";
+
+        document.querySelectorAll(".equation-choice").forEach(b => {
+          b.classList.remove("correct", "wrong");
+        });
+
+        if (correct) {
+          button.classList.add("correct");
+          setFeedback(
+            "feedback2",
+            "Yes! The wall, ground, and ladder form a right triangle, so <span class='math'>x² + y² = L²</span>.",
+            "good"
+          );
+          unlockPhase(3);
+        } else {
+          button.classList.add("wrong");
+          setFeedback(
+            "feedback2",
+            "Try again. The ladder is the hypotenuse of a right triangle.",
+            "bad"
+          );
+        }
+      });
+    });
+
+    // -----------------------------
+    // Phase 3 differentiation check
+    // -----------------------------
+    document.getElementById("checkDiff").addEventListener("click", () => {
+      const dxChoice = document.getElementById("diff-x").value;
+      const dyChoice = document.getElementById("diff-y").value;
+      const lChoice = document.getElementById("diff-L").value;
+
+      const correct =
+        dxChoice === "2xDx" &&
+        dyChoice === "2yDy" &&
+        lChoice === "zero";
+
+      if (correct) {
+        setFeedback(
+          "feedback3",
+          "Great! Differentiating gives <span class='math'>2x(dx/dt) + 2y(dy/dt) = 0</span>. Since the ladder length is constant, <span class='math'>dL/dt = 0</span>.",
+          "good"
+        );
+        unlockPhase(4);
+      } else {
+        setFeedback(
+          "feedback3",
+          "Check the chain rule. Since x and y depend on time, differentiating x² gives 2x(dx/dt), not just 2x.",
+          "bad"
+        );
+      }
+    });
+
+    // -----------------------------
+    // Phase 4 rate puzzle
+    // -----------------------------
+    document.getElementById("runMoment").addEventListener("click", () => {
+      x = 2.15;
+      animatingToMoment = true;
+      showStrain = false;
+      solutionBox.hidden = true;
+
+      setFeedback(
+        "feedback4",
+        "The ladder is moving... wait for the pause at the target moment.",
+        ""
+      );
+    });
+
+    dySlider.addEventListener("input", () => {
+      const value = parseFloat(dySlider.value);
+      dyValue.textContent = `${fmt(value)} m/s`;
+      showStrain = false;
+      updateRigidityPreview(false);
+    });
+
+    document.getElementById("checkRate").addEventListener("click", () => {
+      if (animatingToMoment) {
+        setFeedback(
+          "feedback4",
+          "Let the animation reach the target moment first.",
+          "bad"
+        );
+        return;
+      }
+
+      const guess = parseFloat(dySlider.value);
+      const expected = expectedDydt();
+      const error = Math.abs(guess - expected);
+      const correct = error <= 0.05;
+
+      showStrain = !correct;
+      updateRigidityPreview(true);
+
+      if (correct) {
+        setFeedback(
+          "feedback4",
+          "Rescue complete! The top must move downward at 0.60 m/s, so <span class='math'>dy/dt = -0.60</span> m/s.",
+          "good"
+        );
+        solutionBox.hidden = false;
+      } else {
+        const directionHint = guess > expected
+          ? "Your arrow is not downward fast enough."
+          : "Your arrow is downward too fast.";
+
+        setFeedback(
+          "feedback4",
+          `${directionHint} Use <span class='math'>dy/dt = -(x/y)(dx/dt)</span> at this exact moment.`,
+          "bad"
+        );
+        solutionBox.hidden = true;
+      }
+    });
+
+    function updateRigidityPreview(afterCheck) {
+      const guess = parseFloat(dySlider.value);
+      const expected = expectedDydt();
+      const error = Math.abs(guess - expected);
+
+      const score = Math.max(0, Math.min(100, 100 - error * 180));
+      meterFill.style.width = `${score}%`;
+      meterText.textContent = `Rigidity: ${Math.round(score)}%`;
+
+      if (!afterCheck) return;
+
+      if (score >= 92) {
+        meterFill.style.background = "var(--green)";
+      } else if (score >= 65) {
+        meterFill.style.background = "#d4a72c";
+      } else {
+        meterFill.style.background = "var(--red)";
+      }
+    }
+
+    // Initial slider display
+    dyValue.textContent = `${fmt(parseFloat(dySlider.value))} m/s`;
+    updateRigidityPreview(false);
+  </script>
+    <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#f6f6f6"
+    }
+  </script>
+</body>
+</html>

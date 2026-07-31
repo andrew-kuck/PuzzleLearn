@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ puzzle_name }}</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --border: #d7dce6;
+      --text: #172033;
+      --muted: #657084;
+      --accent: #2f65d9;
+      --accent-dark: #234ea9;
+      --disabled: #d9dde7;
+      --context: #ffe08a;
+      --target: #93e6b5;
+      --danger: #b42318;
+      --code-bg: #101828;
+      --code-text: #e8eefc;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      height: 100vh;
+      min-height: 0;
+    }
+
+    .side {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+      height: 100%;
+      overflow: hidden;
+      border-right: 1px solid var(--border);
+      background: var(--panel);
+    }
+
+    .side:last-child {
+      border-right: none;
+    }
+
+    header {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+      background: #fbfcff;
+    }
+
+    h1, h2 {
+      margin: 0 0 0.75rem;
+      font-size: 1.1rem;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    label {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    input {
+      padding: 0.5rem 0.6rem;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      min-width: 6rem;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      min-width: 12rem;
+    }
+
+    button {
+      border: none;
+      border-radius: 0.5rem;
+      padding: 0.55rem 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      color: white;
+      background: var(--accent);
+      transition: background 0.15s ease, transform 0.05s ease;
+    }
+
+    button:hover:not(:disabled) {
+      background: var(--accent-dark);
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    button:disabled,
+    input:disabled {
+      cursor: not-allowed;
+      background: var(--disabled);
+      color: #7d8492;
+    }
+
+    button.secondary {
+      background: #475467;
+    }
+
+    button.secondary:hover:not(:disabled) {
+      background: #344054;
+    }
+
+    button.warning {
+      background: #b54708;
+    }
+
+    button.warning:hover:not(:disabled) {
+      background: #93370d;
+    }
+
+    .status {
+      margin-top: 0.65rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.35;
+    }
+
+    .error {
+      color: var(--danger);
+      font-weight: 700;
+    }
+
+    .content {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 1rem;
+    }
+
+    #textContainer {
+      height: 100%;
+      min-height: 0;
+    }
+
+    #textDisplay {
+      line-height: 1.7;
+      font-size: 0.98rem;
+      white-space: normal;
+      padding-bottom: 2rem;
+    }
+
+    .token {
+      border-radius: 0.25rem;
+      padding: 0.05rem 0.08rem;
+    }
+
+    .context-highlight {
+      background: var(--context);
+      outline: 1px solid rgba(150, 110, 0, 0.25);
+    }
+
+    .target-highlight {
+      background: var(--target);
+      outline: 1px solid rgba(0, 110, 50, 0.25);
+    }
+
+    .right-body {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .model-box {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+      background: var(--code-bg);
+      color: var(--code-text);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.86rem;
+      line-height: 1.45;
+      white-space: pre;
+    }
+
+    .generated-box {
+      flex-shrink: 0;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      min-height: 6rem;
+      background: #fbfcff;
+      line-height: 1.8;
+    }
+
+    .generated-title {
+      margin: 0 0 0.5rem;
+      font-weight: 800;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .gen-token {
+      border-radius: 0.25rem;
+      padding: 0.05rem 0.08rem;
+    }
+
+    .gen-context {
+      background: var(--context);
+    }
+
+    .gen-new {
+      background: var(--target);
+    }
+
+    .empty {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .book-title {
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .small-note {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 0.5rem;
+    }
+
+    .ignored-token {
+      color: #667085;
+    }
+
+    @media (max-width: 850px) {
+      body {
+        overflow: auto;
+        height: auto;
+      }
+
+      .app {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+
+      .side {
+        height: 100vh;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <!-- LEFT SIDE -->
+    <section class="side" aria-label="Text side">
+      <header>
+        <h1>Project Gutenberg Text Reader</h1>
+
+        <div class="controls">
+          <label for="searchInput">Search term</label>
+          <input
+            id="searchInput"
+            type="text"
+            placeholder="e.g., Frankenstein Mary Shelley"
+            autocomplete="off"
+          />
+          <button id="searchButton">Search</button>
+        </div>
+
+        <div class="controls" style="margin-top: 0.65rem;">
+          <label for="nInput">n</label>
+          <input
+            id="nInput"
+            type="number"
+            min="1"
+            step="1"
+            value="2"
+            disabled
+          />
+          <button id="trainButton" disabled>Train n-gram model</button>
+        </div>
+
+        <div id="leftStatus" class="status">
+          Search for a Project Gutenberg book to begin.
+        </div>
+      </header>
+
+      <div class="content" id="textContainer">
+        <div id="textDisplay" class="empty">
+          No text loaded yet.
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT SIDE -->
+    <section class="side" aria-label="Model side">
+      <header>
+        <h2>N-Gram Model</h2>
+        <div id="rightControls" class="controls">
+          <button id="stepButton" disabled>Scan next token</button>
+          <button id="scanRestButton" class="secondary" disabled>Scan remainder</button>
+        </div>
+        <div id="rightStatus" class="status">
+          Train a model to see it grow here.
+        </div>
+      </header>
+
+      <div class="content">
+        <div class="right-body">
+          <pre id="modelDisplay" class="model-box">{}</pre>
+
+          <section class="generated-box" aria-label="Generated text display">
+            <p class="generated-title">Generated text</p>
+            <div id="generatedDisplay" class="empty">
+              Convert frequencies to probabilities, then generate words.
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    /***********************
+     * DOM ELEMENTS
+     ***********************/
+    const searchInput = document.getElementById("searchInput");
+    const searchButton = document.getElementById("searchButton");
+    const nInput = document.getElementById("nInput");
+    const trainButton = document.getElementById("trainButton");
+
+    const leftStatus = document.getElementById("leftStatus");
+    const rightStatus = document.getElementById("rightStatus");
+
+    const textDisplay = document.getElementById("textDisplay");
+    const textContainer = document.getElementById("textContainer");
+
+    const rightControls = document.getElementById("rightControls");
+    const stepButton = document.getElementById("stepButton");
+    const scanRestButton = document.getElementById("scanRestButton");
+
+    const modelDisplay = document.getElementById("modelDisplay");
+    const generatedDisplay = document.getElementById("generatedDisplay");
+
+    /***********************
+     * STATE
+     ***********************/
+    let rawText = "";
+
+    // Used for training/modeling.
+    // Commas are NOT included here.
+    let tokens = [];
+
+    // Used for the reader view.
+    // Commas ARE included here.
+    let displayTokens = [];
+
+    // Maps training token index -> display token index.
+    let trainIndexToDisplayIndex = [];
+
+    let tokenSpans = [];
+    let renderedDisplayTokenCount = 0;
+
+    let n = 0;
+    let model = {};
+    let scanIndex = 0;
+    let trainedThroughEnd = false;
+    let probabilitiesReady = false;
+
+    let generatedTokens = [];
+    let temporaryNewIndex = null;
+    let resetRightOnLeftInput = true;
+
+    const TEXT_TOKEN_PAGE_SIZE = 1200;
+    const MODEL_ENTRY_PAGE_SIZE = 80;
+
+    let renderedTokenCount = 0;
+    let modelRenderLimit = MODEL_ENTRY_PAGE_SIZE;
+
+    // Option 1: current behavior.
+    // Commas display but are ignored for training.
+    // . ! ? display and are used as training tokens.
+    // const IGNORED_TRAINING_CHARACTERS = [",", ";", ":"];
+    // Option 2: ignore every non-alphanumeric character for training.
+    // Uncomment this and comment out the array above if desired.
+    const IGNORED_TRAINING_CHARACTERS = "all-non-alphanumeric";
+
+    // Characters that are treated as separate tokens and ARE used for training.
+    const TRAINING_PUNCTUATION_CHARACTERS = [".", "!", "?"];
+
+    function escapeForRegex(char) {
+      return char.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    function ignoringAllNonAlphanumeric() {
+      return IGNORED_TRAINING_CHARACTERS === "all-non-alphanumeric";
+    }
+
+    function isAlphanumericToken(token) {
+      return /^[\p{L}\p{N}]+$/u.test(token);
+    }
+
+    function getExplicitIgnoredCharacters() {
+      if (Array.isArray(IGNORED_TRAINING_CHARACTERS)) {
+        return IGNORED_TRAINING_CHARACTERS;
+      }
+
+      return [];
+    }
+
+    function getActiveTrainingPunctuationCharacters() {
+      if (ignoringAllNonAlphanumeric()) {
+        return [];
+      }
+
+      return TRAINING_PUNCTUATION_CHARACTERS;
+    }
+
+    /***********************
+     * BASIC UTILITIES
+     ***********************/
+    function escapeHTML(str) {
+      return str.replace(/[&<>"']/g, ch => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      }[ch]));
+    }
+
+    function tokenizeForDisplayAndTraining(text) {
+      /*
+        Rules:
+        - Text should already be lowercase.
+
+        If IGNORED_TRAINING_CHARACTERS is an array:
+          - Those characters are displayed but ignored for training.
+          - TRAINING_PUNCTUATION_CHARACTERS are displayed and used for training.
+
+        If IGNORED_TRAINING_CHARACTERS === "all-non-alphanumeric":
+          - Every non-alphanumeric character is displayed but ignored for training.
+          - Only letter/number sequences are used for training.
+      */
+
+      let tokenRegex;
+
+      if (ignoringAllNonAlphanumeric()) {
+        // Unicode-aware:
+        // - letter/number sequences become trainable tokens
+        // - every other non-whitespace character becomes its own display-only token
+        tokenRegex = /[\p{L}\p{N}]+|[^\s]/gu;
+      } else {
+        const punctuationCharacters = [
+          ...getExplicitIgnoredCharacters(),
+          ...TRAINING_PUNCTUATION_CHARACTERS
+        ];
+
+        const punctuationRegexPart = punctuationCharacters
+          .map(escapeForRegex)
+          .join("");
+
+        tokenRegex = new RegExp(
+          `[^\\s${punctuationRegexPart}]+|[${punctuationRegexPart}]`,
+          "gu"
+        );
+      }
+
+      const displayTokens = [];
+      const trainingTokens = [];
+      const trainIndexToDisplayIndex = [];
+
+      let lastMatchEnd = 0;
+      let match;
+
+      while ((match = tokenRegex.exec(text)) !== null) {
+        const piece = match[0];
+
+        // Preserve readable spacing.
+        // Any whitespace between previous token and this token becomes one display space.
+        const leadingRaw = text.slice(lastMatchEnd, match.index);
+        const leadingText = leadingRaw.length > 0 ? " " : "";
+
+        const displayIndex = displayTokens.length;
+
+        let ignoredForTraining;
+
+        if (ignoringAllNonAlphanumeric()) {
+          ignoredForTraining = !isAlphanumericToken(piece);
+        } else {
+          ignoredForTraining = getExplicitIgnoredCharacters().includes(piece);
+        }
+
+        if (ignoredForTraining) {
+          displayTokens.push({
+            text: piece,
+            leadingText,
+            trainIndex: null,
+            ignoredForTraining: true
+          });
+        } else {
+          const trainIndex = trainingTokens.length;
+
+          displayTokens.push({
+            text: piece,
+            leadingText,
+            trainIndex,
+            ignoredForTraining: false
+          });
+
+          trainingTokens.push(piece);
+          trainIndexToDisplayIndex[trainIndex] = displayIndex;
+        }
+
+        lastMatchEnd = tokenRegex.lastIndex;
+      }
+
+      return {
+        displayTokens,
+        trainingTokens,
+        trainIndexToDisplayIndex
+      };
+    }
+
+    function tokenNeedsLeadingSpace(token, previousToken) {
+      if (!previousToken) return false;
+
+      const trainingPunctuation = getActiveTrainingPunctuationCharacters();
+
+      if (trainingPunctuation.includes(token)) {
+        return false;
+      }
+
+      return true;
+    }
+
+    function formatTokensAsHTML(tokenArray, options = {}) {
+      const {
+        className = "token",
+        contextIndexes = new Set(),
+        targetIndex = null
+      } = options;
+
+      let html = "";
+
+      tokenArray.forEach((token, i) => {
+        const previous = tokenArray[i - 1];
+        const leading = tokenNeedsLeadingSpace(token, previous) ? " " : "";
+
+        let extraClass = "";
+        if (contextIndexes.has(i)) extraClass += " context-highlight";
+        if (i === targetIndex) extraClass += " target-highlight";
+
+        html += `${leading}<span class="${className}${extraClass}" data-token-index="${i}">${escapeHTML(token)}</span>`;
+      });
+
+      return html;
+    }
+
+    function updateModelDisplay(resetLimit = false) {
+      if (resetLimit) {
+        modelRenderLimit = MODEL_ENTRY_PAGE_SIZE;
+        modelDisplay.scrollTop = 0;
+      }
+
+      const previousScrollTop = modelDisplay.scrollTop;
+
+      modelDisplay.textContent = formatModelForDisplay();
+
+      if (!resetLimit) {
+        modelDisplay.scrollTop = previousScrollTop;
+      }
+    }
+
+    function formatNumber(value) {
+      if (typeof value !== "number") return value;
+
+      if (probabilitiesReady) {
+        return Number(value.toFixed(6));
+      }
+
+      return value;
+    }
+
+    function formatInnerDictionary(inner) {
+      const pieces = Object.entries(inner).map(([word, value]) => {
+        return `"${escapeForModel(word)}": ${formatNumber(value)}`;
+      });
+
+      return `{ ${pieces.join(", ")} }`;
+    }
+
+    function escapeForModel(str) {
+      return String(str)
+        .replace(/\\/g, "\\\\")
+        .replace(/"/g, '\\"');
+    }
+
+    function formatModelForDisplay() {
+      const entries = Object.entries(model);
+
+      if (entries.length === 0) {
+        return "{}";
+      }
+
+      const visibleEntries = entries.slice(0, modelRenderLimit);
+      const hasMore = entries.length > modelRenderLimit;
+
+      const lines = ["{"];
+
+      if (n === 1) {
+        visibleEntries.forEach(([word, value], index) => {
+          const comma =
+            index < visibleEntries.length - 1 || hasMore
+              ? ","
+              : "";
+
+          lines.push(
+            `  "${escapeForModel(word)}": ${formatNumber(value)}${comma}`
+          );
+        });
+      } else {
+        visibleEntries.forEach(([context, inner], index) => {
+          const comma =
+            index < visibleEntries.length - 1 || hasMore
+              ? ","
+              : "";
+
+          lines.push(
+            `  "${escapeForModel(context)}": ${formatInnerDictionary(inner)}${comma}`
+          );
+        });
+      }
+
+      if (hasMore) {
+        lines.push(
+          `  ... ${entries.length - modelRenderLimit} more entr${entries.length - modelRenderLimit === 1 ? "y" : "ies"}; scroll to load more`
+        );
+      }
+
+      lines.push("}");
+
+      return lines.join("\n");
+    }
+
+    function setLeftStatus(message, isError = false) {
+      leftStatus.innerHTML = isError
+        ? `<span class="error">${escapeHTML(message)}</span>`
+        : message;
+    }
+
+    function setRightStatus(message, isError = false) {
+      rightStatus.innerHTML = isError
+        ? `<span class="error">${escapeHTML(message)}</span>`
+        : message;
+    }
+
+    function clearHighlights() {
+      textDisplay.querySelectorAll(".token").forEach(span => {
+        span.classList.remove("context-highlight", "target-highlight");
+      });
+    }
+
+    function highlightTrainingWindow(targetIndex) {
+      ensureTextRenderedThrough(targetIndex);
+      clearHighlights();
+
+      if (!tokenSpans.length) return;
+
+      const targetSpan = textDisplay.querySelector(
+        `[data-train-index="${targetIndex}"]`
+      );
+
+      if (n === 1) {
+        targetSpan?.classList.add("target-highlight");
+        targetSpan?.scrollIntoView({
+          behavior: "smooth",
+          block: "center"
+        });
+        return;
+      }
+
+      const contextStart = targetIndex - (n - 1);
+      const contextEnd = targetIndex - 1;
+
+      ensureTextRenderedThrough(contextEnd);
+
+      for (let i = contextStart; i <= contextEnd; i++) {
+        const span = textDisplay.querySelector(`[data-train-index="${i}"]`);
+        span?.classList.add("context-highlight");
+      }
+
+      targetSpan?.classList.add("target-highlight");
+
+      const firstContextSpan = textDisplay.querySelector(
+        `[data-train-index="${contextStart}"]`
+      );
+
+      firstContextSpan?.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+    }
+
+    function renderText(reset = true) {
+      if (!displayTokens.length) {
+        textDisplay.className = "empty";
+        textDisplay.textContent = "No text loaded yet.";
+        tokenSpans = [];
+        renderedDisplayTokenCount = 0;
+        return;
+      }
+
+      if (reset) {
+        textDisplay.className = "";
+        textDisplay.innerHTML = "";
+        tokenSpans = [];
+        renderedDisplayTokenCount = 0;
+        textContainer.scrollTop = 0;
+      }
+
+      appendMoreTextTokens();
+    }
+
+    function appendMoreTextTokens() {
+      if (renderedDisplayTokenCount >= displayTokens.length) return;
+
+      const start = renderedDisplayTokenCount;
+      const end = Math.min(
+        displayTokens.length,
+        start + TEXT_TOKEN_PAGE_SIZE
+      );
+
+      let html = "";
+
+      for (let i = start; i < end; i++) {
+        const current = displayTokens[i];
+
+        const token = current.text;
+        const leading = current.leadingText || "";
+
+        if (current.trainIndex === null) {
+          html += `${escapeHTML(leading)}<span class="ignored-token">${escapeHTML(token)}</span>`;
+        } else {
+          html += `${escapeHTML(leading)}<span class="token" data-train-index="${current.trainIndex}" data-display-index="${i}">${escapeHTML(token)}</span>`;
+        }
+      }
+
+      textDisplay.insertAdjacentHTML("beforeend", html);
+
+      renderedDisplayTokenCount = end;
+      tokenSpans = Array.from(textDisplay.querySelectorAll(".token"));
+    }
+
+    function ensureTextRenderedThrough(trainingTokenIndex) {
+      const displayIndex = trainIndexToDisplayIndex[trainingTokenIndex];
+
+      if (displayIndex === undefined) return;
+
+      while (
+        renderedDisplayTokenCount <= displayIndex &&
+        renderedDisplayTokenCount < displayTokens.length
+      ) {
+        appendMoreTextTokens();
+      }
+    }
+
+    /***********************
+     * RIGHT SIDE RESET
+     ***********************/
+    function resetRightSide() {
+      n = 0;
+      model = {};
+      scanIndex = 0;
+      trainedThroughEnd = false;
+      probabilitiesReady = false;
+      generatedTokens = [];
+      temporaryNewIndex = null;
+      modelRenderLimit = MODEL_ENTRY_PAGE_SIZE;
+
+      clearHighlights();
+      updateModelDisplay(true);
+
+      rightControls.innerHTML = `
+        <button id="stepButton" disabled>Scan next token</button>
+        <button id="scanRestButton" class="secondary" disabled>Scan remainder</button>
+      `;
+
+      window.stepButton = document.getElementById("stepButton");
+      window.scanRestButton = document.getElementById("scanRestButton");
+
+      document.getElementById("stepButton").addEventListener("click", scanOneStep);
+      document.getElementById("scanRestButton").addEventListener("click", scanRemainder);
+
+      generatedDisplay.className = "empty";
+      generatedDisplay.textContent = "Convert frequencies to probabilities, then generate words.";
+
+      setRightStatus("Train a model to see it grow here.");
+    }
+
+    /***********************
+     * GUTENBERG SEARCH / LOAD
+     ***********************/
+    function getPlainTextUrl(book) {
+      const formats = book.formats || {};
+      const entries = Object.entries(formats);
+
+      const preferred = entries.find(([mime, url]) =>
+        mime.toLowerCase().includes("text/plain") &&
+        mime.toLowerCase().includes("utf-8") &&
+        !url.toLowerCase().endsWith(".zip")
+      );
+
+      if (preferred) return preferred[1];
+
+      const fallback = entries.find(([mime, url]) =>
+        mime.toLowerCase().includes("text/plain") &&
+        !url.toLowerCase().endsWith(".zip")
+      );
+
+      return fallback ? fallback[1] : null;
+    }
+
+    async function fetchTextWithFallback(url) {
+      const proxiedUrl = `/api/gutenberg-text/?url=${encodeURIComponent(url)}`;
+
+      const response = await fetch(proxiedUrl);
+
+      if (!response.ok) {
+        throw new Error(`Could not fetch text through Django proxy: ${response.status}`);
+      }
+
+      return await response.text();
+    }
+
+    async function searchGutenberg() {
+      const query = searchInput.value.trim();
+
+      if (!query) {
+        setLeftStatus("Please enter a search term.", true);
+        return;
+      }
+
+      resetRightSide();
+
+      rawText = "";
+      tokens = [];
+      tokenSpans = [];
+      renderText();
+
+      nInput.disabled = true;
+      trainButton.disabled = true;
+
+      setLeftStatus("Searching Project Gutenberg...");
+      searchButton.disabled = true;
+
+      try {
+        const searchUrl = `https://gutendex.com/books/?search=${encodeURIComponent(query)}`;
+        const response = await fetch(searchUrl);
+
+        if (!response.ok) {
+          throw new Error(`Search failed with status ${response.status}.`);
+        }
+
+        const data = await response.json();
+
+        if (!data.results || data.results.length === 0) {
+          throw new Error("No matching Project Gutenberg book was found.");
+        }
+
+        // Gutendex returns results ranked by relevance, so the first result is the closest match.
+        const book = data.results[0];
+        const textUrl = getPlainTextUrl(book);
+
+        if (!textUrl) {
+          throw new Error("The best-matching book does not have a plain-text version available.");
+        }
+
+        setLeftStatus(`
+          Best match: <span class="book-title">${escapeHTML(book.title)}</span>
+          ${book.authors?.length ? " by " + escapeHTML(book.authors.map(a => a.name).join(", ")) : ""}
+          <br>Loading plain text...
+        `);
+
+        rawText = (await fetchTextWithFallback(textUrl)).toLowerCase();
+
+        const tokenized = tokenizeForDisplayAndTraining(rawText);
+
+        displayTokens = tokenized.displayTokens;
+        tokens = tokenized.trainingTokens;
+        trainIndexToDisplayIndex = tokenized.trainIndexToDisplayIndex;
+
+        renderText(true);
+
+        nInput.disabled = false;
+        trainButton.disabled = false;
+
+        setLeftStatus(`
+          Loaded <span class="book-title">${escapeHTML(book.title)}</span>
+          ${book.authors?.length ? " by " + escapeHTML(book.authors.map(a => a.name).join(", ")) : ""}
+          <br>${tokens.length.toLocaleString()} training tokens found.
+          <div class="small-note">
+            Text is lowercase. Periods, exclamation marks, and question marks are separate tokens.
+          </div>
+        `);
+      } catch (error) {
+        rawText = "";
+        tokens = [];
+        renderText();
+        setLeftStatus(error.message, true);
+      } finally {
+        searchButton.disabled = false;
+      }
+    }
+
+    /***********************
+     * TRAINING
+     ***********************/
+    function beginTraining() {
+      if (!tokens.length) {
+        setRightStatus("Load a text before training.", true);
+        return;
+      }
+
+      const parsedN = Number(nInput.value);
+
+      if (!Number.isInteger(parsedN) || parsedN < 1) {
+        setRightStatus("n must be an integer greater than 0.", true);
+        return;
+      }
+
+      resetRightSide();
+
+      n = parsedN;
+      model = {};
+      modelRenderLimit = MODEL_ENTRY_PAGE_SIZE;
+      scanIndex = n === 1 ? 0 : n - 1;
+      trainedThroughEnd = false;
+      probabilitiesReady = false;
+
+      updateModelDisplay(true);
+
+      const currentStepButton = document.getElementById("stepButton");
+      const currentScanRestButton = document.getElementById("scanRestButton");
+
+      currentStepButton.disabled = scanIndex >= tokens.length;
+      currentScanRestButton.disabled = scanIndex >= tokens.length;
+
+      if (scanIndex >= tokens.length) {
+        setRightStatus(
+          `This text is too short to train a ${n}-gram model. Try a smaller n.`,
+          true
+        );
+        return;
+      }
+
+      setRightStatus(
+        n === 1
+          ? "Unigram model initialized as a single frequency dictionary. Click to scan tokens."
+          : `${n}-gram model initialized as a dictionary of dictionaries. Click to scan tokens.`
+      );
+    }
+
+    function addTrainingObservation(targetIndex) {
+      const word = tokens[targetIndex];
+
+      if (n === 1) {
+        model[word] = (model[word] || 0) + 1;
+      } else {
+        const contextStart = targetIndex - (n - 1);
+        const context = tokens.slice(contextStart, targetIndex).join(" ");
+
+        if (!model[context]) model[context] = {};
+        model[context][word] = (model[context][word] || 0) + 1;
+      }
+    }
+
+    function finishScanningIfDone() {
+      if (scanIndex >= tokens.length) {
+        trainedThroughEnd = true;
+        clearHighlights();
+        showConvertOnlyControls();
+        setRightStatus("Scanning complete. Convert frequencies to probabilities.");
+      }
+    }
+
+    function scanOneStep() {
+      if (probabilitiesReady || trainedThroughEnd) return;
+      if (scanIndex >= tokens.length) {
+        finishScanningIfDone();
+        return;
+      }
+
+      highlightTrainingWindow(scanIndex);
+      addTrainingObservation(scanIndex);
+      scanIndex++;
+
+      updateModelDisplay();
+
+      if (scanIndex >= tokens.length) {
+        finishScanningIfDone();
+      } else {
+        setRightStatus(
+          `Scanned ${scanIndex.toLocaleString()} of ${tokens.length.toLocaleString()} tokens.`
+        );
+      }
+    }
+
+    function scanRemainder() {
+      if (probabilitiesReady || trainedThroughEnd) return;
+
+      clearHighlights();
+
+      while (scanIndex < tokens.length) {
+        addTrainingObservation(scanIndex);
+        scanIndex++;
+      }
+
+      trainedThroughEnd = true;
+      updateModelDisplay();
+      showConvertOnlyControls();
+      setRightStatus("Remainder scanned. Convert frequencies to probabilities.");
+    }
+
+    /***********************
+     * PROBABILITIES
+     ***********************/
+    function showConvertOnlyControls() {
+      rightControls.innerHTML = `
+        <button id="convertButton" class="warning">Convert frequencies to probabilities</button>
+      `;
+
+      document.getElementById("convertButton").addEventListener("click", convertToProbabilities);
+    }
+
+    function convertToProbabilities() {
+      if (probabilitiesReady) return;
+
+      if (n === 1) {
+        const total = Object.values(model).reduce((sum, count) => sum + count, 0);
+
+        for (const word of Object.keys(model)) {
+          model[word] = model[word] / total;
+        }
+      } else {
+        for (const context of Object.keys(model)) {
+          const inner = model[context];
+          const total = Object.values(inner).reduce((sum, count) => sum + count, 0);
+
+          for (const word of Object.keys(inner)) {
+            inner[word] = inner[word] / total;
+          }
+        }
+      }
+
+      probabilitiesReady = true;
+      updateModelDisplay();
+      prepareGeneration();
+      showGenerationControls();
+
+      setRightStatus("Probabilities ready. Generate words from the model.");
+    }
+
+    /***********************
+     * GENERATION
+     ***********************/
+    function showGenerationControls() {
+      rightControls.innerHTML = `
+        <button id="generateButton">Generate word</button>
+        <button id="clearGeneratedButton" class="secondary">Clear</button>
+      `;
+
+      document.getElementById("generateButton").addEventListener("click", generateWord);
+      document.getElementById("clearGeneratedButton").addEventListener("click", clearGenerated);
+    }
+
+    function weightedChoice(probabilityDictionary) {
+      const entries = Object.entries(probabilityDictionary);
+      let r = Math.random();
+
+      for (const [word, probability] of entries) {
+        r -= probability;
+        if (r <= 0) return word;
+      }
+
+      // Floating-point safety fallback.
+      return entries[entries.length - 1]?.[0] || "";
+    }
+
+    function randomKey(obj) {
+      const keys = Object.keys(obj);
+      return keys[Math.floor(Math.random() * keys.length)];
+    }
+
+    function prepareGeneration() {
+      generatedTokens = [];
+      temporaryNewIndex = null;
+
+      if (n > 1) {
+        const seedContext = randomKey(model);
+
+        if (seedContext) {
+          generatedTokens = seedContext.split(" ");
+        }
+      }
+
+      renderGenerated();
+    }
+
+    function currentContextString() {
+      if (n === 1) return "";
+
+      if (generatedTokens.length < n - 1) {
+        return "";
+      }
+
+      return generatedTokens.slice(-(n - 1)).join(" ");
+    }
+
+    function generateWord() {
+      if (!probabilitiesReady) return;
+
+      let nextWord = "";
+
+      if (n === 1) {
+        nextWord = weightedChoice(model);
+      } else {
+        let context = currentContextString();
+
+        // If the current generated context was never observed, restart from a random known context.
+        if (!model[context]) {
+          context = randomKey(model);
+          generatedTokens = context.split(" ");
+        }
+
+        nextWord = weightedChoice(model[context]);
+      }
+
+      if (!nextWord) return;
+
+      generatedTokens.push(nextWord);
+      temporaryNewIndex = generatedTokens.length - 1;
+
+      renderGenerated();
+
+      setTimeout(() => {
+        temporaryNewIndex = null;
+        renderGenerated();
+      }, 550);
+    }
+
+    function clearGenerated() {
+      prepareGeneration();
+      setRightStatus("Generated text cleared. The trained model remains unchanged.");
+    }
+
+    function renderGenerated() {
+      if (!generatedTokens.length) {
+        generatedDisplay.className = "empty";
+        generatedDisplay.textContent =
+          n === 1
+            ? "Click “Generate word” to begin."
+            : "No starting context is available.";
+        return;
+      }
+
+      generatedDisplay.className = "";
+
+      const contextIndexes = new Set();
+
+      if (n > 1 && temporaryNewIndex === null) {
+        const start = Math.max(0, generatedTokens.length - (n - 1));
+
+        for (let i = start; i < generatedTokens.length; i++) {
+          contextIndexes.add(i);
+        }
+      }
+
+      let html = "";
+
+      generatedTokens.forEach((token, i) => {
+        const previous = generatedTokens[i - 1];
+        const leading = tokenNeedsLeadingSpace(token, previous) ? " " : "";
+
+        let classes = "gen-token";
+
+        if (contextIndexes.has(i)) classes += " gen-context";
+        if (i === temporaryNewIndex) classes += " gen-new";
+
+        html += `${leading}<span class="${classes}">${escapeHTML(token)}</span>`;
+      });
+
+      generatedDisplay.innerHTML = html;
+    }
+
+    /***********************
+     * EVENT LISTENERS
+     ***********************/
+    searchButton.addEventListener("click", searchGutenberg);
+
+    searchInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        searchGutenberg();
+      }
+    });
+
+    trainButton.addEventListener("click", beginTraining);
+
+    nInput.addEventListener("input", () => {
+      if (resetRightOnLeftInput) {
+        resetRightSide();
+      }
+
+      const parsedN = Number(nInput.value);
+      trainButton.disabled = !tokens.length || !Number.isInteger(parsedN) || parsedN < 1;
+    });
+
+    searchInput.addEventListener("input", () => {
+      if (resetRightOnLeftInput) {
+        resetRightSide();
+      }
+    });
+
+    stepButton.addEventListener("click", scanOneStep);
+    scanRestButton.addEventListener("click", scanRemainder);
+
+    textContainer.addEventListener("scroll", () => {
+      const nearBottom =
+        textContainer.scrollTop + textContainer.clientHeight >=
+        textContainer.scrollHeight - 80;
+
+      if (nearBottom) {
+        appendMoreTextTokens();
+      }
+    });
+
+    modelDisplay.addEventListener("scroll", () => {
+      const nearBottom =
+        modelDisplay.scrollTop + modelDisplay.clientHeight >=
+        modelDisplay.scrollHeight - 80;
+
+      if (nearBottom) {
+        const totalEntries = Object.keys(model).length;
+
+        if (modelRenderLimit < totalEntries) {
+          modelRenderLimit += MODEL_ENTRY_PAGE_SIZE;
+          updateModelDisplay(false);
+        }
+      }
+    });
+
+    // Initial render.
+    resetRightSide();
+  </script>
+<script src="/static/puzzle/js/activity.js"></script>
+</body>
+</html>

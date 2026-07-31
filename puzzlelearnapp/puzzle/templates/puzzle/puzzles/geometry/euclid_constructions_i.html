@@ -1,0 +1,1587 @@
+{% extends "puzzle/geo_constructions.html" %}
+
+{% block question_information %}
+<script>
+const DEFAULT_ERROR_MARGIN = 14;
+
+/********************************************************************
+ * Geometry evaluation helpers
+ ********************************************************************/
+
+const GeometryEval = {
+  resolveInitialImage(initialImage, width, height) {
+    const scalePoint = p => ({
+      ...p,
+      x: p.x * width,
+      y: p.y * height
+    });
+
+    const points = (initialImage.points || []).map(scalePoint);
+
+    const lines = (initialImage.lines || []).map(line => ({
+      ...line,
+      x1: line.x1 * width,
+      y1: line.y1 * height,
+      x2: line.x2 * width,
+      y2: line.y2 * height
+    }));
+
+    const circles = (initialImage.circles || []).map(circle => ({
+      ...circle,
+      cx: circle.cx * width,
+      cy: circle.cy * height,
+      r: circle.r * Math.min(width, height)
+    }));
+
+    const polygons = (initialImage.polygons || []).map(poly => ({
+      ...poly,
+      points: poly.points.map(scalePoint)
+    }));
+
+    return { points, lines, circles, polygons };
+  },
+
+  getPoint(resolved, name) {
+    return resolved.points.find(p => p.name === name);
+  },
+
+  getLine(resolved, name) {
+    return resolved.lines.find(l => l.name === name);
+  },
+
+  getPolygon(resolved, name) {
+    return resolved.polygons.find(p => p.name === name);
+  },
+
+  blueLines(userShapes) {
+    return userShapes.filter(
+      s => s.type === "line" && s.colorKey === "blue"
+    );
+  },
+
+  blueCircles(userShapes) {
+    return userShapes.filter(
+      s => s.type === "circle" && s.colorKey === "blue"
+    );
+  },
+
+  pt(x, y) {
+    return { x, y };
+  },
+
+  lineStart(line) {
+    return { x: line.x1, y: line.y1 };
+  },
+
+  lineEnd(line) {
+    return { x: line.x2, y: line.y2 };
+  },
+
+  vector(a, b) {
+    return {
+      x: b.x - a.x,
+      y: b.y - a.y
+    };
+  },
+
+  dot(u, v) {
+    return u.x * v.x + u.y * v.y;
+  },
+
+  cross(u, v) {
+    return u.x * v.y - u.y * v.x;
+  },
+
+  length(v) {
+    return Math.hypot(v.x, v.y);
+  },
+
+  distance(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  },
+
+  segmentLength(line) {
+    return Math.hypot(line.x2 - line.x1, line.y2 - line.y1);
+  },
+
+  midpoint(a, b) {
+    return {
+      x: (a.x + b.x) / 2,
+      y: (a.y + b.y) / 2
+    };
+  },
+
+  normalize(v) {
+    const len = Math.hypot(v.x, v.y);
+    if (len === 0) return { x: 0, y: 0 };
+    return {
+      x: v.x / len,
+      y: v.y / len
+    };
+  },
+
+  angleBetween(u, v) {
+    const lu = Math.hypot(u.x, u.y);
+    const lv = Math.hypot(v.x, v.y);
+
+    if (lu === 0 || lv === 0) return 0;
+
+    let c = this.dot(u, v) / (lu * lv);
+    c = Math.max(-1, Math.min(1, c));
+
+    return Math.acos(c);
+  },
+
+  angleABC(A, B, C) {
+    return this.angleBetween(
+      this.vector(B, A),
+      this.vector(B, C)
+    );
+  },
+
+  defaultAngleTolerance(errorMargin) {
+    // About 4–7 degrees for ordinary canvas sizes.
+    return Math.max(0.055, Math.min(0.13, errorMargin / 160));
+  },
+
+  distancePointToSegment(point, a, b) {
+    const ab = this.vector(a, b);
+    const ap = this.vector(a, point);
+    const lenSq = this.dot(ab, ab);
+
+    if (lenSq === 0) {
+      return this.distance(point, a);
+    }
+
+    let t = this.dot(ap, ab) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+
+    const projection = {
+      x: a.x + t * ab.x,
+      y: a.y + t * ab.y
+    };
+
+    return this.distance(point, projection);
+  },
+
+  linePassesThroughPoint(line, point, margin) {
+    return this.distancePointToSegment(
+      point,
+      this.lineStart(line),
+      this.lineEnd(line)
+    ) <= margin;
+  },
+
+  lineCoversTwoPoints(line, p, q, margin) {
+    return (
+      this.linePassesThroughPoint(line, p, margin) &&
+      this.linePassesThroughPoint(line, q, margin)
+    );
+  },
+
+  endpointNearPoint(line, point, margin) {
+    return (
+      this.distance(this.lineStart(line), point) <= margin ||
+      this.distance(this.lineEnd(line), point) <= margin
+    );
+  },
+
+  segmentHasEndpointAndLength(line, requiredEndpoint, targetLength, margin) {
+    const length = this.segmentLength(line);
+
+    return (
+      this.endpointNearPoint(line, requiredEndpoint, margin) &&
+      Math.abs(length - targetLength) <= margin
+    );
+  },
+
+  areParallelVectors(u, v, angleTolerance) {
+    const angle = this.angleBetween(u, v);
+    return (
+      angle <= angleTolerance ||
+      Math.abs(Math.PI - angle) <= angleTolerance
+    );
+  },
+
+  arePerpendicularVectors(u, v, angleTolerance) {
+    const angle = this.angleBetween(u, v);
+    return Math.abs(angle - Math.PI / 2) <= angleTolerance;
+  },
+
+  lineParallelToVector(line, vector, angleTolerance) {
+    const lineVector = this.vector(this.lineStart(line), this.lineEnd(line));
+    return this.areParallelVectors(lineVector, vector, angleTolerance);
+  },
+
+  linePerpendicularToVector(line, vector, angleTolerance) {
+    const lineVector = this.vector(this.lineStart(line), this.lineEnd(line));
+    return this.arePerpendicularVectors(lineVector, vector, angleTolerance);
+  },
+
+  circleCenteredAtRadius(circle, center, radius, margin) {
+    return (
+      this.distance({ x: circle.cx, y: circle.cy }, center) <= margin &&
+      Math.abs(circle.r - radius) <= margin
+    );
+  },
+
+  pointOnRay(point, rayStart, rayThrough, margin) {
+    const rayVector = this.vector(rayStart, rayThrough);
+    const pointVector = this.vector(rayStart, point);
+    const rayLength = this.length(rayVector);
+
+    if (rayLength === 0) return false;
+
+    const distanceFromLine =
+      Math.abs(this.cross(rayVector, pointVector)) / rayLength;
+
+    const forward =
+      this.dot(rayVector, pointVector) >= -margin * rayLength;
+
+    return distanceFromLine <= margin && forward;
+  },
+
+  equilateralVertices(A, B) {
+    const dx = B.x - A.x;
+    const dy = B.y - A.y;
+
+    return [
+      {
+        x: A.x + 0.5 * dx - (Math.sqrt(3) / 2) * dy,
+        y: A.y + 0.5 * dy + (Math.sqrt(3) / 2) * dx
+      },
+      {
+        x: A.x + 0.5 * dx + (Math.sqrt(3) / 2) * dy,
+        y: A.y + 0.5 * dy - (Math.sqrt(3) / 2) * dx
+      }
+    ];
+  },
+
+  polygonArea(points) {
+    let sum = 0;
+
+    for (let i = 0; i < points.length; i++) {
+      const p = points[i];
+      const q = points[(i + 1) % points.length];
+
+      sum += p.x * q.y - q.x * p.y;
+    }
+
+    return Math.abs(sum) / 2;
+  },
+
+  areaMatches(actualArea, targetArea, errorMargin) {
+    const tolerance =
+      targetArea * 0.08 + errorMargin * Math.sqrt(Math.max(targetArea, 1)) * 4;
+
+    return Math.abs(actualArea - targetArea) <= tolerance;
+  },
+
+  lengthsMatchUnordered(actualLengths, targetLengths, margin) {
+    if (actualLengths.length !== targetLengths.length) return false;
+
+    const a = [...actualLengths].sort((x, y) => x - y);
+    const b = [...targetLengths].sort((x, y) => x - y);
+
+    return a.every((len, i) => Math.abs(len - b[i]) <= margin);
+  },
+
+  clusterEndpoints(segments, margin) {
+    const clusters = [];
+
+    function addPoint(point, segmentIndex, endpointName) {
+      let cluster = clusters.find(c =>
+        Math.hypot(c.x - point.x, c.y - point.y) <= margin
+      );
+
+      if (!cluster) {
+        cluster = {
+          x: point.x,
+          y: point.y,
+          count: 0,
+          members: []
+        };
+        clusters.push(cluster);
+      }
+
+      cluster.members.push({ point, segmentIndex, endpointName });
+      cluster.count += 1;
+
+      cluster.x =
+        cluster.members.reduce((sum, m) => sum + m.point.x, 0) /
+        cluster.members.length;
+
+      cluster.y =
+        cluster.members.reduce((sum, m) => sum + m.point.y, 0) /
+        cluster.members.length;
+
+      return clusters.indexOf(cluster);
+    }
+
+    const segmentClusterPairs = segments.map((segment, i) => {
+      const c1 = addPoint(
+        { x: segment.x1, y: segment.y1 },
+        i,
+        "start"
+      );
+
+      const c2 = addPoint(
+        { x: segment.x2, y: segment.y2 },
+        i,
+        "end"
+      );
+
+      return [c1, c2];
+    });
+
+    return { clusters, segmentClusterPairs };
+  },
+
+  combinations(array, size) {
+    const results = [];
+
+    function recurse(start, combo) {
+      if (combo.length === size) {
+        results.push([...combo]);
+        return;
+      }
+
+      for (let i = start; i < array.length; i++) {
+        combo.push(array[i]);
+        recurse(i + 1, combo);
+        combo.pop();
+      }
+    }
+
+    recurse(0, []);
+    return results;
+  },
+
+  closedCycleFromSegments(segments, requiredVertexCount, margin) {
+    const { clusters, segmentClusterPairs } =
+      this.clusterEndpoints(segments, margin);
+
+    if (clusters.length !== requiredVertexCount) return null;
+
+    const adjacency = Array.from(
+      { length: requiredVertexCount },
+      () => []
+    );
+
+    for (const [a, b] of segmentClusterPairs) {
+      if (a === b) return null;
+      adjacency[a].push(b);
+      adjacency[b].push(a);
+    }
+
+    if (!adjacency.every(neighbors => neighbors.length === 2)) {
+      return null;
+    }
+
+    const order = [0];
+    let previous = -1;
+    let current = 0;
+
+    while (order.length < requiredVertexCount) {
+      const next = adjacency[current].find(
+        n => n !== previous && !order.includes(n)
+      );
+
+      if (next === undefined) return null;
+
+      previous = current;
+      current = next;
+      order.push(current);
+    }
+
+    if (!adjacency[current].includes(0)) return null;
+
+    const points = order.map(i => ({
+      x: clusters[i].x,
+      y: clusters[i].y
+    }));
+
+    return { points, segments };
+  },
+
+  triangleFromSegments(segments, margin) {
+    const cycle = this.closedCycleFromSegments(segments, 3, margin);
+    if (!cycle) return null;
+
+    const area = this.polygonArea(cycle.points);
+    if (area <= margin * margin) return null;
+
+    return cycle;
+  },
+
+  parallelogramFromSegments(segments, margin, angleTolerance) {
+    const cycle = this.closedCycleFromSegments(segments, 4, margin);
+    if (!cycle) return null;
+
+    const [P, Q, R, S] = cycle.points;
+
+    const PQ = this.vector(P, Q);
+    const QR = this.vector(Q, R);
+    const RS = this.vector(R, S);
+    const SP = this.vector(S, P);
+
+    const oppositeSidesParallel =
+      this.areParallelVectors(PQ, RS, angleTolerance) &&
+      this.areParallelVectors(QR, SP, angleTolerance);
+
+    if (!oppositeSidesParallel) return null;
+
+    const area = this.polygonArea(cycle.points);
+    if (area <= margin * margin) return null;
+
+    return {
+      points: cycle.points,
+      segments,
+      area,
+      sideLengths: [
+        this.length(PQ),
+        this.length(QR),
+        this.length(RS),
+        this.length(SP)
+      ],
+      interiorAngles: [
+        this.angleBetween(this.vector(P, S), this.vector(P, Q)),
+        this.angleBetween(this.vector(Q, P), this.vector(Q, R)),
+        this.angleBetween(this.vector(R, Q), this.vector(R, S)),
+        this.angleBetween(this.vector(S, R), this.vector(S, P))
+      ]
+    };
+  },
+
+  findParallelograms(segments, margin, angleTolerance, options = {}) {
+    const candidates = this.combinations(segments, 4);
+    const parallelograms = [];
+
+    for (const combo of candidates) {
+      if (options.mustIncludeId) {
+        const includesRequired = combo.some(
+          s => s.fixedId === options.mustIncludeId
+        );
+
+        if (!includesRequired) continue;
+      }
+
+      const p = this.parallelogramFromSegments(
+        combo,
+        margin,
+        angleTolerance
+      );
+
+      if (p) {
+        parallelograms.push(p);
+      }
+    }
+
+    return parallelograms;
+  },
+
+  parallelogramHasAngle(parallelogram, targetAngle, angleTolerance) {
+    return parallelogram.interiorAngles.some(angle =>
+      Math.abs(angle - targetAngle) <= angleTolerance
+    );
+  }
+};
+
+
+/********************************************************************
+ * 1. Equilateral triangle on given segment
+ ********************************************************************/
+
+function evaluateEquilateralTriangleOnGivenSegment(ctx) {
+  const G = GeometryEval;
+  const resolved = G.resolveInitialImage(
+    ctx.initialImage,
+    ctx.canvasWidth,
+    ctx.canvasHeight
+  );
+
+  const AB = G.getLine(resolved, "AB");
+  const A = { x: AB.x1, y: AB.y1 };
+  const B = { x: AB.x2, y: AB.y2 };
+
+  const possibleVertices = G.equilateralVertices(A, B);
+  const blueLines = G.blueLines(ctx.userShapes);
+
+  return possibleVertices.some(C => {
+    const hasAC = blueLines.some(line =>
+      G.lineCoversTwoPoints(line, A, C, ctx.errorMargin)
+    );
+
+    const hasBC = blueLines.some(line =>
+      G.lineCoversTwoPoints(line, B, C, ctx.errorMargin)
+    );
+
+    return hasAC && hasBC;
+  });
+}
+
+
+/********************************************************************
+ * 2. Segment congruent to a given segment from a given endpoint
+ ********************************************************************/
+
+function evaluateCongruentSegmentFromGivenPoint(ctx) {
+  const G = GeometryEval;
+  const resolved = G.resolveInitialImage(
+    ctx.initialImage,
+    ctx.canvasWidth,
+    ctx.canvasHeight
+  );
+
+  const A = G.getPoint(resolved, "A");
+  const CD = G.getLine(resolved, "CD");
+
+  const targetLength = G.segmentLength(CD);
+  const blueLines = G.blueLines(ctx.userShapes);
+
+  return blueLines.some(line =>
+    G.segmentHasEndpointAndLength(
+      line,
+      A,
+      targetLength,
+      ctx.errorMargin
+    )
+  );
+}
+
+
+/********************************************************************
+ * 3. Copy CD onto ray AB, constructing E with AE ≅ CD
+ ********************************************************************/
+
+function evaluateCopySegmentOntoRay(ctx) {
+  const G = GeometryEval;
+  const resolved = G.resolveInitialImage(
+    ctx.initialImage,
+    ctx.canvasWidth,
+    ctx.canvasHeight
+  );
+
+  const A = G.getPoint(resolved, "A");
+  const B = G.getPoint(resolved, "B");
+  const CD = G.getLine(resolved, "CD");
+
+  const targetLength = G.segmentLength(CD);
+  const direction = G.normalize(G.vector(A, B));
+
+  const E = {
+    x: A.x + direction.x * targetLength,
+    y: A.y + direction.y * targetLength
+  };
+
+  const blueLines = G.blueLines(ctx.userShapes);
+  const blueCircles = G.blueCircles(ctx.userShapes);
+
+  const hasSegmentAE = blueLines.some(line =>
+    G.lineCoversTwoPoints(line, A, E, ctx.errorMargin)
+  );
+
+  const hasCompassCircle = blueCircles.some(circle =>
+    G.circleCenteredAtRadius(circle, A, targetLength, ctx.errorMargin)
+  );
+
+  return hasSegmentAE || hasCompassCircle;
+}
+
+
+/********************************************************************
+ * 4. Angle bisector of ∠ABC
+ ********************************************************************/
+
+function evaluateAngleBisector(ctx) {
+  const G = GeometryEval;
+  const resolved = G.resolveInitialImage(
+    ctx.initialImage,
+    ctx.canvasWidth,
+    ctx.canvasHeight
+  );
+
+  const A = G.getPoint(resolved, "A");
+  const B = G.getPoint(resolved, "B");
+  const C = G.getPoint(resolved, "C");
+
+  const BA = G.normalize(G.vector(B, A));
+  const BC = G.normalize(G.vector(B, C));
+
+  const bisectorDirection = {
+    x: BA.x + BC.x,
+    y: BA.y + BC.y
+  };
+
+  const angleTolerance = G.defaultAngleTolerance(ctx.errorMargin);
+  const blueLines = G.blueLines(ctx.userShapes);
+
+  return blueLines.some(line =>
+    G.linePassesThroughPoint(line, B, ctx.errorMargin) &&
+    G.lineParallelToVector(line, bisectorDirection, angleTolerance)
+  );
+}
+
+
+/********************************************************************
+ * 5. Midpoint of a given segment
+ *
+ * Because the activity has no separate point tool, this accepts the
+ * standard visible result: the perpendicular bisector through the midpoint.
+ ********************************************************************/
+
+function evaluateMidpointOfSegment(ctx) {
+  const G = GeometryEval;
+  const resolved = G.resolveInitialImage(
+    ctx.initialImage,
+    ctx.canvasWidth,
+    ctx.canvasHeight
+  );
+
+  const AB = G.getLine(resolved, "AB");
+  const A = { x: AB.x1, y: AB.y1 };
+  const B = { x: AB.x2, y: AB.y2 };
+  const M = G.midpoint(A, B);
+
+  const ABVector = G.vector(A, B);
+  const angleTolerance = G.defaultAngleTolerance(ctx.errorMargin);
+  const blueLines = G.blueLines(ctx.userShapes);
+
+  return blueLines.some(line =>
+    G.linePassesThroughPoint(line, M, ctx.errorMargin) &&
+    G.linePerpendicularToVector(line, ABVector, angleTolerance)
+  );
+}
+
+
+/********************************************************************
+ * 6. Perpendicular to line AB at A
+ ********************************************************************/
+
+function evaluatePerpendicularToLineAtPoint(ctx) {
+  const G = GeometryEval;
+  const resolved = G.resolveInitialImage(
+    ctx.initialImage,
+    ctx.canvasWidth,
+    ctx.canvasHeight
+  );
+
+  const A = G.getPoint(resolved, "A");
+  const B = G.getPoint(resolved, "B");
+
+  const ABVector = G.vector(A, B);
+  const angleTolerance = G.defaultAngleTolerance(ctx.errorMargin);
+  const blueLines = G.blueLines(ctx.userShapes);
+
+  return blueLines.some(line =>
+    G.linePassesThroughPoint(line, A, ctx.errorMargin) &&
+    G.linePerpendicularToVector(line, ABVector, angleTolerance)
+  );
+}
+
+
+/********************************************************************
+ * 7. Perpendicular to line AB through external point C
+ ********************************************************************/
+
+function evaluatePerpendicularFromExternalPoint(ctx) {
+  const G = GeometryEval;
+  const resolved = G.resolveInitialImage(
+    ctx.initialImage,
+    ctx.canvasWidth,
+    ctx.canvasHeight
+  );
+
+  const A = G.getPoint(resolved, "A");
+  const B = G.getPoint(resolved, "B");
+  const C = G.getPoint(resolved, "C");
+
+  const ABVector = G.vector(A, B);
+  const angleTolerance = G.defaultAngleTolerance(ctx.errorMargin);
+  const blueLines = G.blueLines(ctx.userShapes);
+
+  return blueLines.some(line =>
+    G.linePassesThroughPoint(line, C, ctx.errorMargin) &&
+    G.linePerpendicularToVector(line, ABVector, angleTolerance)
+  );
+}
+
+
+/********************************************************************
+ * 8. Triangle with sides congruent to three given segments
+ ********************************************************************/
+
+function evaluateTriangleFromThreeSegments(ctx) {
+  const G = GeometryEval;
+  const resolved = G.resolveInitialImage(
+    ctx.initialImage,
+    ctx.canvasWidth,
+    ctx.canvasHeight
+  );
+
+  const AB = G.getLine(resolved, "AB");
+  const CD = G.getLine(resolved, "CD");
+  const EF = G.getLine(resolved, "EF");
+
+  const targetLengths = [
+    G.segmentLength(AB),
+    G.segmentLength(CD),
+    G.segmentLength(EF)
+  ];
+
+  const blueLines = G.blueLines(ctx.userShapes);
+  const triples = G.combinations(blueLines, 3);
+
+  return triples.some(triple => {
+    const triangle = G.triangleFromSegments(triple, ctx.errorMargin);
+    if (!triangle) return false;
+
+    const actualLengths = triple.map(line => G.segmentLength(line));
+
+    return G.lengthsMatchUnordered(
+      actualLengths,
+      targetLengths,
+      ctx.errorMargin
+    );
+  });
+}
+
+
+/********************************************************************
+ * 9. Copy angle CDE to line AB at A, constructing F so ∠FAB ≅ ∠CDE
+ ********************************************************************/
+
+function evaluateCopyAngleToLine(ctx) {
+  const G = GeometryEval;
+  const resolved = G.resolveInitialImage(
+    ctx.initialImage,
+    ctx.canvasWidth,
+    ctx.canvasHeight
+  );
+
+  const A = G.getPoint(resolved, "A");
+  const B = G.getPoint(resolved, "B");
+  const C = G.getPoint(resolved, "C");
+  const D = G.getPoint(resolved, "D");
+  const E = G.getPoint(resolved, "E");
+
+  const targetAngle = G.angleABC(C, D, E);
+  const ABVector = G.vector(A, B);
+
+  const angleTolerance = G.defaultAngleTolerance(ctx.errorMargin);
+  const blueLines = G.blueLines(ctx.userShapes);
+
+  return blueLines.some(line => {
+    if (!G.linePassesThroughPoint(line, A, ctx.errorMargin)) return false;
+
+    const lineVector = G.vector(G.lineStart(line), G.lineEnd(line));
+    const angle = G.angleBetween(ABVector, lineVector);
+
+    return (
+      Math.abs(angle - targetAngle) <= angleTolerance ||
+      Math.abs(Math.PI - angle - targetAngle) <= angleTolerance
+    );
+  });
+}
+
+
+/********************************************************************
+ * 10. Parallel through point C to line AB
+ ********************************************************************/
+
+function evaluateParallelThroughPoint(ctx) {
+  const G = GeometryEval;
+  const resolved = G.resolveInitialImage(
+    ctx.initialImage,
+    ctx.canvasWidth,
+    ctx.canvasHeight
+  );
+
+  const A = G.getPoint(resolved, "A");
+  const B = G.getPoint(resolved, "B");
+  const C = G.getPoint(resolved, "C");
+
+  const ABVector = G.vector(A, B);
+  const angleTolerance = G.defaultAngleTolerance(ctx.errorMargin);
+  const blueLines = G.blueLines(ctx.userShapes);
+
+  return blueLines.some(line =>
+    G.linePassesThroughPoint(line, C, ctx.errorMargin) &&
+    G.lineParallelToVector(line, ABVector, angleTolerance)
+  );
+}
+
+
+/********************************************************************
+ * 11. Parallelogram with angle ≅ ∠ABC and area equal to △DEF
+ ********************************************************************/
+
+function evaluateParallelogramGivenAngleAndAreaTriangle(ctx) {
+  const G = GeometryEval;
+  const resolved = G.resolveInitialImage(
+    ctx.initialImage,
+    ctx.canvasWidth,
+    ctx.canvasHeight
+  );
+
+  const A = G.getPoint(resolved, "A");
+  const B = G.getPoint(resolved, "B");
+  const C = G.getPoint(resolved, "C");
+
+  const targetAngle = G.angleABC(A, B, C);
+
+  const triangle = G.getPolygon(resolved, "DEF");
+  const targetArea = G.polygonArea(triangle.points);
+
+  const angleTolerance = G.defaultAngleTolerance(ctx.errorMargin);
+  const blueLines = G.blueLines(ctx.userShapes);
+
+  const parallelograms = G.findParallelograms(
+    blueLines,
+    ctx.errorMargin,
+    angleTolerance
+  );
+
+  return parallelograms.some(p =>
+    G.parallelogramHasAngle(p, targetAngle, angleTolerance) &&
+    G.areaMatches(p.area, targetArea, ctx.errorMargin)
+  );
+}
+
+
+/********************************************************************
+ * 12. Parallelogram with given side AB, angle ≅ ∠CDE,
+ *     and area equal to △FGH
+ ********************************************************************/
+
+function evaluateParallelogramGivenSideAngleAndAreaTriangle(ctx) {
+  const G = GeometryEval;
+  const resolved = G.resolveInitialImage(
+    ctx.initialImage,
+    ctx.canvasWidth,
+    ctx.canvasHeight
+  );
+
+  const AB = G.getLine(resolved, "AB");
+  const C = G.getPoint(resolved, "C");
+  const D = G.getPoint(resolved, "D");
+  const E = G.getPoint(resolved, "E");
+
+  const targetAngle = G.angleABC(C, D, E);
+
+  const triangle = G.getPolygon(resolved, "FGH");
+  const targetArea = G.polygonArea(triangle.points);
+
+  const fixedAB = {
+    ...AB,
+    fixedId: "givenSideAB"
+  };
+
+  const candidateSegments = [
+    fixedAB,
+    ...G.blueLines(ctx.userShapes)
+  ];
+
+  const angleTolerance = G.defaultAngleTolerance(ctx.errorMargin);
+
+  const parallelograms = G.findParallelograms(
+    candidateSegments,
+    ctx.errorMargin,
+    angleTolerance,
+    { mustIncludeId: "givenSideAB" }
+  );
+
+  return parallelograms.some(p =>
+    G.parallelogramHasAngle(p, targetAngle, angleTolerance) &&
+    G.areaMatches(p.area, targetArea, ctx.errorMargin)
+  );
+}
+
+
+/********************************************************************
+ * 13. Parallelogram with angle ≅ ∠ABC and area equal to polygon DEFGH
+ ********************************************************************/
+
+function evaluateParallelogramGivenAngleAndAreaPolygon(ctx) {
+  const G = GeometryEval;
+  const resolved = G.resolveInitialImage(
+    ctx.initialImage,
+    ctx.canvasWidth,
+    ctx.canvasHeight
+  );
+
+  const A = G.getPoint(resolved, "A");
+  const B = G.getPoint(resolved, "B");
+  const C = G.getPoint(resolved, "C");
+
+  const targetAngle = G.angleABC(A, B, C);
+
+  const polygon = G.getPolygon(resolved, "DEFGH");
+  const targetArea = G.polygonArea(polygon.points);
+
+  const angleTolerance = G.defaultAngleTolerance(ctx.errorMargin);
+  const blueLines = G.blueLines(ctx.userShapes);
+
+  const parallelograms = G.findParallelograms(
+    blueLines,
+    ctx.errorMargin,
+    angleTolerance
+  );
+
+  return parallelograms.some(p =>
+    G.parallelogramHasAngle(p, targetAngle, angleTolerance) &&
+    G.areaMatches(p.area, targetArea, ctx.errorMargin)
+  );
+}
+
+
+/********************************************************************
+ * 14. Square with given segment AB as one side
+ ********************************************************************/
+
+function evaluateSquareOnGivenSegment(ctx) {
+  const G = GeometryEval;
+  const resolved = G.resolveInitialImage(
+    ctx.initialImage,
+    ctx.canvasWidth,
+    ctx.canvasHeight
+  );
+
+  const AB = G.getLine(resolved, "AB");
+  const targetSideLength = G.segmentLength(AB);
+
+  const fixedAB = {
+    ...AB,
+    fixedId: "givenSideAB"
+  };
+
+  const candidateSegments = [
+    fixedAB,
+    ...G.blueLines(ctx.userShapes)
+  ];
+
+  const angleTolerance = G.defaultAngleTolerance(ctx.errorMargin);
+
+  const parallelograms = G.findParallelograms(
+    candidateSegments,
+    ctx.errorMargin,
+    angleTolerance,
+    { mustIncludeId: "givenSideAB" }
+  );
+
+  return parallelograms.some(p => {
+    const allSidesCongruent = p.sideLengths.every(length =>
+      Math.abs(length - targetSideLength) <= ctx.errorMargin
+    );
+
+    const allAnglesRight = p.interiorAngles.every(angle =>
+      Math.abs(angle - Math.PI / 2) <= angleTolerance
+    );
+
+    return allSidesCongruent && allAnglesRight;
+  });
+}
+
+const QUESTION_INFORMATION = [
+  {
+    id: "equilateral_triangle_on_given_segment",
+    question:
+      `Construct an equilateral triangle having a given segment as one side.`,
+    initialImage: {
+      points: [
+        { name: "A", x: 0.34, y: 0.58 },
+        { name: "B", x: 0.66, y: 0.58 }
+      ],
+      lines: [
+        {
+          kind: "segment",
+          name: "AB",
+          x1: 0.34,
+          y1: 0.58,
+          x2: 0.66,
+          y2: 0.58
+        }
+      ],
+      circles: [],
+      polygons: []
+    },
+    evaluationFunction: evaluateEquilateralTriangleOnGivenSegment,
+    errorMargin: DEFAULT_ERROR_MARGIN
+  },
+
+  {
+    id: "congruent_segment_from_given_point",
+    question:
+      `Construct a segment congruent to a given segment and with a given point as one endpoint.`,
+    initialImage: {
+      points: [
+        { name: "C", x: 0.16, y: 0.28 },
+        { name: "D", x: 0.38, y: 0.28 },
+        { name: "A", x: 0.46, y: 0.64 }
+      ],
+      lines: [
+        {
+          kind: "segment",
+          name: "CD",
+          x1: 0.16,
+          y1: 0.28,
+          x2: 0.38,
+          y2: 0.28
+        }
+      ],
+      circles: [],
+      polygons: []
+    },
+    evaluationFunction: evaluateCongruentSegmentFromGivenPoint,
+    errorMargin: DEFAULT_ERROR_MARGIN
+  },
+
+  {
+    id: "copy_segment_onto_ray",
+    question:
+      `Given <span class="geo-ray">AB</span> and <span class="geo-seg">CD</span>, construct point E on <span class="geo-ray">AB</span> such that <span class="geo-seg">AE</span> ≅ <span class="geo-seg">CD</span>.`,
+    initialImage: {
+      points: [
+        { name: "A", x: 0.18, y: 0.62 },
+        { name: "B", x: 0.52, y: 0.62 },
+        { name: "C", x: 0.18, y: 0.28 },
+        { name: "D", x: 0.38, y: 0.28 }
+      ],
+      lines: [
+        {
+          kind: "ray",
+          name: "AB",
+          x1: 0.18,
+          y1: 0.62,
+          x2: 0.52,
+          y2: 0.62
+        },
+        {
+          kind: "segment",
+          name: "CD",
+          x1: 0.18,
+          y1: 0.28,
+          x2: 0.38,
+          y2: 0.28
+        }
+      ],
+      circles: [],
+      polygons: []
+    },
+    evaluationFunction: evaluateCopySegmentOntoRay,
+    errorMargin: DEFAULT_ERROR_MARGIN
+  },
+
+  {
+    id: "angle_bisector",
+    question:
+      `Construct the angle bisector of ∠ABC.`,
+    initialImage: {
+      points: [
+        { name: "A", x: 0.30, y: 0.34 },
+        { name: "B", x: 0.48, y: 0.62 },
+        { name: "C", x: 0.72, y: 0.40 }
+      ],
+      lines: [
+        {
+          kind: "ray",
+          name: "BA",
+          x1: 0.48,
+          y1: 0.62,
+          x2: 0.30,
+          y2: 0.34
+        },
+        {
+          kind: "ray",
+          name: "BC",
+          x1: 0.48,
+          y1: 0.62,
+          x2: 0.72,
+          y2: 0.40
+        }
+      ],
+      circles: [],
+      polygons: []
+    },
+    evaluationFunction: evaluateAngleBisector,
+    errorMargin: DEFAULT_ERROR_MARGIN
+  },
+
+  {
+    id: "midpoint_of_segment",
+    question:
+      `Construct the midpoint of <span class="geo-seg">AB</span>.`,
+    initialImage: {
+      points: [
+        { name: "A", x: 0.30, y: 0.52 },
+        { name: "B", x: 0.70, y: 0.52 }
+      ],
+      lines: [
+        {
+          kind: "segment",
+          name: "AB",
+          x1: 0.30,
+          y1: 0.52,
+          x2: 0.70,
+          y2: 0.52
+        }
+      ],
+      circles: [],
+      polygons: []
+    },
+    evaluationFunction: evaluateMidpointOfSegment,
+    errorMargin: DEFAULT_ERROR_MARGIN
+  },
+
+  {
+    id: "perpendicular_to_line_at_point",
+    question:
+      `Given <span class="geo-line">AB</span>, construct the perpendicular to <span class="geo-line">AB</span> at A.`,
+    initialImage: {
+      points: [
+        { name: "A", x: 0.42, y: 0.58 },
+        { name: "B", x: 0.72, y: 0.58 }
+      ],
+      lines: [
+        {
+          kind: "line",
+          name: "AB",
+          x1: 0.22,
+          y1: 0.58,
+          x2: 0.82,
+          y2: 0.58
+        }
+      ],
+      circles: [],
+      polygons: []
+    },
+    evaluationFunction: evaluatePerpendicularToLineAtPoint,
+    errorMargin: DEFAULT_ERROR_MARGIN
+  },
+
+  {
+    id: "perpendicular_from_external_point",
+    question:
+      `Given point C off <span class="geo-line">AB</span>, construct the perpendicular to <span class="geo-line">AB</span> through C.`,
+    initialImage: {
+      points: [
+        { name: "A", x: 0.24, y: 0.66 },
+        { name: "B", x: 0.78, y: 0.66 },
+        { name: "C", x: 0.50, y: 0.34 }
+      ],
+      lines: [
+        {
+          kind: "line",
+          name: "AB",
+          x1: 0.18,
+          y1: 0.66,
+          x2: 0.84,
+          y2: 0.66
+        }
+      ],
+      circles: [],
+      polygons: []
+    },
+    evaluationFunction: evaluatePerpendicularFromExternalPoint,
+    errorMargin: DEFAULT_ERROR_MARGIN
+  },
+
+  {
+    id: "triangle_from_three_segments",
+    question:
+      `Construct △XYZ such that <span class="geo-seg">XY</span> ≅ <span class="geo-seg">AB</span>, <span class="geo-seg">YZ</span> ≅ <span class="geo-seg">CD</span>, and <span class="geo-seg">ZX</span> ≅ <span class="geo-seg">EF</span>.`,
+    initialImage: {
+      points: [
+        { name: "A", x: 0.12, y: 0.24 },
+        { name: "B", x: 0.34, y: 0.24 },
+
+        { name: "C", x: 0.12, y: 0.38 },
+        { name: "D", x: 0.42, y: 0.38 },
+
+        { name: "E", x: 0.12, y: 0.52 },
+        { name: "F", x: 0.30, y: 0.52 }
+      ],
+      lines: [
+        {
+          kind: "segment",
+          name: "AB",
+          x1: 0.12,
+          y1: 0.24,
+          x2: 0.34,
+          y2: 0.24
+        },
+        {
+          kind: "segment",
+          name: "CD",
+          x1: 0.12,
+          y1: 0.38,
+          x2: 0.42,
+          y2: 0.38
+        },
+        {
+          kind: "segment",
+          name: "EF",
+          x1: 0.12,
+          y1: 0.52,
+          x2: 0.30,
+          y2: 0.52
+        }
+      ],
+      circles: [],
+      polygons: []
+    },
+    evaluationFunction: evaluateTriangleFromThreeSegments,
+    errorMargin: DEFAULT_ERROR_MARGIN
+  },
+
+  {
+    id: "copy_angle_to_line",
+    question:
+      `Given <span class="geo-line">AB</span> and ∠CDE, construct point F such that ∠FAB ≅ ∠CDE.`,
+    initialImage: {
+      points: [
+        { name: "A", x: 0.28, y: 0.68 },
+        { name: "B", x: 0.72, y: 0.68 },
+
+        { name: "C", x: 0.20, y: 0.30 },
+        { name: "D", x: 0.36, y: 0.46 },
+        { name: "E", x: 0.58, y: 0.34 }
+      ],
+      lines: [
+        {
+          kind: "line",
+          name: "AB",
+          x1: 0.18,
+          y1: 0.68,
+          x2: 0.82,
+          y2: 0.68
+        },
+        {
+          kind: "ray",
+          name: "DC",
+          x1: 0.36,
+          y1: 0.46,
+          x2: 0.20,
+          y2: 0.30
+        },
+        {
+          kind: "ray",
+          name: "DE",
+          x1: 0.36,
+          y1: 0.46,
+          x2: 0.58,
+          y2: 0.34
+        }
+      ],
+      circles: [],
+      polygons: []
+    },
+    evaluationFunction: evaluateCopyAngleToLine,
+    errorMargin: DEFAULT_ERROR_MARGIN
+  },
+
+  {
+    id: "parallel_through_point",
+    question:
+      `Through point C, construct the parallel to <span class="geo-line">AB</span>.`,
+    initialImage: {
+      points: [
+        { name: "A", x: 0.24, y: 0.64 },
+        { name: "B", x: 0.74, y: 0.54 },
+        { name: "C", x: 0.46, y: 0.34 }
+      ],
+      lines: [
+        {
+          kind: "line",
+          name: "AB",
+          x1: 0.18,
+          y1: 0.65,
+          x2: 0.82,
+          y2: 0.52
+        }
+      ],
+      circles: [],
+      polygons: []
+    },
+    evaluationFunction: evaluateParallelThroughPoint,
+    errorMargin: DEFAULT_ERROR_MARGIN
+  },
+
+  {
+    id: "parallelogram_given_angle_and_area_triangle",
+    question:
+      `Construct a parallelogram with an angle congruent to ∠ABC and area equal to the area of △DEF.`,
+    initialImage: {
+      points: [
+        { name: "A", x: 0.18, y: 0.28 },
+        { name: "B", x: 0.34, y: 0.44 },
+        { name: "C", x: 0.58, y: 0.32 },
+
+        { name: "D", x: 0.18, y: 0.72 },
+        { name: "E", x: 0.44, y: 0.72 },
+        { name: "F", x: 0.28, y: 0.54 }
+      ],
+      lines: [
+        {
+          kind: "ray",
+          name: "BA",
+          x1: 0.34,
+          y1: 0.44,
+          x2: 0.18,
+          y2: 0.28
+        },
+        {
+          kind: "ray",
+          name: "BC",
+          x1: 0.34,
+          y1: 0.44,
+          x2: 0.58,
+          y2: 0.32
+        },
+        {
+          kind: "segment",
+          name: "DE",
+          x1: 0.18,
+          y1: 0.72,
+          x2: 0.44,
+          y2: 0.72
+        },
+        {
+          kind: "segment",
+          name: "EF",
+          x1: 0.44,
+          y1: 0.72,
+          x2: 0.28,
+          y2: 0.54
+        },
+        {
+          kind: "segment",
+          name: "FD",
+          x1: 0.28,
+          y1: 0.54,
+          x2: 0.18,
+          y2: 0.72
+        }
+      ],
+      circles: [],
+      polygons: [
+        {
+          kind: "triangle",
+          name: "DEF",
+          points: [
+            { x: 0.18, y: 0.72 },
+            { x: 0.44, y: 0.72 },
+            { x: 0.28, y: 0.54 }
+          ]
+        }
+      ]
+    },
+    evaluationFunction: evaluateParallelogramGivenAngleAndAreaTriangle,
+    errorMargin: DEFAULT_ERROR_MARGIN
+  },
+
+  {
+    id: "parallelogram_given_side_angle_and_area_triangle",
+    question:
+      `Construct a parallelogram with side <span class="geo-seg">AB</span>, an angle congruent to ∠CDE, and area equal to the area of △FGH.`,
+    initialImage: {
+      points: [
+        { name: "A", x: 0.52, y: 0.70 },
+        { name: "B", x: 0.78, y: 0.70 },
+
+        { name: "C", x: 0.16, y: 0.24 },
+        { name: "D", x: 0.32, y: 0.40 },
+        { name: "E", x: 0.54, y: 0.28 },
+
+        { name: "F", x: 0.16, y: 0.76 },
+        { name: "G", x: 0.40, y: 0.76 },
+        { name: "H", x: 0.26, y: 0.58 }
+      ],
+      lines: [
+        {
+          kind: "segment",
+          name: "AB",
+          x1: 0.52,
+          y1: 0.70,
+          x2: 0.78,
+          y2: 0.70
+        },
+        {
+          kind: "ray",
+          name: "DC",
+          x1: 0.32,
+          y1: 0.40,
+          x2: 0.16,
+          y2: 0.24
+        },
+        {
+          kind: "ray",
+          name: "DE",
+          x1: 0.32,
+          y1: 0.40,
+          x2: 0.54,
+          y2: 0.28
+        },
+        {
+          kind: "segment",
+          name: "FG",
+          x1: 0.16,
+          y1: 0.76,
+          x2: 0.40,
+          y2: 0.76
+        },
+        {
+          kind: "segment",
+          name: "GH",
+          x1: 0.40,
+          y1: 0.76,
+          x2: 0.26,
+          y2: 0.58
+        },
+        {
+          kind: "segment",
+          name: "HF",
+          x1: 0.26,
+          y1: 0.58,
+          x2: 0.16,
+          y2: 0.76
+        }
+      ],
+      circles: [],
+      polygons: [
+        {
+          kind: "triangle",
+          name: "FGH",
+          points: [
+            { x: 0.16, y: 0.76 },
+            { x: 0.40, y: 0.76 },
+            { x: 0.26, y: 0.58 }
+          ]
+        }
+      ]
+    },
+    evaluationFunction: evaluateParallelogramGivenSideAngleAndAreaTriangle,
+    errorMargin: DEFAULT_ERROR_MARGIN
+  },
+
+  {
+    id: "parallelogram_given_angle_and_area_polygon",
+    question:
+      `Construct a parallelogram with an angle congruent to ∠ABC and area equal to the area of polygon DEFGH.`,
+    initialImage: {
+      points: [
+        { name: "A", x: 0.18, y: 0.24 },
+        { name: "B", x: 0.34, y: 0.40 },
+        { name: "C", x: 0.58, y: 0.28 },
+
+        { name: "D", x: 0.16, y: 0.72 },
+        { name: "E", x: 0.26, y: 0.56 },
+        { name: "F", x: 0.46, y: 0.58 },
+        { name: "G", x: 0.54, y: 0.74 },
+        { name: "H", x: 0.34, y: 0.82 }
+      ],
+      lines: [
+        {
+          kind: "ray",
+          name: "BA",
+          x1: 0.34,
+          y1: 0.40,
+          x2: 0.18,
+          y2: 0.24
+        },
+        {
+          kind: "ray",
+          name: "BC",
+          x1: 0.34,
+          y1: 0.40,
+          x2: 0.58,
+          y2: 0.28
+        },
+        {
+          kind: "segment",
+          name: "DE",
+          x1: 0.16,
+          y1: 0.72,
+          x2: 0.26,
+          y2: 0.56
+        },
+        {
+          kind: "segment",
+          name: "EF",
+          x1: 0.26,
+          y1: 0.56,
+          x2: 0.46,
+          y2: 0.58
+        },
+        {
+          kind: "segment",
+          name: "FG",
+          x1: 0.46,
+          y1: 0.58,
+          x2: 0.54,
+          y2: 0.74
+        },
+        {
+          kind: "segment",
+          name: "GH",
+          x1: 0.54,
+          y1: 0.74,
+          x2: 0.34,
+          y2: 0.82
+        },
+        {
+          kind: "segment",
+          name: "HD",
+          x1: 0.34,
+          y1: 0.82,
+          x2: 0.16,
+          y2: 0.72
+        }
+      ],
+      circles: [],
+      polygons: [
+        {
+          kind: "polygon",
+          name: "DEFGH",
+          points: [
+            { x: 0.16, y: 0.72 },
+            { x: 0.26, y: 0.56 },
+            { x: 0.46, y: 0.58 },
+            { x: 0.54, y: 0.74 },
+            { x: 0.34, y: 0.82 }
+          ]
+        }
+      ]
+    },
+    evaluationFunction: evaluateParallelogramGivenAngleAndAreaPolygon,
+    errorMargin: DEFAULT_ERROR_MARGIN
+  },
+
+  {
+    id: "square_on_given_segment",
+    question:
+      `Construct a square with <span class="geo-seg">AB</span> as one side.`,
+    initialImage: {
+      points: [
+        { name: "A", x: 0.36, y: 0.62 },
+        { name: "B", x: 0.64, y: 0.62 }
+      ],
+      lines: [
+        {
+          kind: "segment",
+          name: "AB",
+          x1: 0.36,
+          y1: 0.62,
+          x2: 0.64,
+          y2: 0.62
+        }
+      ],
+      circles: [],
+      polygons: []
+    },
+    evaluationFunction: evaluateSquareOnGivenSegment,
+    errorMargin: DEFAULT_ERROR_MARGIN
+  }
+];
+</script>
+{% endblock %}

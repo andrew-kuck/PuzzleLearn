@@ -1,0 +1,1515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Series Convergence Labyrinth</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --bg: #111827;
+      --panel: #1f2937;
+      --panel-2: #243244;
+      --text: #f9fafb;
+      --muted: #cbd5e1;
+      --blue: #60a5fa;
+      --green: #34d399;
+      --red: #f87171;
+      --yellow: #fbbf24;
+      --purple: #a78bfa;
+      --border: #374151;
+      --locked: #4b5563;
+      --um-blue: #00274c;
+      --um-maize: #ffcb05;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(96, 165, 250, 0.2), transparent 35%),
+        linear-gradient(135deg, #0f172a, #111827 60%, #020617);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 1.25rem;
+      background: linear-gradient(90deg, var(--um-blue), #0f172a);
+      border-bottom: 4px solid var(--um-maize);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: clamp(1.5rem, 4vw, 2.5rem);
+    }
+
+    header p {
+      margin: 0.35rem 0 0;
+      color: var(--muted);
+      max-width: 900px;
+    }
+
+    main {
+      width: min(1200px, 96vw);
+      margin: 1rem auto 3rem;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 1rem;
+    }
+
+    @media (max-width: 850px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: rgba(31, 41, 55, 0.92);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    .sidebar {
+      padding: 1rem;
+      position: sticky;
+      top: 1rem;
+      align-self: start;
+    }
+
+    @media (max-width: 850px) {
+      .sidebar {
+        position: static;
+      }
+    }
+
+    .scorebox {
+      background: var(--panel-2);
+      border-radius: 14px;
+      padding: 0.9rem;
+      margin-bottom: 1rem;
+      border: 1px solid var(--border);
+    }
+
+    .scorebox strong {
+      color: var(--um-maize);
+    }
+
+    .maze-title {
+      font-weight: 800;
+      margin-bottom: 0.75rem;
+      color: var(--um-maize);
+    }
+
+    .maze {
+      display: grid;
+      gap: 0.55rem;
+    }
+
+    .maze-room {
+      padding: 0.65rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #111827;
+      color: var(--muted);
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      font-size: 0.92rem;
+    }
+
+    .maze-room.current {
+      border-color: var(--um-maize);
+      background: rgba(255, 203, 5, 0.09);
+      color: var(--text);
+    }
+
+    .maze-room.done {
+      border-color: rgba(52, 211, 153, 0.65);
+      background: rgba(52, 211, 153, 0.1);
+    }
+
+    .badge {
+      width: 1.6rem;
+      height: 1.6rem;
+      border-radius: 50%;
+      display: inline-grid;
+      place-items: center;
+      background: var(--locked);
+      color: white;
+      font-size: 0.8rem;
+      flex: 0 0 auto;
+    }
+
+    .maze-room.current .badge {
+      background: var(--um-maize);
+      color: #111827;
+      font-weight: 900;
+    }
+
+    .maze-room.done .badge {
+      background: var(--green);
+      color: #052e16;
+      font-weight: 900;
+    }
+
+    .content {
+      padding: 1rem;
+    }
+
+    .room-card {
+      padding: 1.25rem;
+      background: rgba(15, 23, 42, 0.7);
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      margin-bottom: 1rem;
+    }
+
+    .room-topline {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .room-title {
+      margin: 0;
+      font-size: clamp(1.25rem, 3vw, 1.75rem);
+      color: var(--um-maize);
+    }
+
+    .phase-pill {
+      background: rgba(96, 165, 250, 0.15);
+      color: #bfdbfe;
+      border: 1px solid rgba(96, 165, 250, 0.35);
+      padding: 0.35rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+    }
+
+    .formula {
+      margin: 1rem 0;
+      padding: 1rem;
+      background: #020617;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      font-size: clamp(1.25rem, 4vw, 2.1rem);
+      text-align: center;
+      letter-spacing: 0.02em;
+    }
+
+    .hint {
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .section {
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: rgba(36, 50, 68, 0.78);
+    }
+
+    .section h3 {
+      margin-top: 0;
+      color: #dbeafe;
+    }
+
+    .options,
+    .doors,
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      align-items: center;
+    }
+
+    button,
+    select,
+    input {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 0.7rem 0.9rem;
+      background: var(--blue);
+      color: #061126;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.12s ease, filter 0.12s ease, background 0.12s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.07);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      transform: none;
+      filter: grayscale(0.7);
+      opacity: 0.6;
+    }
+
+    .secondary {
+      background: #334155;
+      color: var(--text);
+      border: 1px solid #475569;
+    }
+
+    .success {
+      background: var(--green);
+      color: #052e16;
+    }
+
+    .danger {
+      background: var(--red);
+      color: #450a0a;
+    }
+
+    .door {
+      background: #111827;
+      color: var(--text);
+      border: 1px solid #475569;
+      position: relative;
+      min-width: 135px;
+    }
+
+    .door.unlocked {
+      border-color: rgba(52, 211, 153, 0.85);
+      box-shadow: inset 0 0 0 1px rgba(52, 211, 153, 0.2);
+    }
+
+    .door.locked {
+      border-color: rgba(248, 113, 113, 0.55);
+    }
+
+    .door::before {
+      content: "🚪";
+      margin-right: 0.35rem;
+    }
+
+    .door.unlocked::after {
+      content: " ✓";
+      color: var(--green);
+    }
+
+    .door.locked::after {
+      content: " 🔒";
+      color: var(--red);
+    }
+
+    label.choice {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: #111827;
+      border: 1px solid #475569;
+      padding: 0.55rem 0.7rem;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+
+    input[type="radio"],
+    input[type="checkbox"] {
+      transform: scale(1.15);
+      accent-color: var(--um-maize);
+    }
+
+    .visual-wrap {
+      background: #020617;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 0.7rem;
+      overflow: hidden;
+    }
+
+    canvas {
+      width: 100%;
+      max-width: 100%;
+      background:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 24px 24px;
+      border-radius: 12px;
+      display: block;
+    }
+
+    .feedback {
+      margin-top: 0.85rem;
+      padding: 0.85rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #0f172a;
+      line-height: 1.5;
+      min-height: 3.2rem;
+    }
+
+    .feedback.good {
+      border-color: rgba(52, 211, 153, 0.7);
+      background: rgba(6, 78, 59, 0.35);
+    }
+
+    .feedback.bad {
+      border-color: rgba(248, 113, 113, 0.7);
+      background: rgba(127, 29, 29, 0.35);
+    }
+
+    .feedback.warn {
+      border-color: rgba(251, 191, 36, 0.7);
+      background: rgba(113, 63, 18, 0.35);
+    }
+
+    .challenge-grid {
+      display: grid;
+      gap: 0.85rem;
+      max-width: 760px;
+    }
+
+    .challenge-row {
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .challenge-row select,
+    .challenge-row input[type="text"],
+    .challenge-row input[type="number"] {
+      width: min(100%, 440px);
+      padding: 0.65rem;
+      border-radius: 10px;
+      border: 1px solid #64748b;
+      background: #020617;
+      color: var(--text);
+    }
+
+    .mini-note {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .result-banner {
+      display: none;
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 16px;
+      border: 1px solid rgba(52, 211, 153, 0.75);
+      background: rgba(6, 78, 59, 0.35);
+    }
+
+    .result-banner.show {
+      display: block;
+    }
+
+    .footer-actions {
+      display: flex;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Series Convergence Labyrinth</h1>
+    <p>
+      Choose the right convergence test door, justify your reasoning, and escape the maze.
+      Beware: partial sums can look calm even when a series is secretly wandering off forever.
+    </p>
+  </header>
+
+  <main>
+    <aside class="panel sidebar">
+      <div class="scorebox">
+        <div><strong>Score:</strong> <span id="score">0</span></div>
+        <div><strong>Room:</strong> <span id="roomCounter">1</span>/<span id="roomTotal">1</span></div>
+      </div>
+
+      <div class="maze-title">Labyrinth Map</div>
+      <div id="maze" class="maze" aria-label="Maze progress"></div>
+    </aside>
+
+    <section class="panel content">
+      <div class="room-card">
+        <div class="room-topline">
+          <h2 id="roomTitle" class="room-title"></h2>
+          <span id="phasePill" class="phase-pill"></span>
+        </div>
+
+        <div id="formula" class="formula" aria-label="Current series"></div>
+        <p id="roomHint" class="hint"></p>
+      </div>
+
+      <section class="section" aria-labelledby="phase1-heading">
+        <h3 id="phase1-heading">Phase 1: Recognize the form</h3>
+        <p class="mini-note">
+          Pick the most obvious structural clue. This is not always the final proof, but it helps you choose a door.
+        </p>
+        <div id="classificationOptions" class="options"></div>
+        <div id="classificationFeedback" class="feedback"></div>
+      </section>
+
+      <section class="section" aria-labelledby="phase2-heading">
+        <h3 id="phase2-heading">Phase 2: Watch partial sums</h3>
+        <p class="mini-note">
+          The animation gives evidence, not proof. Slowly divergent series may pretend to settle down.
+        </p>
+        <div class="controls">
+          <button id="animate20">Animate 20 terms</button>
+          <button id="animate50">Animate 50 terms</button>
+          <button id="resetVisual" class="secondary">Reset visual</button>
+        </div>
+
+        <div class="visual-wrap" style="margin-top:0.75rem;">
+          <canvas id="seriesCanvas" width="900" height="430" aria-label="Series visualization"></canvas>
+        </div>
+
+        <div id="visualFeedback" class="feedback warn">
+          Press an animation button to see terms and partial sums.
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="phase3-heading">
+        <h3 id="phase3-heading">Phase 3: Choose a test door</h3>
+        <p class="mini-note">
+          Only doors that can support a valid mathematical conclusion will open.
+        </p>
+        <div id="doors" class="doors"></div>
+        <div id="doorFeedback" class="feedback"></div>
+      </section>
+
+      <section class="section" aria-labelledby="phase4-heading">
+        <h3 id="phase4-heading">Phase 4: Complete the test</h3>
+        <div id="challengeArea">
+          <p class="mini-note">Choose a valid door first.</p>
+        </div>
+        <div id="challengeFeedback" class="feedback"></div>
+
+        <div id="resultBanner" class="result-banner">
+          <strong>Room cleared!</strong>
+          <div id="resultText"></div>
+          <div class="footer-actions">
+            <button id="nextRoom" class="success">Continue through the labyrinth</button>
+            <button id="restart" class="secondary">Restart</button>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const DOORS = [
+      { id: "geometric", label: "geometric" },
+      { id: "pseries", label: "p-series" },
+      { id: "nth", label: "nth-term test" },
+      { id: "comparison", label: "comparison" },
+      { id: "limitcomparison", label: "limit comparison" },
+      { id: "ratio", label: "ratio test" },
+      { id: "alternating", label: "alternating series test" }
+    ];
+
+    const CLASSIFICATIONS = [
+      { id: "geometric", label: "geometric" },
+      { id: "pseries", label: "p-series" },
+      { id: "factorial", label: "factorial / exponential" },
+      { id: "alternating", label: "alternating" },
+      { id: "rational", label: "rational / comparison candidate" },
+      { id: "none", label: "none obvious" }
+    ];
+
+    const rooms = [
+      {
+        id: "geo-half",
+        title: "Room 1: The Shrinking Tile Hall",
+        phase: "Phase 1 focus",
+        formula: "∑<sub>n=1</sub><sup>∞</sup> (1/2)<sup>n</sup>",
+        hint: "The terms shrink by the same factor each step.",
+        term: n => Math.pow(0.5, n),
+        knownLimit: 1,
+        classification: ["geometric"],
+        visualMessage:
+          "The partial sums approach 1. But the proof comes from recognizing a geometric series with |r| < 1.",
+        tests: {
+          geometric: {
+            kind: "geometric",
+            ratio: "1/2",
+            conclusion: "converges",
+            explanation:
+              "A geometric series ∑ arⁿ converges when |r| < 1. Here r = 1/2, so the series converges."
+          },
+          ratio: {
+            kind: "ratio",
+            exprId: "geo",
+            limit: "1/2",
+            conclusion: "converges",
+            explanation:
+              "The ratio test gives L = 1/2 < 1, so the series converges."
+          }
+        }
+      },
+      {
+        id: "p-two",
+        title: "Room 2: The Square-Stone Stairway",
+        phase: "Phase 1 focus",
+        formula: "∑<sub>n=1</sub><sup>∞</sup> 1/n<sup>2</sup>",
+        hint: "This is one of the classic p-series rooms.",
+        term: n => 1 / (n * n),
+        knownLimit: Math.PI * Math.PI / 6,
+        classification: ["pseries"],
+        visualMessage:
+          "The partial sums appear to level off near π²/6. The p-series test proves convergence because p = 2 > 1.",
+        tests: {
+          pseries: {
+            kind: "pseries",
+            p: 2,
+            conclusion: "converges",
+            explanation:
+              "For ∑ 1/nᵖ, the series converges when p > 1. Here p = 2, so it converges."
+          }
+        }
+      },
+      {
+        id: "harmonic",
+        title: "Room 3: The Deceptively Calm Corridor",
+        phase: "Partial sums can mislead",
+        formula: "∑<sub>n=1</sub><sup>∞</sup> 1/n",
+        hint: "It grows slowly. Very slowly. Suspiciously slowly.",
+        term: n => 1 / n,
+        knownLimit: null,
+        classification: ["pseries"],
+        visualMessage:
+          "The harmonic series grows slowly, but it does not settle. Visual leveling is not proof of convergence.",
+        tests: {
+          pseries: {
+            kind: "pseries",
+            p: 1,
+            conclusion: "diverges",
+            explanation:
+              "For ∑ 1/nᵖ, convergence requires p > 1. Here p = 1, so the harmonic series diverges."
+          }
+        }
+      },
+      {
+        id: "factorial",
+        title: "Room 4: The Factorial Gear Chamber",
+        phase: "Ratio test focus",
+        formula: "∑<sub>n=1</sub><sup>∞</sup> 3<sup>n</sup>/n!",
+        hint: "Factorials often invite the ratio test.",
+        term: n => Math.pow(3, n) / factorial(n),
+        knownLimit: Math.exp(3) - 1,
+        classification: ["factorial"],
+        visualMessage:
+          "The terms eventually shrink very fast. The ratio test captures the factorial behavior cleanly.",
+        tests: {
+          ratio: {
+            kind: "ratio",
+            exprId: "factorial",
+            limit: "0",
+            conclusion: "converges",
+            explanation:
+              "For aₙ = 3ⁿ/n!, |aₙ₊₁/aₙ| = 3/(n+1). The limit is 0 < 1, so the series converges."
+          }
+        }
+      },
+      {
+        id: "alt-harmonic",
+        title: "Room 5: The Left-Right Bridge",
+        phase: "Alternating series focus",
+        formula: "∑<sub>n=1</sub><sup>∞</sup> (-1)<sup>n+1</sup>/n",
+        hint: "The partial sums jump left and right with smaller and smaller steps.",
+        term: n => Math.pow(-1, n + 1) / n,
+        knownLimit: Math.log(2),
+        classification: ["alternating"],
+        visualMessage:
+          "The jumps alternate and shrink toward 0. The alternating series test proves convergence.",
+        tests: {
+          alternating: {
+            kind: "alternating",
+            decreases: true,
+            zero: true,
+            conclusion: "converges",
+            explanation:
+              "The positive magnitudes bₙ = 1/n decrease and approach 0. Therefore ∑ (-1)ⁿ⁺¹/n converges by the alternating series test."
+          }
+        }
+      },
+      {
+        id: "nth-term",
+        title: "Room 6: The Terms That Refuse to Vanish",
+        phase: "nth-term test focus",
+        formula: "∑<sub>n=1</sub><sup>∞</sup> n/(n+1)",
+        hint: "Ask whether the terms themselves even approach 0.",
+        term: n => n / (n + 1),
+        knownLimit: null,
+        classification: ["none", "rational"],
+        visualMessage:
+          "The terms approach 1, so adding them forever forces divergence. The nth-term test is decisive here.",
+        tests: {
+          nth: {
+            kind: "nth",
+            limitKind: "nonzero",
+            limitText: "1",
+            conclusion: "diverges",
+            explanation:
+              "Since limₙ→∞ n/(n+1) = 1, the terms do not approach 0. Therefore the series diverges by the nth-term test."
+          }
+        }
+      },
+      {
+        id: "comparison",
+        title: "Room 7: The Comparison Fork",
+        phase: "Comparison focus",
+        formula: "∑<sub>n=1</sub><sup>∞</sup> 1/(n<sup>2</sup> + n)",
+        hint: "This resembles 1/n² for large n. Multiple valid doors can open here.",
+        term: n => 1 / (n * n + n),
+        knownLimit: 1,
+        classification: ["rational"],
+        visualMessage:
+          "The partial sums approach 1. Comparison with 1/n² or limit comparison confirms convergence.",
+        tests: {
+          comparison: {
+            kind: "comparison",
+            comparison: "1/n²",
+            relation: "leConv",
+            conclusion: "converges",
+            explanation:
+              "For n ≥ 1, 0 < 1/(n²+n) ≤ 1/n². Since ∑1/n² converges, the comparison test shows this series converges."
+          },
+          limitcomparison: {
+            kind: "limitcomparison",
+            comparison: "1/n²",
+            limit: "1",
+            conclusion: "converges",
+            explanation:
+              "Using bₙ = 1/n², lim (aₙ/bₙ) = lim n²/(n²+n) = 1. Since this is positive and finite and ∑1/n² converges, the given series converges."
+          }
+        }
+      }
+    ];
+
+    let currentIndex = 0;
+    let score = 0;
+    let cleared = new Set();
+    let selectedDoor = null;
+    let animationTimer = null;
+    let currentK = 0;
+    let maxAnimate = 0;
+
+    const els = {
+      score: document.getElementById("score"),
+      roomCounter: document.getElementById("roomCounter"),
+      roomTotal: document.getElementById("roomTotal"),
+      maze: document.getElementById("maze"),
+      roomTitle: document.getElementById("roomTitle"),
+      phasePill: document.getElementById("phasePill"),
+      formula: document.getElementById("formula"),
+      roomHint: document.getElementById("roomHint"),
+      classificationOptions: document.getElementById("classificationOptions"),
+      classificationFeedback: document.getElementById("classificationFeedback"),
+      animate20: document.getElementById("animate20"),
+      animate50: document.getElementById("animate50"),
+      resetVisual: document.getElementById("resetVisual"),
+      canvas: document.getElementById("seriesCanvas"),
+      visualFeedback: document.getElementById("visualFeedback"),
+      doors: document.getElementById("doors"),
+      doorFeedback: document.getElementById("doorFeedback"),
+      challengeArea: document.getElementById("challengeArea"),
+      challengeFeedback: document.getElementById("challengeFeedback"),
+      resultBanner: document.getElementById("resultBanner"),
+      resultText: document.getElementById("resultText"),
+      nextRoom: document.getElementById("nextRoom"),
+      restart: document.getElementById("restart")
+    };
+
+    const ctx = els.canvas.getContext("2d");
+
+    function factorial(n) {
+      let out = 1;
+      for (let i = 2; i <= n; i++) out *= i;
+      return out;
+    }
+
+    function currentRoom() {
+      return rooms[currentIndex];
+    }
+
+    function updateScore(delta) {
+      score += delta;
+      els.score.textContent = score;
+    }
+
+    function renderAll() {
+      stopAnimation();
+      selectedDoor = null;
+      currentK = 0;
+
+      const room = currentRoom();
+
+      els.roomTotal.textContent = rooms.length;
+      els.roomCounter.textContent = currentIndex + 1;
+      els.roomTitle.textContent = room.title;
+      els.phasePill.textContent = room.phase;
+      els.formula.innerHTML = room.formula;
+      els.roomHint.textContent = room.hint;
+
+      els.classificationFeedback.className = "feedback";
+      els.classificationFeedback.textContent = "Choose a structural clue.";
+      els.visualFeedback.className = "feedback warn";
+      els.visualFeedback.textContent = "Press an animation button to see terms and partial sums.";
+      els.doorFeedback.className = "feedback";
+      els.doorFeedback.textContent = "Choose a test door.";
+      els.challengeFeedback.className = "feedback";
+      els.challengeFeedback.textContent = "";
+      els.challengeArea.innerHTML = `<p class="mini-note">Choose a valid door first.</p>`;
+      els.resultBanner.classList.remove("show");
+
+      renderMaze();
+      renderClassification();
+      renderDoors();
+      drawVisualization(0);
+    }
+
+    function renderMaze() {
+      els.maze.innerHTML = "";
+
+      rooms.forEach((room, idx) => {
+        const item = document.createElement("div");
+        item.className = "maze-room";
+        if (idx === currentIndex) item.classList.add("current");
+        if (cleared.has(idx)) item.classList.add("done");
+
+        const badge = document.createElement("span");
+        badge.className = "badge";
+        badge.textContent = cleared.has(idx) ? "✓" : idx + 1;
+
+        const label = document.createElement("span");
+        label.textContent = room.title.replace(/^Room \d+:\s*/, "");
+
+        item.appendChild(badge);
+        item.appendChild(label);
+        els.maze.appendChild(item);
+      });
+    }
+
+    function renderClassification() {
+      els.classificationOptions.innerHTML = "";
+
+      CLASSIFICATIONS.forEach(opt => {
+        const label = document.createElement("label");
+        label.className = "choice";
+
+        label.innerHTML = `
+          <input type="radio" name="classify" value="${opt.id}">
+          <span>${opt.label}</span>
+        `;
+
+        label.querySelector("input").addEventListener("change", () => {
+          checkClassification(opt.id);
+        });
+
+        els.classificationOptions.appendChild(label);
+      });
+    }
+
+    function checkClassification(choice) {
+      const room = currentRoom();
+
+      if (room.classification.includes(choice)) {
+        els.classificationFeedback.className = "feedback good";
+        els.classificationFeedback.textContent =
+          "Good structural read. Now remember: recognizing the form helps choose a proof, but the proof still needs the test conditions.";
+        updateScore(1);
+      } else {
+        els.classificationFeedback.className = "feedback warn";
+        els.classificationFeedback.textContent =
+          "That clue is not the best fit. Try focusing on the dominant structure of the term.";
+      }
+    }
+
+    function renderDoors() {
+      els.doors.innerHTML = "";
+      const room = currentRoom();
+
+      DOORS.forEach(door => {
+        const btn = document.createElement("button");
+        const valid = Boolean(room.tests[door.id]);
+        btn.className = `door ${valid ? "unlocked" : "locked"}`;
+        btn.textContent = door.label;
+        btn.addEventListener("click", () => chooseDoor(door.id, valid));
+        els.doors.appendChild(btn);
+      });
+    }
+
+    function chooseDoor(doorId, valid) {
+      const room = currentRoom();
+
+      if (!valid) {
+        els.doorFeedback.className = "feedback bad";
+        els.doorFeedback.innerHTML = `<strong>Locked.</strong> ${invalidReason(doorId, room)}`;
+        els.challengeArea.innerHTML = `<p class="mini-note">That door did not open. Choose a test that can actually prove convergence or divergence here.</p>`;
+        return;
+      }
+
+      selectedDoor = doorId;
+      els.doorFeedback.className = "feedback good";
+      els.doorFeedback.innerHTML =
+        `<strong>Door opened:</strong> ${doorLabel(doorId)} can justify this series. Complete the mechanism below.`;
+      updateScore(2);
+      renderChallenge(doorId);
+    }
+
+    function doorLabel(id) {
+      return DOORS.find(d => d.id === id)?.label ?? id;
+    }
+
+    function invalidReason(doorId, room) {
+      if (doorId === "nth") {
+        return "The nth-term test proves divergence only when lim aₙ is not 0 or does not exist. If the terms approach 0, the test cannot prove convergence.";
+      }
+
+      if (doorId === "ratio") {
+        if (["p-two", "harmonic", "comparison"].includes(room.id)) {
+          return "The ratio test tends to give L = 1 for many p-like rational series, which is inconclusive.";
+        }
+        return "The ratio test is not the useful structure here.";
+      }
+
+      if (doorId === "alternating") {
+        return "Alternating signs alone matter only when the series actually has alternating sign structure and the magnitudes decrease to 0.";
+      }
+
+      if (doorId === "pseries") {
+        return "This is not directly of the form ∑ 1/nᵖ.";
+      }
+
+      if (doorId === "geometric") {
+        return "A geometric series needs a constant ratio between consecutive terms.";
+      }
+
+      if (doorId === "comparison" || doorId === "limitcomparison") {
+        return "A comparison proof needs a suitable benchmark series and the right inequality or limiting ratio. This room has a more direct intended test.";
+      }
+
+      return "This test cannot produce a valid conclusion for the current series.";
+    }
+
+    function renderChallenge(doorId) {
+      const room = currentRoom();
+      const detail = room.tests[doorId];
+
+      els.challengeFeedback.className = "feedback";
+      els.challengeFeedback.textContent = "Complete the selected test.";
+
+      if (detail.kind === "pseries") {
+        els.challengeArea.innerHTML = `
+          <div class="challenge-grid">
+            <div class="challenge-row">
+              <label for="pInput">For ∑ 1/nᵖ, what is p?</label>
+              <input id="pInput" type="text" placeholder="Example: 2">
+            </div>
+
+            <div class="challenge-row">
+              <label for="pConclusion">What does the p-series test conclude?</label>
+              <select id="pConclusion">
+                <option value="">Choose...</option>
+                <option value="converges">converges because p &gt; 1</option>
+                <option value="diverges">diverges because p ≤ 1</option>
+              </select>
+            </div>
+
+            <button id="checkChallenge" class="success">Submit test</button>
+          </div>
+        `;
+      }
+
+      if (detail.kind === "geometric") {
+        els.challengeArea.innerHTML = `
+          <div class="challenge-grid">
+            <div class="challenge-row">
+              <label for="ratioInput">What is the common ratio r?</label>
+              <input id="ratioInput" type="text" placeholder="Example: 1/2">
+            </div>
+
+            <div class="challenge-row">
+              <label for="geoConclusion">What does the geometric test conclude?</label>
+              <select id="geoConclusion">
+                <option value="">Choose...</option>
+                <option value="converges">converges because |r| &lt; 1</option>
+                <option value="diverges">diverges because |r| ≥ 1</option>
+              </select>
+            </div>
+
+            <button id="checkChallenge" class="success">Submit test</button>
+          </div>
+        `;
+      }
+
+      if (detail.kind === "ratio") {
+        els.challengeArea.innerHTML = `
+          <div class="challenge-grid">
+            <div class="challenge-row">
+              <label for="ratioExpr">Assemble the ratio-test expression.</label>
+              <select id="ratioExpr">
+                <option value="">Choose...</option>
+                <option value="geo">lim |((1/2)ⁿ⁺¹)/((1/2)ⁿ)|</option>
+                <option value="factorial">lim |(3ⁿ⁺¹/(n+1)!)/(3ⁿ/n!)| = lim 3/(n+1)</option>
+                <option value="harmonic">lim |(1/(n+1))/(1/n)|</option>
+                <option value="wrongInvert">lim |aₙ/aₙ₊₁|</option>
+              </select>
+            </div>
+
+            <div class="challenge-row">
+              <label for="ratioLimit">What is L = lim |aₙ₊₁/aₙ|?</label>
+              <select id="ratioLimit">
+                <option value="">Choose...</option>
+                <option value="0">0</option>
+                <option value="1/2">1/2</option>
+                <option value="1">1</option>
+                <option value="infinity">∞</option>
+              </select>
+            </div>
+
+            <div class="challenge-row">
+              <label for="ratioConclusion">What does the ratio test conclude?</label>
+              <select id="ratioConclusion">
+                <option value="">Choose...</option>
+                <option value="converges">converges because L &lt; 1</option>
+                <option value="diverges">diverges because L &gt; 1 or infinite</option>
+                <option value="inconclusive">inconclusive because L = 1</option>
+              </select>
+            </div>
+
+            <button id="checkChallenge" class="success">Submit test</button>
+          </div>
+        `;
+      }
+
+      if (detail.kind === "alternating") {
+        els.challengeArea.innerHTML = `
+          <div class="challenge-grid">
+            <div class="challenge-row">
+              <label class="choice">
+                <input id="altDecrease" type="checkbox">
+                <span>The positive magnitudes bₙ decrease eventually.</span>
+              </label>
+            </div>
+
+            <div class="challenge-row">
+              <label class="choice">
+                <input id="altZero" type="checkbox">
+                <span>lim bₙ = 0.</span>
+              </label>
+            </div>
+
+            <div class="challenge-row">
+              <label for="altConclusion">What does the alternating series test conclude?</label>
+              <select id="altConclusion">
+                <option value="">Choose...</option>
+                <option value="converges">converges</option>
+                <option value="diverges">diverges</option>
+                <option value="inconclusive">inconclusive</option>
+              </select>
+            </div>
+
+            <button id="checkChallenge" class="success">Submit test</button>
+          </div>
+        `;
+      }
+
+      if (detail.kind === "nth") {
+        els.challengeArea.innerHTML = `
+          <div class="challenge-grid">
+            <div class="challenge-row">
+              <label for="nthLimit">What is lim aₙ?</label>
+              <select id="nthLimit">
+                <option value="">Choose...</option>
+                <option value="0">0</option>
+                <option value="nonzero">a nonzero finite number</option>
+                <option value="dne">does not exist</option>
+              </select>
+            </div>
+
+            <div class="challenge-row">
+              <label for="nthConclusion">What can the nth-term test conclude?</label>
+              <select id="nthConclusion">
+                <option value="">Choose...</option>
+                <option value="diverges">the series diverges</option>
+                <option value="converges">the series converges</option>
+                <option value="noConclusion">no conclusion</option>
+              </select>
+            </div>
+
+            <button id="checkChallenge" class="success">Submit test</button>
+          </div>
+        `;
+      }
+
+      if (detail.kind === "comparison") {
+        els.challengeArea.innerHTML = `
+          <div class="challenge-grid">
+            <div class="challenge-row">
+              <label for="compSeries">Choose a comparison series.</label>
+              <select id="compSeries">
+                <option value="">Choose...</option>
+                <option value="1/n">∑ 1/n</option>
+                <option value="1/n²">∑ 1/n²</option>
+                <option value="1/2^n">∑ 1/2ⁿ</option>
+                <option value="n/(n+1)">∑ n/(n+1)</option>
+              </select>
+            </div>
+
+            <div class="challenge-row">
+              <label for="compRelation">Choose the useful comparison statement.</label>
+              <select id="compRelation">
+                <option value="">Choose...</option>
+                <option value="leConv">0 &lt; aₙ ≤ bₙ and ∑bₙ converges</option>
+                <option value="geDiv">aₙ ≥ bₙ &gt; 0 and ∑bₙ diverges</option>
+                <option value="signOnly">aₙ has positive terms, so it converges</option>
+              </select>
+            </div>
+
+            <div class="challenge-row">
+              <label for="compConclusion">Conclusion?</label>
+              <select id="compConclusion">
+                <option value="">Choose...</option>
+                <option value="converges">converges</option>
+                <option value="diverges">diverges</option>
+                <option value="inconclusive">inconclusive</option>
+              </select>
+            </div>
+
+            <button id="checkChallenge" class="success">Submit test</button>
+          </div>
+        `;
+      }
+
+      if (detail.kind === "limitcomparison") {
+        els.challengeArea.innerHTML = `
+          <div class="challenge-grid">
+            <div class="challenge-row">
+              <label for="lcSeries">Choose bₙ for limit comparison.</label>
+              <select id="lcSeries">
+                <option value="">Choose...</option>
+                <option value="1/n">1/n</option>
+                <option value="1/n²">1/n²</option>
+                <option value="1/2^n">1/2ⁿ</option>
+              </select>
+            </div>
+
+            <div class="challenge-row">
+              <label for="lcLimit">Compute lim aₙ/bₙ.</label>
+              <select id="lcLimit">
+                <option value="">Choose...</option>
+                <option value="0">0</option>
+                <option value="1">1</option>
+                <option value="infinity">∞</option>
+                <option value="dne">does not exist</option>
+              </select>
+            </div>
+
+            <div class="challenge-row">
+              <label for="lcConclusion">Conclusion?</label>
+              <select id="lcConclusion">
+                <option value="">Choose...</option>
+                <option value="converges">converges because bₙ is a convergent p-series and the limit is positive finite</option>
+                <option value="diverges">diverges</option>
+                <option value="inconclusive">inconclusive</option>
+              </select>
+            </div>
+
+            <button id="checkChallenge" class="success">Submit test</button>
+          </div>
+        `;
+      }
+
+      document.getElementById("checkChallenge").addEventListener("click", checkChallenge);
+    }
+
+    function checkChallenge() {
+      const room = currentRoom();
+      const detail = room.tests[selectedDoor];
+      let ok = false;
+
+      if (detail.kind === "pseries") {
+        const pVal = parseMathNumber(document.getElementById("pInput").value);
+        const conclusion = document.getElementById("pConclusion").value;
+        ok = almostEqual(pVal, detail.p) && conclusion === detail.conclusion;
+      }
+
+      if (detail.kind === "geometric") {
+        const rVal = parseMathNumber(document.getElementById("ratioInput").value);
+        const expected = parseMathNumber(detail.ratio);
+        const conclusion = document.getElementById("geoConclusion").value;
+        ok = almostEqual(Math.abs(rVal), Math.abs(expected)) && conclusion === detail.conclusion;
+      }
+
+      if (detail.kind === "ratio") {
+        const expr = document.getElementById("ratioExpr").value;
+        const limit = document.getElementById("ratioLimit").value;
+        const conclusion = document.getElementById("ratioConclusion").value;
+        ok = expr === detail.exprId && limit === detail.limit && conclusion === detail.conclusion;
+      }
+
+      if (detail.kind === "alternating") {
+        const decrease = document.getElementById("altDecrease").checked;
+        const zero = document.getElementById("altZero").checked;
+        const conclusion = document.getElementById("altConclusion").value;
+        ok =
+          decrease === detail.decreases &&
+          zero === detail.zero &&
+          conclusion === detail.conclusion;
+      }
+
+      if (detail.kind === "nth") {
+        const limit = document.getElementById("nthLimit").value;
+        const conclusion = document.getElementById("nthConclusion").value;
+        ok = limit === detail.limitKind && conclusion === detail.conclusion;
+      }
+
+      if (detail.kind === "comparison") {
+        const comp = document.getElementById("compSeries").value;
+        const relation = document.getElementById("compRelation").value;
+        const conclusion = document.getElementById("compConclusion").value;
+        ok =
+          comp === detail.comparison &&
+          relation === detail.relation &&
+          conclusion === detail.conclusion;
+      }
+
+      if (detail.kind === "limitcomparison") {
+        const comp = document.getElementById("lcSeries").value;
+        const limit = document.getElementById("lcLimit").value;
+        const conclusion = document.getElementById("lcConclusion").value;
+        ok =
+          comp === detail.comparison &&
+          limit === detail.limit &&
+          conclusion === detail.conclusion;
+      }
+
+      if (ok) {
+        els.challengeFeedback.className = "feedback good";
+        els.challengeFeedback.innerHTML = `<strong>Correct.</strong> The door mechanism clicks open.`;
+        clearRoom(detail.explanation);
+      } else {
+        els.challengeFeedback.className = "feedback bad";
+        els.challengeFeedback.innerHTML =
+          `<strong>Not quite.</strong> Check both the test condition and the conclusion. A valid test must prove the result, not merely look plausible.`;
+      }
+    }
+
+    function clearRoom(explanation) {
+      if (!cleared.has(currentIndex)) {
+        cleared.add(currentIndex);
+        updateScore(5);
+      }
+
+      renderMaze();
+      els.resultText.textContent = explanation;
+      els.resultBanner.classList.add("show");
+    }
+
+    function parseMathNumber(str) {
+      const s = String(str).trim().toLowerCase().replace(/\s+/g, "");
+
+      if (!s) return NaN;
+
+      if (s.includes("/")) {
+        const [a, b] = s.split("/");
+        return Number(a) / Number(b);
+      }
+
+      if (s === "pi") return Math.PI;
+      return Number(s);
+    }
+
+    function almostEqual(a, b, eps = 1e-6) {
+      return Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) < eps;
+    }
+
+    function stopAnimation() {
+      if (animationTimer) {
+        clearInterval(animationTimer);
+        animationTimer = null;
+      }
+    }
+
+    function animateTerms(maxTerms) {
+      stopAnimation();
+      maxAnimate = maxTerms;
+      currentK = 0;
+
+      animationTimer = setInterval(() => {
+        currentK += 1;
+        drawVisualization(currentK);
+
+        if (currentK >= maxAnimate) {
+          stopAnimation();
+          els.visualFeedback.className = "feedback warn";
+          els.visualFeedback.textContent = currentRoom().visualMessage;
+        }
+      }, 110);
+    }
+
+    function getTermsAndSums(k) {
+      const room = currentRoom();
+      const terms = [];
+      const sums = [];
+      let s = 0;
+
+      for (let n = 1; n <= k; n++) {
+        const a = room.term(n);
+        terms.push(a);
+        s += a;
+        sums.push(s);
+      }
+
+      return { terms, sums };
+    }
+
+    function drawVisualization(k) {
+      const room = currentRoom();
+      const width = els.canvas.width;
+      const height = els.canvas.height;
+
+      ctx.clearRect(0, 0, width, height);
+
+      drawTitle(`Term blocks and partial sums: first ${k} term${k === 1 ? "" : "s"}`);
+
+      if (k === 0) {
+        drawEmptyState();
+        return;
+      }
+
+      const { terms, sums } = getTermsAndSums(k);
+      drawTermBars(terms);
+      drawPartialSums(sums, room);
+    }
+
+    function drawTitle(text) {
+      ctx.save();
+      ctx.fillStyle = "#f9fafb";
+      ctx.font = "bold 20px system-ui, sans-serif";
+      ctx.fillText(text, 24, 34);
+      ctx.restore();
+    }
+
+    function drawEmptyState() {
+      ctx.save();
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "18px system-ui, sans-serif";
+      ctx.fillText("The labyrinth is quiet. Start the animation to add blocks term by term.", 24, 100);
+
+      ctx.strokeStyle = "rgba(255, 203, 5, 0.55)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 8]);
+      ctx.strokeRect(24, 70, 852, 310);
+      ctx.restore();
+    }
+
+    function drawTermBars(terms) {
+      const maxBars = Math.min(terms.length, 35);
+      const shown = terms.slice(0, maxBars);
+      const maxAbs = Math.max(...shown.map(v => Math.abs(v)), 1e-9);
+
+      const x0 = 48;
+      const yBase = 150;
+      const plotW = 800;
+      const plotH = 90;
+      const gap = 3;
+      const barW = Math.max(4, plotW / maxBars - gap);
+
+      ctx.save();
+
+      ctx.fillStyle = "#cbd5e1";
+      ctx.font = "14px system-ui, sans-serif";
+      ctx.fillText("Terms aₙ as signed blocks", x0, 72);
+
+      ctx.strokeStyle = "#475569";
+      ctx.beginPath();
+      ctx.moveTo(x0, yBase);
+      ctx.lineTo(x0 + plotW, yBase);
+      ctx.stroke();
+
+      shown.forEach((v, i) => {
+        const h = Math.min(plotH, Math.abs(v) / maxAbs * plotH);
+        const x = x0 + i * (barW + gap);
+        const y = v >= 0 ? yBase - h : yBase;
+
+        ctx.fillStyle = v >= 0 ? "#60a5fa" : "#f97316";
+        ctx.fillRect(x, y, barW, h);
+      });
+
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "12px system-ui, sans-serif";
+      ctx.fillText("n = 1", x0, yBase + 22);
+      ctx.fillText(`n = ${maxBars}`, x0 + plotW - 55, yBase + 22);
+
+      ctx.restore();
+    }
+
+    function drawPartialSums(sums, room) {
+      const x0 = 56;
+      const y0 = 235;
+      const plotW = 790;
+      const plotH = 145;
+
+      let minY = Math.min(...sums, 0);
+      let maxY = Math.max(...sums, 0);
+
+      if (room.knownLimit !== null) {
+        minY = Math.min(minY, room.knownLimit);
+        maxY = Math.max(maxY, room.knownLimit);
+      }
+
+      if (Math.abs(maxY - minY) < 1e-9) {
+        maxY += 1;
+        minY -= 1;
+      }
+
+      const pad = 0.08 * (maxY - minY);
+      minY -= pad;
+      maxY += pad;
+
+      const mapX = i => x0 + (i / Math.max(1, sums.length - 1)) * plotW;
+      const mapY = y => y0 + plotH - ((y - minY) / (maxY - minY)) * plotH;
+
+      ctx.save();
+
+      ctx.fillStyle = "#cbd5e1";
+      ctx.font = "14px system-ui, sans-serif";
+      ctx.fillText("Partial sums Sₙ", x0, y0 - 18);
+
+      ctx.strokeStyle = "#334155";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x0, y0, plotW, plotH);
+
+      const zeroY = mapY(0);
+      if (zeroY >= y0 && zeroY <= y0 + plotH) {
+        ctx.strokeStyle = "#64748b";
+        ctx.beginPath();
+        ctx.moveTo(x0, zeroY);
+        ctx.lineTo(x0 + plotW, zeroY);
+        ctx.stroke();
+      }
+
+      if (room.knownLimit !== null) {
+        const limY = mapY(room.knownLimit);
+        ctx.strokeStyle = "rgba(52, 211, 153, 0.8)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([8, 6]);
+        ctx.beginPath();
+        ctx.moveTo(x0, limY);
+        ctx.lineTo(x0 + plotW, limY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = "#86efac";
+        ctx.font = "13px system-ui, sans-serif";
+        ctx.fillText("possible platform", x0 + plotW - 120, limY - 8);
+      }
+
+      ctx.strokeStyle = "#ffcb05";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+
+      sums.forEach((s, i) => {
+        const x = mapX(i);
+        const y = mapY(s);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+
+      ctx.stroke();
+
+      sums.forEach((s, i) => {
+        const x = mapX(i);
+        const y = mapY(s);
+        ctx.fillStyle = "#fef3c7";
+        ctx.beginPath();
+        ctx.arc(x, y, i === sums.length - 1 ? 5 : 3, 0, 2 * Math.PI);
+        ctx.fill();
+      });
+
+      const last = sums[sums.length - 1];
+      ctx.fillStyle = "#f9fafb";
+      ctx.font = "14px system-ui, sans-serif";
+      ctx.fillText(`Current Sₙ ≈ ${formatNumber(last)}`, x0, y0 + plotH + 28);
+
+      if (room.id === "alt-harmonic") {
+        ctx.fillStyle = "#a78bfa";
+        ctx.fillText("Alternating partial sums jump left/right while steps shrink.", x0 + 220, y0 + plotH + 28);
+      }
+
+      ctx.restore();
+    }
+
+    function formatNumber(x) {
+      if (!Number.isFinite(x)) return String(x);
+      if (Math.abs(x) >= 1000) return x.toExponential(2);
+      return x.toFixed(5).replace(/0+$/, "").replace(/\.$/, "");
+    }
+
+    els.animate20.addEventListener("click", () => animateTerms(20));
+    els.animate50.addEventListener("click", () => animateTerms(50));
+    els.resetVisual.addEventListener("click", () => {
+      stopAnimation();
+      currentK = 0;
+      drawVisualization(0);
+      els.visualFeedback.className = "feedback warn";
+      els.visualFeedback.textContent = "Visual reset. Remember: animation suggests behavior, tests prove it.";
+    });
+
+    els.nextRoom.addEventListener("click", () => {
+      if (currentIndex < rooms.length - 1) {
+        currentIndex += 1;
+        renderAll();
+      } else {
+        els.resultBanner.classList.add("show");
+        els.resultText.textContent =
+          "You escaped the Series Convergence Labyrinth. Final moral: choose tests based on structure, not vibes. Mathematical vibes are charming but unreliable.";
+        els.nextRoom.disabled = true;
+      }
+    });
+
+    els.restart.addEventListener("click", () => {
+      currentIndex = 0;
+      score = 0;
+      cleared.clear();
+      els.nextRoom.disabled = false;
+      updateScore(0);
+      els.score.textContent = "0";
+      renderAll();
+    });
+
+    renderAll();
+  </script>
+
+    <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#f6f6f6"
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Derivative Circuit</title>
+<style>
+body{margin:0;background:#101827;color:white;font-family:system-ui;display:flex;justify-content:center}
+.app{max-width:900px;padding:20px}
+.board{background:#fff;color:#111;border-radius:16px;padding:25px;min-height:270px}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0;align-items:center}
+select,input,button{font-size:17px;padding:10px;border-radius:10px;border:1px solid #bbb}
+button{background:#ffcb05;color:#00274c;font-weight:800;border:0}
+.card{display:inline-block;background:#e9eef6;border:3px solid #00274c;padding:12px 16px;border-radius:14px;margin:6px}
+.pill{background:#243b55;color:white;border-radius:999px;padding:8px 13px}
+</style>
+</head>
+<body>
+<div class="app">
+<h1>Derivative Circuit</h1>
+<p>Power the circuit by choosing the outer rule, inner rule, and derivative value at the marked x.</p>
+<div class="board">
+<h2 id="expr"></h2>
+<div id="cards"></div>
+<div class="row">
+<label>Outer rule <select id="outer"></select></label>
+<label>Inner rule <select id="inner"></select></label>
+<label>f′(x₀)= <input id="val" size="8"></label>
+<button onclick="check()">Power</button>
+</div>
+<div id="msg" class="pill"></div>
+</div>
+</div>
+<script>
+const opts=["Power","Chain","Product","Quotient","Sum","Constant multiple","Exponential","Log"];
+outer.innerHTML=inner.innerHTML=opts.map(x=>`<option>${x}</option>`).join("");
+const L=[
+ {e:"f(x)=(3x²+1)⁵,  x₀=1",cards:["outside: u⁵","inside: 3x²+1"],o:"Chain",inn:"Power",ans:5*(4**4)*6},
+ {e:"f(x)=x² sin(x),  x₀=0",cards:["left: x²","right: sin x"],o:"Product",inn:"Power",ans:0},
+ {e:"f(x)=ln(2x+5),  x₀=2",cards:["outside: ln u","inside: 2x+5"],o:"Chain",inn:"Constant multiple",ans:2/9},
+ {e:"f(x)=e^(x²-1),  x₀=1",cards:["outside: e^u","inside: x²-1"],o:"Chain",inn:"Power",ans:2},
+ {e:"f(x)=(x+1)/(x²+1),  x₀=1",cards:["top: x+1","bottom: x²+1"],o:"Quotient",inn:"Power",ans:-.5},
+ {e:"f(x)=√(1+cos x),  x₀=0",cards:["outside: √u","inside: 1+cos x"],o:"Chain",inn:"Sum",ans:0}
+];
+let i=0;
+function load(){
+ let q=L[i];expr.textContent=`Level ${i+1}/${L.length}: ${q.e}`;
+ cards.innerHTML=q.cards.map(x=>`<span class="card">${x}</span>`).join(" → ");
+ outer.value=opts[0];inner.value=opts[0];val.value="";msg.textContent="";
+}
+function check(){
+ let q=L[i],v=parseFloat(val.value);
+ if(outer.value==q.o&&inner.value==q.inn&&Math.abs(v-q.ans)<.03){
+  msg.textContent="Circuit powered!";
+  i=(i+1)%L.length;setTimeout(load,700);
+ }else msg.textContent="Not yet. Identify the structure first, then compute the rate.";
+}
+load();
+</script>
+  <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#e1e1e1"
+    }
+  </script>
+</body>
+</html>

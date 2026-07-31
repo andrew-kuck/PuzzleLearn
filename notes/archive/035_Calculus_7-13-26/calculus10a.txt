@@ -1,0 +1,1049 @@
+create detailed outlines for 10 different interactive learning activities that span the important concepts of calculus. these should be activities that could be implemented with html, css, and javascript. these are activities a student would complete individually on a computer. the activities should have game-like components, but the activity should be driven by the underlying mathematics. it should not be possible to complete the activity successfully without a complete understanding of the given topic. as much as possible, the activity should be visual and should not rely heavily on text that the user has to read. these activities should be types of puzzles and rely more on critical thinking and problem-solving than on retrieval of rote memorization. as much as possible, the activities should be difficult but rely on a minimum of prior knowledge, while still deeply covering the topic or concept in question. A good activity would take a proficient student between 10 and 20 minutes to complete, but may take some students longer.
+
+Below are **10 interactive calculus learning activity outlines** designed for individual computer use with **HTML, CSS, and JavaScript**. Each activity is intended to take a proficient student about **10–20 minutes**, be visually driven, puzzle-like, and require genuine conceptual understanding rather than memorized procedures.
+
+---
+
+# 1. Limit Landing: Navigating Toward a Function’s Behavior
+
+## Core concept  
+Limits, one-sided limits, removable discontinuities, jump discontinuities, infinite limits.
+
+## Learning goal  
+Students understand that a limit depends on the behavior of a function near a point, not necessarily at the point itself.
+
+## Main visual idea  
+A graph is shown with a marked target x-value. The student controls two “approach drones,” one coming from the left and one from the right. Each drone moves along the curve toward the target.
+
+## Gameplay structure  
+The student must determine the limit by guiding both drones close enough to the target and interpreting their y-values.
+
+## Activity flow  
+
+### Stage 1: Basic continuous functions  
+A graph such as:
+
+\[
+f(x)=2x+1
+\]
+
+The drones approach \(x=2\). Both y-values approach 5.
+
+The student must place a “limit marker” on the y-axis at the value both drones approach.
+
+### Stage 2: Removable discontinuity  
+Example:
+
+\[
+f(x)=\frac{x^2-1}{x-1}
+\]
+
+with a hole at \(x=1\).
+
+The graph shows a missing point and perhaps a separate filled point elsewhere. The student must identify that the limit is 2 even though \(f(1)\) may not equal 2.
+
+### Stage 3: Jump discontinuity  
+Example:
+
+\[
+f(x)=
+\begin{cases}
+1, & x<0 \\
+3, & x\ge 0
+\end{cases}
+\]
+
+The left drone approaches 1 and the right drone approaches 3. The student must recognize that the two-sided limit does not exist.
+
+### Stage 4: Infinite limit  
+Example:
+
+\[
+f(x)=\frac{1}{(x-2)^2}
+\]
+
+The drones shoot upward as they approach \(x=2\). The student must classify the limit as \(+\infty\).
+
+## Puzzle mechanics  
+Students are given several draggable labels:
+
+- finite number
+- does not exist
+- \(+\infty\)
+- \(-\infty\)
+- left and right limits differ
+- oscillates
+
+They must place the correct label/value into a “limit console.”
+
+## Why understanding is required  
+The graph may include misleading features:
+
+- a filled point at the target x-value that does not equal the limit
+- a hole where the limit exists
+- left and right sides that approach different values
+- vertical asymptotes
+
+Students cannot simply inspect \(f(a)\); they must reason about nearby behavior.
+
+## Implementation notes  
+
+Use JavaScript canvas or SVG.
+
+Important elements:
+
+- graph renderer
+- draggable y-axis marker
+- two animated approach points
+- snapping tolerance for correct y-values
+- randomized function bank
+- feedback based on conceptual error
+
+Example feedback:
+
+- “Your marker matches the filled point, but the drones are approaching a different height.”
+- “The left and right drones are not meeting at the same y-value.”
+
+---
+
+# 2. Tangent Builder: Discovering the Derivative Visually
+
+## Core concept  
+Derivative as instantaneous rate of change and slope of the tangent line.
+
+## Learning goal  
+Students understand that the derivative at a point is the limiting slope of secant lines.
+
+## Main visual idea  
+A curve is shown with one fixed point and one movable point. A secant line connects them. As the movable point approaches the fixed point, the secant line approaches the tangent line.
+
+## Gameplay structure  
+Students must rotate and position a tangent line so that it matches the limiting direction of the curve at a selected point.
+
+## Activity flow  
+
+### Stage 1: Secant exploration  
+The student drags a point \(Q\) along the curve toward a fixed point \(P\). A slope meter displays:
+
+\[
+\frac{f(x_Q)-f(x_P)}{x_Q-x_P}
+\]
+
+The numerical display can be minimal or hidden behind a “slope gauge.”
+
+### Stage 2: Tangent prediction  
+Before \(Q\) reaches \(P\), the student must predict the tangent line by rotating a line through \(P\).
+
+### Stage 3: Tangent challenge  
+The student is shown multiple points on the same curve and must set the tangent at each one.
+
+Example functions:
+
+\[
+f(x)=x^2
+\]
+
+\[
+f(x)=\sin x
+\]
+
+\[
+f(x)=x^3-x
+\]
+
+\[
+f(x)=\sqrt{x}
+\]
+
+## Puzzle mechanics  
+The game could involve “laser reflection.” The tangent line acts as a mirror, and the student must aim a beam so that it hits a target. The beam only travels correctly if the tangent slope is accurate.
+
+## Why understanding is required  
+Students must connect local straightness to slope. They cannot rely on formula memorization because many stages can use unfamiliar curves drawn visually rather than given symbolically.
+
+## Difficulty progression  
+
+1. Parabola with obvious tangent behavior.
+2. Cubic with positive, zero, and negative slopes.
+3. Trigonometric curve with repeated structure.
+4. Sharp corner example such as \(f(x)=|x|\), where the tangent at 0 does not exist.
+
+## Implementation notes  
+
+Use SVG for easier line manipulation.
+
+Key features:
+
+- draggable point on curve
+- secant line updates dynamically
+- tangent line rotation handle
+- error measured by slope difference
+- visual-only mode where equations are hidden
+
+Correctness criterion:
+
+\[
+|m_{\text{student}} - f'(a)| < \epsilon
+\]
+
+For nondifferentiable points, the student selects “no tangent” and must show unequal left/right secant slopes.
+
+---
+
+# 3. Derivative Machine: Building Rules from Function Blocks
+
+## Core concept  
+Derivative rules: power rule, constant multiple rule, sum rule, product rule, quotient rule, chain rule.
+
+## Learning goal  
+Students understand how derivative rules arise from function structure, especially composition and multiplication.
+
+## Main visual idea  
+Functions are represented as machines made of blocks. Students must assemble a derivative machine that matches the original function machine.
+
+## Gameplay structure  
+Students are shown a function pipeline and must build the corresponding derivative pipeline using visual blocks.
+
+## Example function  
+
+\[
+y=(3x^2+1)^5
+\]
+
+The original function machine:
+
+1. input \(x\)
+2. square
+3. multiply by 3
+4. add 1
+5. raise to fifth power
+
+The derivative machine must include:
+
+- outer derivative
+- inner derivative
+- multiplication of the two pieces
+
+\[
+y'=5(3x^2+1)^4(6x)
+\]
+
+## Puzzle mechanics  
+Students drag blocks such as:
+
+- differentiate outer
+- copy inner unchanged
+- multiply by inner derivative
+- add derivative branches
+- product split
+- quotient split
+- power decrease
+- coefficient multiply
+
+The interface visually tests the derivative by comparing the student-built function to the true derivative at several hidden x-values.
+
+## Why understanding is required  
+The student must recognize structure:
+
+- Is this a sum?
+- Is this a product?
+- Is this a composition?
+- Which part is inner?
+- Which part remains unchanged?
+
+Randomized examples prevent simple pattern matching.
+
+## Activity flow  
+
+### Stage 1: Power and sum rules  
+Example:
+
+\[
+f(x)=4x^3-2x+7
+\]
+
+Students drag derivative blocks for each term.
+
+### Stage 2: Product rule  
+Example:
+
+\[
+f(x)=x^2\sin x
+\]
+
+They must create two branches:
+
+\[
+(x^2)'\sin x + x^2(\sin x)'
+\]
+
+### Stage 3: Chain rule  
+Example:
+
+\[
+f(x)=\sin(x^2+1)
+\]
+
+They must preserve the inner expression and multiply by its derivative.
+
+### Stage 4: Mixed challenge  
+Example:
+
+\[
+f(x)=x^2e^{3x}
+\]
+
+or
+
+\[
+f(x)=\frac{x^2+1}{\sqrt{x}}
+\]
+
+## Visual design  
+Use modular colored blocks:
+
+- blue: original function pieces
+- orange: derivative operators
+- green: multiplication/composition connectors
+- red: common errors
+
+## Feedback examples  
+
+- “You differentiated the outside, but the inside derivative is missing.”
+- “This is a product, not a composition.”
+- “The second factor should stay unchanged in one branch.”
+
+## Implementation notes  
+
+Represent expressions as parse trees in JavaScript.
+
+Useful structure:
+
+```js
+{
+  type: "compose",
+  outer: { type: "sin" },
+  inner: { type: "add", left: ..., right: ... }
+}
+```
+
+Student block arrangements can be converted into expression trees and evaluated numerically for validation.
+
+---
+
+# 4. Critical Point Quest: Mapping Increasing, Decreasing, and Extrema
+
+## Core concept  
+First derivative, critical points, increasing/decreasing intervals, local maxima and minima.
+
+## Learning goal  
+Students understand how the sign of \(f'(x)\) determines where a function rises and falls.
+
+## Main visual idea  
+A landscape curve is shown. A small character rolls along the curve. The student must place signs and markers that explain the terrain.
+
+## Gameplay structure  
+Students receive a graph of either \(f(x)\) or \(f'(x)\), then must infer the behavior of the other.
+
+## Version A: Given \(f(x)\)  
+Students identify:
+
+- where slope is positive
+- where slope is negative
+- where slope is zero
+- local maxima
+- local minima
+
+## Version B: Given \(f'(x)\)  
+Students build a possible graph of \(f(x)\) by dragging curve segments.
+
+If \(f'(x)>0\), the graph must rise.
+
+If \(f'(x)<0\), the graph must fall.
+
+If \(f'\) changes from positive to negative, there is a local maximum.
+
+If \(f'\) changes from negative to positive, there is a local minimum.
+
+## Puzzle mechanics  
+The activity can be framed as repairing a mountain trail map.
+
+Students place tokens:
+
+- uphill
+- downhill
+- flat point
+- local peak
+- local valley
+- not an extremum
+
+They must place all tokens correctly before the trail opens.
+
+## Why understanding is required  
+Students must reason from derivative sign, not just point height. For example, a flat point may not be an extremum:
+
+\[
+f(x)=x^3
+\]
+
+at \(x=0\).
+
+## Stages  
+
+### Stage 1: Simple parabola  
+\[
+f(x)=x^2
+\]
+
+### Stage 2: Cubic with two critical points  
+\[
+f(x)=x^3-3x
+\]
+
+### Stage 3: Flat inflection  
+\[
+f(x)=x^3
+\]
+
+### Stage 4: Given derivative graph  
+Students are shown something like:
+
+\[
+f'(x)=(x+2)(x-1)
+\]
+
+and must infer intervals of increase/decrease.
+
+## Implementation notes  
+
+Use an SVG graph with draggable interval bars.
+
+Validation can check:
+
+- critical x-values
+- sign intervals
+- extremum classifications
+
+For graph-building stages, use draggable Bézier curve segments constrained by slope direction.
+
+---
+
+# 5. Optimization Lab: Designing the Best Object Under Constraints
+
+## Core concept  
+Optimization using derivatives.
+
+## Learning goal  
+Students understand how to model a real situation with a function, identify a constraint, and find a maximum or minimum.
+
+## Main visual idea  
+Students design a physical object, such as a box, fence, can, or poster. As they adjust dimensions, the area, volume, or cost changes visually.
+
+## Example challenge  
+“Build the largest open-top box from a square sheet by cutting equal squares from the corners.”
+
+A square sheet is shown. The student drags the corner cut size \(x\). The folded box updates in 3D-like projection.
+
+If the original sheet has side length 12, then:
+
+\[
+V(x)=x(12-2x)^2
+\]
+
+Students must find the cut size that maximizes volume.
+
+## Gameplay structure  
+Students are not simply asked to calculate. They must discover the maximum by combining visual exploration with derivative reasoning.
+
+## Activity flow  
+
+### Phase 1: Explore  
+Drag \(x\). Watch the box change. A volume meter rises and falls.
+
+### Phase 2: Graph  
+The activity plots volume versus cut size.
+
+### Phase 3: Predict maximum  
+Students place a marker on the graph where they think maximum volume occurs.
+
+### Phase 4: Justify using derivative  
+Students must identify where the slope of the volume graph is zero and where it changes from positive to negative.
+
+Minimal text can be used by having students place these icons:
+
+- increasing
+- decreasing
+- flat tangent
+- maximum
+
+## Puzzle mechanics  
+The goal is to unlock the “optimal design certificate.” The certificate only unlocks if:
+
+1. the chosen dimension is correct,
+2. the maximum marker is placed correctly,
+3. the derivative sign pattern is correct.
+
+## Why understanding is required  
+Brute-force dragging can get close, but the student must explain why the value is optimal by analyzing the derivative behavior.
+
+## Other possible optimization scenarios  
+
+1. Maximum area rectangle with fixed perimeter.
+2. Minimum surface area can with fixed volume.
+3. Shortest path from a point to a road and then to a destination.
+4. Largest rectangle under a curve.
+
+## Implementation notes  
+
+Use sliders for dimensions and canvas/SVG for diagrams.
+
+For validation:
+
+- compute objective function
+- compute derivative
+- determine critical point
+- verify maximum/minimum by sign change or second derivative
+
+The activity can randomize dimensions, such as sheet size 10, 12, 15, or 20.
+
+---
+
+# 6. Related Rates Rescue: Synchronizing Changing Quantities
+
+## Core concept  
+Related rates, implicit differentiation with respect to time.
+
+## Learning goal  
+Students understand how changing quantities are connected by an equation and how their rates are related through differentiation.
+
+## Main visual idea  
+A dynamic scene shows objects changing over time: water filling a tank, a ladder sliding down a wall, or a shadow lengthening.
+
+## Example challenge  
+A ladder leans against a wall and slides downward. The bottom moves away from the wall at a known speed. The student must determine how fast the top moves down at a specific moment.
+
+The relationship is:
+
+\[
+x^2+y^2=L^2
+\]
+
+Differentiating with respect to time:
+
+\[
+2x\frac{dx}{dt}+2y\frac{dy}{dt}=0
+\]
+
+So:
+
+\[
+\frac{dy}{dt}=-\frac{x}{y}\frac{dx}{dt}
+\]
+
+## Gameplay structure  
+The student must connect visual rate arrows to the correct quantities.
+
+## Activity flow  
+
+### Phase 1: Identify quantities  
+The scene shows the ladder, wall, and ground. Students drag labels:
+
+- \(x\)
+- \(y\)
+- \(L\)
+- \(\frac{dx}{dt}\)
+- \(\frac{dy}{dt}\)
+
+onto the correct parts.
+
+### Phase 2: Choose the relationship  
+Students select or assemble the geometric equation visually.
+
+For the ladder:
+
+\[
+x^2+y^2=L^2
+\]
+
+This could be represented as square tiles attached to the triangle sides.
+
+### Phase 3: Differentiate over time  
+Students transform each quantity into its rate form using operator blocks.
+
+For example:
+
+\[
+x^2 \to 2x\frac{dx}{dt}
+\]
+
+### Phase 4: Solve the missing rate  
+The animation pauses at a specific ladder position. Students adjust a downward velocity arrow until it matches the correct rate.
+
+## Puzzle mechanics  
+The student is “stabilizing” the scene. If the top’s velocity arrow is wrong, the ladder stretches or breaks. If correct, the ladder remains rigid.
+
+## Why understanding is required  
+Students must distinguish between:
+
+- position and rate
+- constant length and changing coordinates
+- \(\frac{dx}{dt}\) and \(\frac{dy}{dt}\)
+- values at a moment versus general variables
+
+## Implementation notes  
+
+Use animation with requestAnimationFrame.
+
+For validation:
+
+- check correct equation
+- check correct differentiated form
+- compute rate at selected moment
+- compare student’s velocity arrow to expected magnitude and direction
+
+Possible scenes:
+
+1. Ladder sliding.
+2. Inflating balloon: \(V=\frac{4}{3}\pi r^3\).
+3. Water cone filling.
+4. Moving shadow problem.
+
+---
+
+# 7. Accumulation Arena: Building Area from Tiny Pieces
+
+## Core concept  
+Definite integrals as accumulation and signed area.
+
+## Learning goal  
+Students understand that integrals measure accumulated change and that area below the x-axis contributes negatively.
+
+## Main visual idea  
+A graph of a rate function appears above a collection container. As the student sweeps across the x-axis, rectangular slices fill or drain the container depending on whether the graph is above or below the axis.
+
+## Gameplay structure  
+Students must estimate, compare, and eventually compute net accumulation over intervals.
+
+## Activity flow  
+
+### Stage 1: Positive area  
+A positive function is shown:
+
+\[
+f(x)=x+1
+\]
+
+Students drag a scanning bar from \(a\) to \(b\). The container fills according to area under the curve.
+
+### Stage 2: Signed area  
+A function crosses the x-axis:
+
+\[
+f(x)=x
+\]
+
+over \([-2,2]\).
+
+Students see accumulation increase below? Actually below the x-axis should subtract. The container can have a “net level” that rises for positive area and falls for negative area.
+
+### Stage 3: Compare intervals  
+Students choose which interval has greater net accumulation.
+
+Example:
+
+\[
+\int_{-2}^{0} x\,dx
+\quad \text{versus} \quad
+\int_0^2 x\,dx
+\]
+
+### Stage 4: Construct an integral  
+Students are given a target net accumulation and must select intervals whose signed areas combine to match it.
+
+## Puzzle mechanics  
+The student operates an “accumulation refinery.” They must fill a tank to an exact target level by choosing intervals on the graph.
+
+Some intervals add; others subtract. Overshooting causes the tank to overflow or drop below zero.
+
+## Why understanding is required  
+Students need to reason about:
+
+- area as accumulation
+- sign of the function
+- cancellation
+- interval width and height
+- net versus total area
+
+## Implementation notes  
+
+Use canvas to draw graph and shaded regions.
+
+Allow students to drag interval endpoints. Compute numerical integral using exact formulas for simple functions or approximation for arbitrary curves.
+
+Functions can include:
+
+- linear
+- piecewise constant
+- semicircle
+- parabola
+- sine wave
+
+Validation checks whether selected interval accumulation is within tolerance.
+
+---
+
+# 8. Fundamental Theorem Bridge: Connecting Area and Slope
+
+## Core concept  
+Fundamental Theorem of Calculus, especially:
+
+\[
+A(x)=\int_a^x f(t)\,dt
+\]
+
+and
+
+\[
+A'(x)=f(x)
+\]
+
+## Learning goal  
+Students understand that the derivative of an accumulation function equals the original rate function.
+
+## Main visual idea  
+Two linked graphs are shown:
+
+1. Top graph: \(f(x)\), a rate function.
+2. Bottom graph: \(A(x)\), accumulated area from a starting point.
+
+As the student moves across the top graph, the bottom graph grows.
+
+## Gameplay structure  
+Students must construct the accumulation graph from the rate graph.
+
+## Activity flow  
+
+### Phase 1: Rate controls slope  
+The student moves a cursor on \(f(x)\). At each x-value, the height of \(f(x)\) controls the slope of \(A(x)\).
+
+If \(f(x)>0\), \(A(x)\) rises.
+
+If \(f(x)<0\), \(A(x)\) falls.
+
+If \(f(x)=0\), \(A(x)\) has a horizontal tangent.
+
+### Phase 2: Draw the accumulation curve  
+Students use draggable control points to shape \(A(x)\). The system checks whether the curve’s slope matches \(f(x)\).
+
+### Phase 3: Match key features  
+Students place markers on \(A(x)\):
+
+- increasing interval
+- decreasing interval
+- local maximum
+- local minimum
+- inflection point, when relevant
+
+## Puzzle mechanics  
+A bridge must be built across a canyon. The top graph gives “wind speed,” and the bottom path is the bridge shape. If the bridge’s slope does not match the wind speed, it collapses.
+
+## Why understanding is required  
+Students must understand the relationship:
+
+- \(f\) positive does not mean \(A\) is above the x-axis.
+- \(f\) decreasing does not necessarily mean \(A\) is decreasing.
+- zeros of \(f\) correspond to horizontal tangents of \(A\).
+- sign changes in \(f\) correspond to extrema of \(A\).
+
+## Example rate functions  
+
+\[
+f(x)=2
+\]
+
+\[
+f(x)=x
+\]
+
+\[
+f(x)=x^2-1
+\]
+
+\[
+f(x)=\sin x
+\]
+
+Piecewise constant functions are especially good for early levels.
+
+## Implementation notes  
+
+Use SVG paths for both graphs.
+
+Student-drawn accumulation curve can be represented by movable points. Check approximate derivative numerically:
+
+```js
+slopeApprox = (A[i+1] - A[i-1]) / (x[i+1] - x[i-1]);
+```
+
+Compare slopeApprox to \(f(x_i)\) within tolerance.
+
+---
+
+# 9. Substitution Lockbox: Undoing the Chain Rule
+
+## Core concept  
+u-substitution in integration.
+
+## Learning goal  
+Students recognize composite structures in integrals and choose substitutions that simplify the integral.
+
+## Main visual idea  
+An integral is shown as a locked mechanism with nested gears. The student must choose the inner gear, label it \(u\), and transform the rest of the integral accordingly.
+
+## Example integral  
+
+\[
+\int 2x\cos(x^2+1)\,dx
+\]
+
+The inner expression is:
+
+\[
+u=x^2+1
+\]
+
+Then:
+
+\[
+du=2x\,dx
+\]
+
+The integral becomes:
+
+\[
+\int \cos(u)\,du
+\]
+
+## Gameplay structure  
+Students physically “extract” the inner function and match its derivative to a remaining factor.
+
+## Activity flow  
+
+### Phase 1: Identify inner expression  
+The integral appears as nested visual layers. Students click or drag around the expression they think should become \(u\).
+
+### Phase 2: Match derivative  
+The student must find \(du\) among the remaining pieces.
+
+If \(u=x^2+1\), then the student must identify \(2x\,dx\).
+
+### Phase 3: Simplify  
+Once the match is made, the integral transforms into a simpler form.
+
+### Phase 4: Integrate and substitute back  
+Students choose the antiderivative visually from a small set, then replace \(u\) with the original expression.
+
+## Puzzle mechanics  
+The student is opening a lockbox. The lock has two tumblers:
+
+1. correct \(u\)
+2. correct \(du\)
+
+If either is wrong, the simplified integral jams.
+
+## Why understanding is required  
+Common distractors include:
+
+\[
+\int x\cos(x^2+1)\,dx
+\]
+
+where a constant adjustment is needed:
+
+\[
+du=2x\,dx
+\]
+
+so:
+
+\[
+x\,dx=\frac{1}{2}du
+\]
+
+Students need to understand proportional derivatives, not just exact matches.
+
+## Stages  
+
+### Stage 1: Exact match  
+\[
+\int 2x(x^2+1)^4\,dx
+\]
+
+### Stage 2: Constant adjustment  
+\[
+\int x(x^2+1)^4\,dx
+\]
+
+### Stage 3: Trigonometric composition  
+\[
+\int \cos(3x)\,dx
+\]
+
+### Stage 4: Exponential composition  
+\[
+\int e^{5x-1}\,dx
+\]
+
+### Stage 5: Hard mixed expression  
+\[
+\int \frac{2x}{x^2+1}\,dx
+\]
+
+## Implementation notes  
+
+Use expression trees to highlight candidate subexpressions.
+
+Validation:
+
+- selected \(u\) must be a meaningful inner function
+- remaining factor must match \(du\) up to a constant
+- final answer checked by differentiating numerically or symbolically
+
+---
+
+# 10. Series Convergence Labyrinth: Choosing the Right Test
+
+## Core concept  
+Infinite series, convergence, divergence, geometric series, p-series, comparison, ratio test, alternating series test.
+
+## Learning goal  
+Students understand that different series require different convergence strategies and that convergence is about long-term behavior.
+
+## Main visual idea  
+A labyrinth contains doors labeled with convergence tests. Each room presents a series visually and symbolically. The student must choose a valid path through the maze by selecting appropriate tests.
+
+## Gameplay structure  
+Each series is an obstacle. The student must determine whether it converges or diverges and justify the choice with a visual test mechanism.
+
+## Example series  
+
+\[
+\sum_{n=1}^{\infty} \frac{1}{n^2}
+\]
+
+Students identify it as a p-series with \(p=2>1\), so it converges.
+
+Another:
+
+\[
+\sum_{n=1}^{\infty} \frac{1}{n}
+\]
+
+p-series with \(p=1\), diverges.
+
+Another:
+
+\[
+\sum_{n=1}^{\infty} \frac{3^n}{n!}
+\]
+
+Ratio test is effective.
+
+## Visual representation  
+
+Each term is represented as a block added to a tower or path.
+
+- If partial sums level off, the path approaches a platform.
+- If partial sums grow without bound, the tower rises endlessly.
+- Alternating series are shown as jumps left and right on a number line, with shrinking or non-shrinking steps.
+
+## Activity flow  
+
+### Phase 1: Recognize obvious forms  
+Students classify geometric and p-series.
+
+### Phase 2: Watch partial sums  
+The first 20–50 terms animate. Students must decide whether the behavior suggests convergence, divergence, or uncertainty.
+
+Important: the animation alone is not enough for full credit because slowly divergent series may appear stable.
+
+### Phase 3: Select a valid test  
+Doors include:
+
+- geometric
+- p-series
+- nth-term test
+- comparison
+- limit comparison
+- ratio test
+- alternating series test
+
+Only mathematically valid choices open.
+
+### Phase 4: Complete the test  
+For ratio test, students must assemble:
+
+\[
+\lim_{n\to\infty}\left|\frac{a_{n+1}}{a_n}\right|
+\]
+
+For alternating series, they must verify:
+
+1. terms decrease,
+2. terms approach 0.
+
+For comparison, they must choose a comparison series.
+
+## Puzzle mechanics  
+The maze contains tempting wrong doors. For example:
+
+\[
+\sum \frac{1}{n}
+\]
+
+may appear to grow slowly, but the student must not conclude convergence from visual leveling.
+
+## Why understanding is required  
+Students must reason about structure and conditions:
+
+- nth-term test can prove divergence but not convergence.
+- ratio test may be inconclusive.
+- alternating signs alone do not guarantee convergence.
+- partial sums can be misleading.
+
+## Implementation notes  
+
+Use JavaScript to generate terms and partial sums.
+
+For visual display:
+
+- bar graph of terms
+- number-line animation of partial sums
+- maze map with unlocked/locked doors
+
+Validation logic should allow multiple valid approaches when appropriate. For example:
+
+\[
+\sum \frac{1}{n^2+n}
+\]
+
+could be handled by comparison or telescoping if that topic is included.
+
+---
+
+# Summary Table
+
+| # | Activity | Main Topic | Core Puzzle |
+|---|---|---|---|
+| 1 | Limit Landing | Limits | Guide left/right approaches and classify behavior |
+| 2 | Tangent Builder | Derivatives | Match secants to tangent behavior |
+| 3 | Derivative Machine | Derivative rules | Build derivative from function blocks |
+| 4 | Critical Point Quest | First derivative test | Map slope signs to extrema |
+| 5 | Optimization Lab | Optimization | Design object with maximum/minimum objective |
+| 6 | Related Rates Rescue | Related rates | Synchronize changing quantities |
+| 7 | Accumulation Arena | Definite integrals | Build signed area from intervals |
+| 8 | FTC Bridge | Fundamental Theorem of Calculus | Construct accumulation graph from rate graph |
+| 9 | Substitution Lockbox | u-substitution | Identify inner function and matching differential |
+| 10 | Series Convergence Labyrinth | Infinite series | Choose valid convergence tests |
+
+These activities collectively cover a strong arc of calculus: limits, derivatives, applications of derivatives, integrals, the Fundamental Theorem of Calculus, integration techniques, and infinite series. Each can be implemented with standard web technologies using SVG or canvas for visual interaction and JavaScript for mathematical validation.

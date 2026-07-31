@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Slope Field Navigator</title>
+<style>
+body{margin:0;background:#0b1320;color:white;font-family:system-ui;display:flex;justify-content:center}
+.app{max-width:900px;padding:20px}
+canvas{background:#fff;border-radius:16px;width:100%;max-width:850px}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:10px 0}
+input,button{font-size:17px;border:0;border-radius:10px;padding:10px}
+button{background:#ffcb05;color:#00274c;font-weight:800}
+.pill{background:#243b55;border-radius:999px;padding:8px 13px}
+</style>
+</head>
+<body>
+<div class="app">
+<h1>Slope Field Navigator</h1>
+<p>Choose the starting height y(0). Your solution curve must pass through the target star.</p>
+<canvas id="cv" width="850" height="430"></canvas>
+<div class="row">
+<span id="lvl" class="pill"></span>
+<label>y(0) <input id="y0" type="range" min="-4" max="4" step=".01"></label>
+<button onclick="launch()">Launch Solution</button>
+<span id="msg" class="pill"></span>
+</div>
+</div>
+<script>
+const cv=document.getElementById("cv"),c=cv.getContext("2d"),X=x=>425+x*80,Y=y=>215-y*45;
+const L=[
+ {eq:"y′ = y",f:(x,y)=>y,tx:1,ty:2.718},
+ {eq:"y′ = -y",f:(x,y)=>-y,tx:1,ty:.5/Math.E*2,need:.5},
+ {eq:"y′ = x",f:(x,y)=>x,tx:2,ty:3},
+ {eq:"y′ = x - y",f:(x,y)=>x-y,tx:2,ty:1.27},
+ {eq:"y′ = y(1-y/3)",f:(x,y)=>y*(1-y/3),tx:2,ty:2.4}
+];
+let i=0;
+function integrate(o,y,draw){
+ let x=0,h=.02,dir=o.tx>=0?1:-1,steps=Math.abs(o.tx/h);
+ if(draw){c.strokeStyle="#ffcb05";c.lineWidth=4;c.beginPath();c.moveTo(X(0),Y(y))}
+ for(let k=0;k<steps;k++){
+  let k1=o.f(x,y),k2=o.f(x+dir*h/2,y+dir*h*k1/2),k3=o.f(x+dir*h/2,y+dir*h*k2/2),k4=o.f(x+dir*h,y+dir*h*k3);
+  y+=dir*h*(k1+2*k2+2*k3+k4)/6;x+=dir*h;
+  if(draw)c.lineTo(X(x),Y(y));
+ }
+ if(draw)c.stroke();
+ return y;
+}
+function draw(){
+ let o=L[i];lvl.textContent=`Level ${i+1}/${L.length}: ${o.eq}`;
+ c.clearRect(0,0,850,430);
+ c.strokeStyle="#ddd";for(let x=-5;x<=5;x++){c.beginPath();c.moveTo(X(x),0);c.lineTo(X(x),430);c.stroke()}
+ for(let y=-4;y<=4;y++){c.beginPath();c.moveTo(0,Y(y));c.lineTo(850,Y(y));c.stroke()}
+ c.strokeStyle="#00274c";c.lineWidth=2;c.beginPath();c.moveTo(0,Y(0));c.lineTo(850,Y(0));c.moveTo(X(0),0);c.lineTo(X(0),430);c.stroke();
+ c.strokeStyle="#999";c.lineWidth=1;
+ for(let x=-4;x<=4;x+=.5)for(let y=-3.5;y<=3.5;y+=.5){let m=o.f(x,y),ang=Math.atan(m),len=14;c.beginPath();c.moveTo(X(x)-len*Math.cos(ang)/2,Y(y)+len*Math.sin(ang)/2);c.lineTo(X(x)+len*Math.cos(ang)/2,Y(y)-len*Math.sin(ang)/2);c.stroke()}
+ c.fillStyle="#e84a5f";c.font="34px serif";c.fillText("★",X(o.tx)-15,Y(o.ty)+12);
+ integrate(o,+y0.value,true);
+}
+function launch(){
+ let o=L[i],end=integrate(o,+y0.value,false),err=Math.abs(end-o.ty);
+ if(err<.08){msg.textContent="Target reached!";i=(i+1)%L.length;setTimeout(()=>{y0.value=1;msg.textContent="";draw()},800)}
+ else msg.textContent=end<o.ty?"Arrived too low.":"Arrived too high.";
+}
+y0.oninput=draw;y0.value=1;draw();
+</script>
+  <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#e1e1e1"
+    }
+  </script>
+</body>
+</html>

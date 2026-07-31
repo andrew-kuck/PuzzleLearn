@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Build the Accumulation Graph</title>
+<style>
+  :root {
+    --bg: #f6f7fb;
+    --panel: #ffffff;
+    --ink: #17202a;
+    --muted: #5b6573;
+    --blue: #1f6feb;
+    --maize: #ffcb05;
+    --green: #2da44e;
+    --red: #cf222e;
+    --grid: #d9dee8;
+    --axis: #30363d;
+    --hint: #8b5cf6;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: radial-gradient(circle at top left, #fff8d8, var(--bg) 35%);
+    color: var(--ink);
+  }
+
+  header {
+    background: #00274c;
+    color: white;
+    padding: 1.1rem 1.25rem;
+    border-bottom: 5px solid var(--maize);
+  }
+
+  header h1 {
+    margin: 0;
+    font-size: clamp(1.4rem, 3vw, 2.1rem);
+  }
+
+  header p {
+    margin: 0.4rem 0 0;
+    color: #e8eef8;
+    max-width: 1000px;
+  }
+
+  main {
+    max-width: 1120px;
+    margin: 1rem auto 2rem;
+    padding: 0 1rem;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid #d8dee9;
+    border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(31, 41, 55, 0.08);
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .topbar {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1rem;
+    align-items: start;
+  }
+
+  .level-title {
+    margin: 0;
+    font-size: 1.2rem;
+  }
+
+  .story {
+    color: var(--muted);
+    line-height: 1.45;
+    margin: 0.45rem 0 0;
+  }
+
+  .badge {
+    display: inline-block;
+    background: #eaf2ff;
+    color: #174ea6;
+    border: 1px solid #b6d4ff;
+    border-radius: 999px;
+    padding: 0.35rem 0.7rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .graphs {
+    display: grid;
+    gap: 0.8rem;
+  }
+
+  .graph-label {
+    font-weight: 800;
+    fill: #17202a;
+    font-size: 16px;
+  }
+
+  svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: #fbfcff;
+    border: 1px solid #d8dee9;
+    border-radius: 12px;
+    touch-action: none;
+  }
+
+  .axis {
+    stroke: var(--axis);
+    stroke-width: 1.4;
+  }
+
+  .grid {
+    stroke: var(--grid);
+    stroke-width: 1;
+  }
+
+  .function-path {
+    fill: none;
+    stroke: #111827;
+    stroke-width: 3;
+  }
+
+  .student-path {
+    fill: none;
+    stroke: var(--blue);
+    stroke-width: 4;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+
+  .true-path {
+    fill: none;
+    stroke: var(--hint);
+    stroke-width: 3;
+    stroke-dasharray: 8 7;
+    opacity: 0.9;
+  }
+
+  .control-point {
+    cursor: grab;
+    stroke: white;
+    stroke-width: 3;
+  }
+
+  .control-point:active {
+    cursor: grabbing;
+  }
+
+  .locked-point {
+    fill: #697386;
+  }
+
+  .selected-point {
+    stroke: #111827;
+    stroke-width: 4;
+  }
+
+  .scanner {
+    stroke: #f97316;
+    stroke-width: 2.5;
+    stroke-dasharray: 6 5;
+    pointer-events: none;
+  }
+
+  .snap-line {
+    stroke: #7c3aed;
+    stroke-width: 1.4;
+    stroke-dasharray: 4 5;
+    opacity: 0.55;
+  }
+
+  .zero-line {
+    stroke: #9ca3af;
+    stroke-width: 1.2;
+    stroke-dasharray: 3 5;
+  }
+
+  .area-positive {
+    fill: rgba(45, 164, 78, 0.28);
+  }
+
+  .area-negative {
+    fill: rgba(207, 34, 46, 0.28);
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    align-items: center;
+    margin-top: 0.85rem;
+  }
+
+  button {
+    border: none;
+    border-radius: 10px;
+    padding: 0.65rem 0.9rem;
+    font-weight: 800;
+    cursor: pointer;
+    background: #e9eef7;
+    color: #17202a;
+    transition: transform 0.08s ease, background 0.15s ease;
+  }
+
+  button:hover {
+    transform: translateY(-1px);
+    background: #dce6f5;
+  }
+
+  button.primary {
+    background: #00274c;
+    color: white;
+  }
+
+  button.primary:hover {
+    background: #073763;
+  }
+
+  button.success {
+    background: var(--green);
+    color: white;
+  }
+
+  button.warning {
+    background: #f97316;
+    color: white;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+    transform: none;
+  }
+
+  .readout {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(140px, 1fr));
+    gap: 0.6rem;
+    margin-top: 0.8rem;
+  }
+
+  .metric {
+    background: #f3f6fb;
+    border: 1px solid #dbe2ee;
+    border-radius: 12px;
+    padding: 0.65rem;
+  }
+
+  .metric strong {
+    display: block;
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin-bottom: 0.2rem;
+  }
+
+  .metric span {
+    font-size: 1rem;
+    font-weight: 800;
+  }
+
+  .message {
+    margin-top: 0.8rem;
+    padding: 0.85rem;
+    border-radius: 12px;
+    border: 1px solid #d8dee9;
+    background: #fbfcff;
+    line-height: 1.45;
+  }
+
+  .message.good {
+    border-color: #93d6a1;
+    background: #eefbf1;
+  }
+
+  .message.try {
+    border-color: #ffd69b;
+    background: #fff8ec;
+  }
+
+  .instructions {
+    line-height: 1.5;
+    color: var(--muted);
+  }
+
+  .instructions ul {
+    margin-top: 0.4rem;
+  }
+
+  kbd {
+    background: #eef2f7;
+    border: 1px solid #cfd7e3;
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    padding: 0.05rem 0.3rem;
+    font-size: 0.85em;
+  }
+
+  @media (max-width: 760px) {
+    .topbar,
+    .readout {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Build the Accumulation Graph</h1>
+  <p>
+    Restore the terrain map: the top graph gives the slope/rate <strong>f(x)</strong>.
+    Your job is to build the elevation/accumulation graph
+    <strong>F(x) = F(a) + ∫<sub>a</sub><sup>x</sup> f(t) dt</strong>.
+  </p>
+</header>
+
+<main>
+  <section class="card instructions" aria-labelledby="how-to-play">
+    <h2 id="how-to-play" style="margin-top:0;">How to play</h2>
+    <ul>
+      <li>Drag the blue control points on the bottom graph to build <strong>F(x)</strong>.</li>
+      <li>The orange scanner shows the current x-value. The shaded area above/below the x-axis on the top graph is the accumulated signed area.</li>
+      <li>If <strong>f(x) &gt; 0</strong>, your F graph should increase. If <strong>f(x) &lt; 0</strong>, it should decrease. If <strong>f(x) = 0</strong>, F has a flat tangent or local extremum.</li>
+      <li>Use <strong>Add Point</strong> and <strong>Remove Point</strong> to shape the path. Points snap near important x-values such as zeroes of f.</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <div class="topbar">
+      <div>
+        <h2 class="level-title" id="levelTitle"></h2>
+        <p class="story" id="levelStory"></p>
+      </div>
+      <div class="badge" id="levelBadge"></div>
+    </div>
+
+    <div class="graphs" style="margin-top:1rem;">
+      <svg id="topSvg" viewBox="0 0 820 275" role="img" aria-label="Fixed graph of rate function f of x"></svg>
+      <svg id="bottomSvg" viewBox="0 0 820 275" role="img" aria-label="Editable graph of accumulation function F of x"></svg>
+    </div>
+
+    <div class="controls" aria-label="Activity controls">
+      <button class="primary" id="resetBtn">Reset</button>
+      <button id="addBtn">Add Point at Scanner</button>
+      <button id="removeBtn">Remove Selected Point</button>
+      <button class="warning" id="hintBtn">Show Hint</button>
+      <button id="animateBtn">Area Sweep</button>
+      <button class="success" id="checkBtn">Check</button>
+      <button class="primary" id="nextBtn" disabled>Next Level</button>
+    </div>
+
+    <div class="readout">
+      <div class="metric">
+        <strong>scanner x</strong>
+        <span id="xReadout">0.00</span>
+      </div>
+      <div class="metric">
+        <strong>rate f(x)</strong>
+        <span id="fReadout">0.00</span>
+      </div>
+      <div class="metric">
+        <strong>signed area so far</strong>
+        <span id="areaReadout">0.00</span>
+      </div>
+      <div class="metric">
+        <strong>trailhead value</strong>
+        <span id="initialReadout">0.00</span>
+      </div>
+    </div>
+
+    <div class="message" id="message">
+      Drag the bottom graph so the hiker’s terrain has the slope shown by the rate graph above.
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  "use strict";
+
+  const W = 820;
+  const H = 275;
+  const margin = { left: 62, right: 24, top: 30, bottom: 42 };
+  const plotW = W - margin.left - margin.right;
+  const plotH = H - margin.top - margin.bottom;
+  const xMin = 0;
+  const xMax = 10;
+
+  const topSvg = document.getElementById("topSvg");
+  const bottomSvg = document.getElementById("bottomSvg");
+
+  const levelTitle = document.getElementById("levelTitle");
+  const levelStory = document.getElementById("levelStory");
+  const levelBadge = document.getElementById("levelBadge");
+  const xReadout = document.getElementById("xReadout");
+  const fReadout = document.getElementById("fReadout");
+  const areaReadout = document.getElementById("areaReadout");
+  const initialReadout = document.getElementById("initialReadout");
+  const message = document.getElementById("message");
+
+  const resetBtn = document.getElementById("resetBtn");
+  const addBtn = document.getElementById("addBtn");
+  const removeBtn = document.getElementById("removeBtn");
+  const hintBtn = document.getElementById("hintBtn");
+  const animateBtn = document.getElementById("animateBtn");
+  const checkBtn = document.getElementById("checkBtn");
+  const nextBtn = document.getElementById("nextBtn");
+
+  function piecewiseLinear(points) {
+    return function(x) {
+      if (x <= points[0][0]) return points[0][1];
+      if (x >= points[points.length - 1][0]) return points[points.length - 1][1];
+      for (let i = 0; i < points.length - 1; i++) {
+        const [x0, y0] = points[i];
+        const [x1, y1] = points[i + 1];
+        if (x >= x0 && x <= x1) {
+          const u = (x - x0) / (x1 - x0);
+          return y0 + u * (y1 - y0);
+        }
+      }
+      return 0;
+    };
+  }
+
+  const finalRatePoints = [
+    [0, 0],
+    [1.5, 1.8],
+    [3, 0],
+    [4.5, -1.4],
+    [6, 0],
+    [7.5, 1.2],
+    [8.7, -0.8],
+    [10, 0.5]
+  ];
+
+  const levels = [
+    {
+      name: "Level 1: Constant uphill rate",
+      story: "The hiker climbs a steady ramp. Since f(x) is a positive constant, F should be a straight line increasing at a constant slope.",
+      f: x => 1,
+      yTop: [-2.5, 2.5],
+      yBot: [-1, 12],
+      initial: 0,
+      snapXs: [0, 10],
+      seedXs: [0, 10],
+      tolerance: { rms: 0.35, max: 0.85, slope: 0.82 }
+    },
+    {
+      name: "Level 2: Up, then down",
+      story: "The terrain first rises, then falls. The accumulated height increases while f is positive and decreases while f is negative.",
+      f: x => x < 5 ? 1.2 : -0.9,
+      yTop: [-2.5, 2.5],
+      yBot: [-1, 7],
+      initial: 0,
+      snapXs: [0, 5, 10],
+      seedXs: [0, 5, 10],
+      tolerance: { rms: 0.42, max: 0.95, slope: 0.78 }
+    },
+    {
+      name: "Level 3: Zero crossings create turning points",
+      story: "Whenever f changes sign, F changes from increasing to decreasing or vice versa. Put the local extrema in the right places.",
+      f: piecewiseLinear([[0, -1], [2, 1.5], [4, 0], [6, -1.5], [8, 1], [10, 0.4]]),
+      yTop: [-2.5, 2.5],
+      yBot: [-3, 5],
+      initial: 0,
+      snapXs: [0, 0.8, 4, 7.2, 10],
+      seedXs: [0, 0.8, 4, 7.2, 10],
+      tolerance: { rms: 0.48, max: 1.1, slope: 0.74 }
+    },
+    {
+      name: "Level 4: Equal-area cancellation",
+      story: "A positive lobe is followed by an equal negative lobe. The hiker ends at the starting elevation even though the path rose in between.",
+      f: x => x <= 5 ? 1.4 * Math.sin(Math.PI * x / 5) : -1.4 * Math.sin(Math.PI * (x - 5) / 5),
+      yTop: [-2.5, 2.5],
+      yBot: [0, 6],
+      initial: 1,
+      snapXs: [0, 2.5, 5, 7.5, 10],
+      seedXs: [0, 2.5, 5, 7.5, 10],
+      tolerance: { rms: 0.45, max: 1.0, slope: 0.76 }
+    },
+    {
+      name: "Final Challenge: Piecewise-linear rate",
+      story: "The rate graph is made of line segments. Since F′(x)=f(x), your accumulation graph should bend like connected quadratic arcs.",
+      f: piecewiseLinear(finalRatePoints),
+      yTop: [-2.5, 2.5],
+      yBot: [-3, 5],
+      initial: -1,
+      snapXs: [0, 1.5, 3, 4.5, 6, 7.5, 8.22, 8.7, 9.5, 10],
+      seedXs: [0, 1.5, 3, 4.5, 6, 7.5, 8.22, 8.7, 9.5, 10],
+      tolerance: { rms: 0.58, max: 1.25, slope: 0.70 }
+    }
+  ];
+
+  let levelIndex = 0;
+  let table = null;
+  let studentPoints = [];
+  let selectedIndex = null;
+  let dragging = false;
+  let scannerX = 0;
+  let showHint = false;
+  let animating = false;
+  let animationHandle = null;
+
+  function currentLevel() {
+    return levels[levelIndex];
+  }
+
+  function clamp(v, lo, hi) {
+    return Math.max(lo, Math.min(hi, v));
+  }
+
+  function fmt(n) {
+    return Number(n).toFixed(2);
+  }
+
+  function xToPx(x) {
+    return margin.left + (x - xMin) / (xMax - xMin) * plotW;
+  }
+
+  function pxToX(px) {
+    return xMin + (px - margin.left) / plotW * (xMax - xMin);
+  }
+
+  function yToPx(y, range) {
+    const [yMin, yMax] = range;
+    return margin.top + (yMax - y) / (yMax - yMin) * plotH;
+  }
+
+  function pxToY(py, range) {
+    const [yMin, yMax] = range;
+    return yMax - (py - margin.top) / plotH * (yMax - yMin);
+  }
+
+  function svgEl(name, attrs = {}) {
+    const el = document.createElementNS("http://www.w3.org/2000/svg", name);
+    for (const [k, v] of Object.entries(attrs)) {
+      el.setAttribute(k, v);
+    }
+    return el;
+  }
+
+  function clearSvg(svg) {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+  }
+
+  function makeIntegralTable(level) {
+    const N = 2200;
+    const h = (xMax - xMin) / N;
+    const xs = [];
+    const fs = [];
+    const Fs = [];
+    xs[0] = xMin;
+    fs[0] = level.f(xMin);
+    Fs[0] = level.initial;
+
+    for (let i = 1; i <= N; i++) {
+      xs[i] = xMin + i * h;
+      fs[i] = level.f(xs[i]);
+      Fs[i] = Fs[i - 1] + 0.5 * (fs[i - 1] + fs[i]) * h;
+    }
+    return { xs, fs, Fs, h, N };
+  }
+
+  function trueF(x) {
+    x = clamp(x, xMin, xMax);
+    const u = (x - xMin) / table.h;
+    const i = Math.floor(u);
+    if (i >= table.N) return table.Fs[table.N];
+    const a = u - i;
+    return table.Fs[i] * (1 - a) + table.Fs[i + 1] * a;
+  }
+
+  function signedArea(x) {
+    return trueF(x) - currentLevel().initial;
+  }
+
+  function studentF(x) {
+    const pts = studentPoints;
+    if (x <= pts[0].x) return pts[0].y;
+    if (x >= pts[pts.length - 1].x) return pts[pts.length - 1].y;
+
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p = pts[i];
+      const q = pts[i + 1];
+      if (x >= p.x && x <= q.x) {
+        const u = (x - p.x) / (q.x - p.x);
+        return p.y + u * (q.y - p.y);
+      }
+    }
+    return pts[pts.length - 1].y;
+  }
+
+  function maybeSnapX(x) {
+    const snaps = currentLevel().snapXs;
+    let best = x;
+    let bestDist = Infinity;
+    for (const s of snaps) {
+      const d = Math.abs(x - s);
+      if (d < bestDist) {
+        bestDist = d;
+        best = s;
+      }
+    }
+    return bestDist < 0.18 ? best : x;
+  }
+
+  function drawGrid(svg, yRange, label, yAxisName) {
+    const g = svgEl("g");
+
+    for (let x = 0; x <= 10; x += 1) {
+      const px = xToPx(x);
+      g.appendChild(svgEl("line", {
+        x1: px, y1: margin.top, x2: px, y2: margin.top + plotH, class: "grid"
+      }));
+      if (x % 2 === 0) {
+        const txt = svgEl("text", {
+          x: px,
+          y: H - 16,
+          "text-anchor": "middle",
+          "font-size": 12,
+          fill: "#5b6573"
+        });
+        txt.textContent = x;
+        g.appendChild(txt);
+      }
+    }
+
+    const [yMin, yMax] = yRange;
+    const yStep = niceStep((yMax - yMin) / 5);
+    const start = Math.ceil(yMin / yStep) * yStep;
+    for (let y = start; y <= yMax + 1e-9; y += yStep) {
+      const py = yToPx(y, yRange);
+      g.appendChild(svgEl("line", {
+        x1: margin.left, y1: py, x2: margin.left + plotW, y2: py, class: "grid"
+      }));
+
+      const txt = svgEl("text", {
+        x: margin.left - 10,
+        y: py + 4,
+        "text-anchor": "end",
+        "font-size": 12,
+        fill: "#5b6573"
+      });
+      txt.textContent = Number(y.toFixed(2));
+      g.appendChild(txt);
+    }
+
+    const xAxisY = yToPx(0, yRange);
+    if (xAxisY >= margin.top && xAxisY <= margin.top + plotH) {
+      g.appendChild(svgEl("line", {
+        x1: margin.left, y1: xAxisY, x2: margin.left + plotW, y2: xAxisY, class: "axis"
+      }));
+    }
+
+    g.appendChild(svgEl("line", {
+      x1: margin.left, y1: margin.top, x2: margin.left, y2: margin.top + plotH, class: "axis"
+    }));
+    g.appendChild(svgEl("line", {
+      x1: margin.left, y1: margin.top + plotH, x2: margin.left + plotW, y2: margin.top + plotH, class: "axis"
+    }));
+
+    const title = svgEl("text", { x: margin.left, y: 21, class: "graph-label" });
+    title.textContent = label;
+    g.appendChild(title);
+
+    const yLabel = svgEl("text", {
+      x: 18,
+      y: margin.top + 16,
+      "font-size": 13,
+      fill: "#5b6573",
+      transform: `rotate(-90 18 ${margin.top + 16})`
+    });
+    yLabel.textContent = yAxisName;
+    g.appendChild(yLabel);
+
+    const xLabel = svgEl("text", {
+      x: margin.left + plotW,
+      y: H - 16,
+      "font-size": 13,
+      fill: "#5b6573",
+      "text-anchor": "end"
+    });
+    xLabel.textContent = "x";
+    g.appendChild(xLabel);
+
+    svg.appendChild(g);
+  }
+
+  function niceStep(raw) {
+    const pow = Math.pow(10, Math.floor(Math.log10(raw)));
+    const n = raw / pow;
+    if (n < 1.5) return 1 * pow;
+    if (n < 3.5) return 2 * pow;
+    if (n < 7.5) return 5 * pow;
+    return 10 * pow;
+  }
+
+  function drawSnapLines(svg, yRange) {
+    const g = svgEl("g");
+    for (const x of currentLevel().snapXs) {
+      if (x <= xMin || x >= xMax) continue;
+      g.appendChild(svgEl("line", {
+        x1: xToPx(x),
+        y1: margin.top,
+        x2: xToPx(x),
+        y2: margin.top + plotH,
+        class: "snap-line"
+      }));
+    }
+    svg.appendChild(g);
+  }
+
+  function functionPath(fn, yRange, samples = 500) {
+    let d = "";
+    for (let i = 0; i <= samples; i++) {
+      const x = xMin + (xMax - xMin) * i / samples;
+      const y = fn(x);
+      d += (i === 0 ? "M" : "L") + xToPx(x) + " " + yToPx(y, yRange) + " ";
+    }
+    return d;
+  }
+
+  function drawArea(svg) {
+    const level = currentLevel();
+    const xEnd = clamp(scannerX, xMin, xMax);
+    const n = Math.max(1, Math.ceil(120 * (xEnd - xMin) / (xMax - xMin)));
+    const dx = (xEnd - xMin) / n;
+    const y0 = yToPx(0, level.yTop);
+
+    const g = svgEl("g");
+    for (let i = 0; i < n; i++) {
+      const xa = xMin + i * dx;
+      const xb = xMin + (i + 1) * dx;
+      const xm = 0.5 * (xa + xb);
+      const fa = level.f(xa);
+      const fb = level.f(xb);
+      const cls = level.f(xm) >= 0 ? "area-positive" : "area-negative";
+      const poly = svgEl("polygon", {
+        points: [
+          [xToPx(xa), y0],
+          [xToPx(xa), yToPx(fa, level.yTop)],
+          [xToPx(xb), yToPx(fb, level.yTop)],
+          [xToPx(xb), y0]
+        ].map(p => p.join(",")).join(" "),
+        class: cls
+      });
+      g.appendChild(poly);
+    }
+    svg.appendChild(g);
+  }
+
+  function drawTop() {
+    const level = currentLevel();
+    clearSvg(topSvg);
+    drawGrid(topSvg, level.yTop, "Rate graph: f(x), fixed", "f(x)");
+    drawSnapLines(topSvg, level.yTop);
+    drawArea(topSvg);
+
+    const path = svgEl("path", {
+      d: functionPath(level.f, level.yTop),
+      class: "function-path"
+    });
+    topSvg.appendChild(path);
+
+    const zeroY = yToPx(0, level.yTop);
+    for (const x of level.snapXs) {
+      if (Math.abs(level.f(x)) < 0.08 || x === 0 || x === 10) {
+        topSvg.appendChild(svgEl("circle", {
+          cx: xToPx(x),
+          cy: clamp(yToPx(level.f(x), level.yTop), margin.top, margin.top + plotH),
+          r: 4,
+          fill: "#111827"
+        }));
+      }
+    }
+
+    topSvg.appendChild(svgEl("line", {
+      x1: xToPx(scannerX),
+      y1: margin.top,
+      x2: xToPx(scannerX),
+      y2: margin.top + plotH,
+      class: "scanner"
+    }));
+
+    const txt = svgEl("text", {
+      x: xToPx(scannerX) + 8,
+      y: Math.max(margin.top + 15, Math.min(margin.top + plotH - 8, yToPx(level.f(scannerX), level.yTop))),
+      fill: "#f97316",
+      "font-size": 13,
+      "font-weight": 800
+    });
+    txt.textContent = "area → height";
+    topSvg.appendChild(txt);
+  }
+
+  function drawTrueF(svg) {
+    const level = currentLevel();
+    const path = svgEl("path", {
+      d: functionPath(trueF, level.yBot, 700),
+      class: "true-path"
+    });
+    svg.appendChild(path);
+  }
+
+  function drawSlopeHint(svg) {
+    const level = currentLevel();
+    const x = scannerX;
+    const y = studentF(x);
+    const slope = level.f(x);
+    const halfDx = 0.45;
+    const xA = clamp(x - halfDx, xMin, xMax);
+    const xB = clamp(x + halfDx, xMin, xMax);
+    const yA = y + slope * (xA - x);
+    const yB = y + slope * (xB - x);
+
+    svg.appendChild(svgEl("line", {
+      x1: xToPx(xA),
+      y1: yToPx(yA, level.yBot),
+      x2: xToPx(xB),
+      y2: yToPx(yB, level.yBot),
+      stroke: "#8b5cf6",
+      "stroke-width": 5,
+      "stroke-linecap": "round",
+      opacity: 0.75
+    }));
+
+    const label = svgEl("text", {
+      x: xToPx(x) + 10,
+      y: yToPx(y, level.yBot) - 12,
+      fill: "#6d28d9",
+      "font-weight": 800,
+      "font-size": 13
+    });
+    label.textContent = `slope should be f(x) ≈ ${fmt(slope)}`;
+    svg.appendChild(label);
+  }
+
+  function drawBottom() {
+    const level = currentLevel();
+    clearSvg(bottomSvg);
+    drawGrid(bottomSvg, level.yBot, "Accumulation graph: F(x), editable", "F(x)");
+    drawSnapLines(bottomSvg, level.yBot);
+
+    if (showHint) {
+      drawTrueF(bottomSvg);
+    }
+
+    const pts = studentPoints.map(p => `${xToPx(p.x)},${yToPx(p.y, level.yBot)}`).join(" ");
+    bottomSvg.appendChild(svgEl("polyline", {
+      points: pts,
+      class: "student-path"
+    }));
+
+    bottomSvg.appendChild(svgEl("line", {
+      x1: xToPx(scannerX),
+      y1: margin.top,
+      x2: xToPx(scannerX),
+      y2: margin.top + plotH,
+      class: "scanner"
+    }));
+
+    const yStudent = studentF(scannerX);
+    bottomSvg.appendChild(svgEl("circle", {
+      cx: xToPx(scannerX),
+      cy: yToPx(yStudent, level.yBot),
+      r: 6,
+      fill: "#1f6feb",
+      stroke: "white",
+      "stroke-width": 2
+    }));
+
+    if (showHint) {
+      bottomSvg.appendChild(svgEl("circle", {
+        cx: xToPx(scannerX),
+        cy: yToPx(trueF(scannerX), level.yBot),
+        r: 6,
+        fill: "#8b5cf6",
+        stroke: "white",
+        "stroke-width": 2
+      }));
+      drawSlopeHint(bottomSvg);
+    }
+
+    studentPoints.forEach((p, i) => {
+      const c = svgEl("circle", {
+        cx: xToPx(p.x),
+        cy: yToPx(p.y, level.yBot),
+        r: i === 0 ? 8 : 9,
+        fill: i === 0 ? "#697386" : "#1f6feb",
+        class: "control-point" +
+          (i === 0 ? " locked-point" : "") +
+          (i === selectedIndex ? " selected-point" : ""),
+        tabindex: "0",
+        role: "button",
+        "aria-label": i === 0
+          ? `Locked starting point at x ${fmt(p.x)}, F ${fmt(p.y)}`
+          : `Draggable control point ${i} at x ${fmt(p.x)}, F ${fmt(p.y)}`
+      });
+
+      c.addEventListener("pointerdown", evt => {
+        evt.preventDefault();
+        selectedIndex = i;
+        if (i !== 0) dragging = true;
+        render();
+      });
+
+      c.addEventListener("click", evt => {
+        evt.stopPropagation();
+        selectedIndex = i;
+        render();
+      });
+
+      bottomSvg.appendChild(c);
+    });
+  }
+
+  function render() {
+    drawTop();
+    drawBottom();
+    updateReadout();
+    removeBtn.disabled = selectedIndex === null || selectedIndex === 0 || studentPoints.length <= 2;
+  }
+
+  function updateReadout() {
+    const level = currentLevel();
+    xReadout.textContent = fmt(scannerX);
+    fReadout.textContent = fmt(level.f(scannerX));
+    areaReadout.textContent = fmt(signedArea(scannerX));
+    initialReadout.textContent = `F(0) = ${fmt(level.initial)}`;
+  }
+
+  function resetLevel() {
+    const level = currentLevel();
+    table = makeIntegralTable(level);
+    scannerX = 0;
+    selectedIndex = null;
+    showHint = false;
+    animating = false;
+    if (animationHandle) cancelAnimationFrame(animationHandle);
+
+    levelTitle.textContent = level.name;
+    levelStory.textContent = level.story;
+    levelBadge.textContent = `Level ${levelIndex + 1} of ${levels.length}`;
+    hintBtn.textContent = "Show Hint";
+    nextBtn.disabled = true;
+
+    const uniqueXs = Array.from(new Set(level.seedXs.map(x => Number(x.toFixed(4))))).sort((a, b) => a - b);
+    studentPoints = uniqueXs.map((x, i) => ({
+      x,
+      y: i === 0 ? level.initial : level.initial
+    }));
+
+    if (studentPoints[0].x !== 0) {
+      studentPoints.unshift({ x: 0, y: level.initial });
+    }
+    if (studentPoints[studentPoints.length - 1].x !== 10) {
+      studentPoints.push({ x: 10, y: level.initial });
+    }
+
+    message.className = "message";
+    message.innerHTML =
+      `Trailhead locked: <strong>F(0) = ${fmt(level.initial)}</strong>. ` +
+      `Use the signed area under f to set the rest of the elevations.`;
+    render();
+  }
+
+  function getSvgCoords(svg, evt) {
+    const rect = svg.getBoundingClientRect();
+    return {
+      x: (evt.clientX - rect.left) / rect.width * W,
+      y: (evt.clientY - rect.top) / rect.height * H
+    };
+  }
+
+  function moveScannerFromEvent(evt, svg) {
+    const p = getSvgCoords(svg, evt);
+    scannerX = clamp(pxToX(p.x), xMin, xMax);
+    render();
+  }
+
+  function dragSelected(evt) {
+    if (!dragging || selectedIndex === null || selectedIndex === 0) return;
+    const level = currentLevel();
+    const p = getSvgCoords(bottomSvg, evt);
+    let x = clamp(pxToX(p.x), xMin, xMax);
+    let y = clamp(pxToY(p.y, level.yBot), level.yBot[0], level.yBot[1]);
+
+    const i = selectedIndex;
+    const eps = 0.08;
+
+    if (i === studentPoints.length - 1) {
+      x = xMax;
+    } else {
+      const left = studentPoints[i - 1].x + eps;
+      const right = studentPoints[i + 1].x - eps;
+      x = clamp(x, left, right);
+      x = maybeSnapX(x);
+      x = clamp(x, left, right);
+    }
+
+    studentPoints[i] = { x, y };
+    scannerX = x;
+    render();
+  }
+
+  function addPointAtScanner() {
+    const x = maybeSnapX(scannerX);
+    if (studentPoints.some(p => Math.abs(p.x - x) < 0.08)) {
+      message.className = "message try";
+      message.textContent = "There is already a point very close to that x-value. Move the scanner or drag the existing point.";
+      return;
+    }
+
+    const y = studentF(x);
+    studentPoints.push({ x, y });
+    studentPoints.sort((a, b) => a.x - b.x);
+    selectedIndex = studentPoints.findIndex(p => Math.abs(p.x - x) < 1e-6);
+    render();
+  }
+
+  function removeSelectedPoint() {
+    if (selectedIndex === null || selectedIndex === 0 || studentPoints.length <= 2) return;
+    studentPoints.splice(selectedIndex, 1);
+    selectedIndex = null;
+    render();
+  }
+
+  function toggleHint() {
+    showHint = !showHint;
+    hintBtn.textContent = showHint ? "Hide Hint" : "Show Hint";
+    message.className = "message";
+    message.innerHTML = showHint
+      ? "Hint mode is on: the purple dashed curve shows the target accumulation graph, and the purple segment shows the slope your graph should have at the scanner."
+      : "Hint mode is off. Try using signs of f and signed area to rebuild the accumulation graph.";
+    render();
+  }
+
+  function startSweep() {
+    if (animating) {
+      animating = false;
+      if (animationHandle) cancelAnimationFrame(animationHandle);
+      animateBtn.textContent = "Area Sweep";
+      return;
+    }
+
+    animating = true;
+    animateBtn.textContent = "Stop Sweep";
+    const startTime = performance.now();
+    const duration = 3500;
+
+    function step(now) {
+      if (!animating) return;
+      const u = ((now - startTime) % duration) / duration;
+      scannerX = xMin + u * (xMax - xMin);
+      render();
+      animationHandle = requestAnimationFrame(step);
+    }
+
+    animationHandle = requestAnimationFrame(step);
+  }
+
+  function sign(v) {
+    if (v > 0.12) return 1;
+    if (v < -0.12) return -1;
+    return 0;
+  }
+
+  function checkQualitative() {
+    const level = currentLevel();
+    let slopeMatches = 0;
+    let slopeTotal = 0;
+
+    for (let x = 0.35; x <= 9.65; x += 0.25) {
+      const fSign = sign(level.f(x));
+      if (fSign === 0) continue;
+
+      const h = 0.16;
+      const s = (studentF(x + h) - studentF(x - h)) / (2 * h);
+      const sSign = sign(s);
+      if (sSign === fSign) slopeMatches++;
+      slopeTotal++;
+    }
+
+    const slopeRate = slopeTotal ? slopeMatches / slopeTotal : 1;
+
+    let keyGood = 0;
+    let keyTotal = 0;
+
+    for (const x of level.snapXs) {
+      if (x <= 0 || x >= 10) continue;
+      const before = sign(level.f(clamp(x - 0.2, 0, 10)));
+      const after = sign(level.f(clamp(x + 0.2, 0, 10)));
+      const targetY = trueF(x);
+      const studentY = studentF(x);
+
+      if (before !== after || Math.abs(level.f(x)) < 0.16) {
+        keyTotal++;
+        const close = Math.abs(studentY - targetY) < 0.7;
+
+        let extremumOK = true;
+        if (before > 0 && after < 0) {
+          extremumOK = studentY >= studentF(clamp(x - 0.5, 0, 10)) - 0.15 &&
+                       studentY >= studentF(clamp(x + 0.5, 0, 10)) - 0.15;
+        } else if (before < 0 && after > 0) {
+          extremumOK = studentY <= studentF(clamp(x - 0.5, 0, 10)) + 0.15 &&
+                       studentY <= studentF(clamp(x + 0.5, 0, 10)) + 0.15;
+        }
+
+        if (close && extremumOK) keyGood++;
+      }
+    }
+
+    return {
+      slopeRate,
+      keyRate: keyTotal ? keyGood / keyTotal : 1,
+      keyGood,
+      keyTotal
+    };
+  }
+
+  function checkGraph() {
+    const level = currentLevel();
+    let sumSq = 0;
+    let maxErr = 0;
+    const N = 121;
+
+    for (let i = 0; i < N; i++) {
+      const x = xMin + (xMax - xMin) * i / (N - 1);
+      const err = Math.abs(studentF(x) - trueF(x));
+      sumSq += err * err;
+      maxErr = Math.max(maxErr, err);
+    }
+
+    const rms = Math.sqrt(sumSq / N);
+    const q = checkQualitative();
+
+    const t = level.tolerance;
+    const shapeOK = rms <= t.rms && maxErr <= t.max;
+    const slopeOK = q.slopeRate >= t.slope;
+    const keyOK = q.keyRate >= 0.72;
+    const pass = shapeOK && slopeOK && keyOK;
+
+    if (pass) {
+      message.className = "message good";
+      message.innerHTML =
+        `<strong>Terrain restored! The hiker can cross.</strong><br>` +
+        `Shape error is small, the increasing/decreasing intervals match f, and the key height changes line up with signed area. ` +
+        `RMS error: <strong>${fmt(rms)}</strong>; max error: <strong>${fmt(maxErr)}</strong>; slope match: <strong>${Math.round(q.slopeRate * 100)}%</strong>.`;
+      nextBtn.disabled = false;
+    } else {
+      const tips = [];
+      if (!shapeOK) {
+        tips.push("Use total signed area to adjust the heights. Positive area raises F; negative area lowers F.");
+      }
+      if (!slopeOK) {
+        tips.push("Check monotonicity: F must increase where f is positive and decrease where f is negative.");
+      }
+      if (!keyOK) {
+        tips.push("Look near zeroes or sign changes of f. Those are where F often has a flat tangent or a local high/low point.");
+      }
+
+      message.className = "message try";
+      message.innerHTML =
+        `<strong>Close, but the terrain is still bumpy in the wrong way.</strong><br>` +
+        `RMS error: <strong>${fmt(rms)}</strong>; max error: <strong>${fmt(maxErr)}</strong>; slope match: <strong>${Math.round(q.slopeRate * 100)}%</strong>; key features: <strong>${q.keyGood}/${q.keyTotal}</strong>.<br>` +
+        tips.map(t => `• ${t}`).join("<br>");
+      nextBtn.disabled = true;
+    }
+  }
+
+  function nextLevel() {
+    if (levelIndex < levels.length - 1) {
+      levelIndex++;
+      resetLevel();
+    } else {
+      message.className = "message good";
+      message.innerHTML =
+        `<strong>All levels complete!</strong> You restored every terrain map. ` +
+        `FTC unlocked: <strong>F′(x)=f(x)</strong>, and signed area under f controls total change in F.`;
+      nextBtn.disabled = true;
+    }
+  }
+
+  topSvg.addEventListener("pointermove", evt => moveScannerFromEvent(evt, topSvg));
+  bottomSvg.addEventListener("pointermove", evt => {
+    if (dragging) dragSelected(evt);
+    else moveScannerFromEvent(evt, bottomSvg);
+  });
+
+  bottomSvg.addEventListener("pointerdown", evt => {
+    if (evt.target === bottomSvg) {
+      selectedIndex = null;
+      moveScannerFromEvent(evt, bottomSvg);
+    }
+  });
+
+  bottomSvg.addEventListener("dblclick", evt => {
+    moveScannerFromEvent(evt, bottomSvg);
+    addPointAtScanner();
+  });
+
+  window.addEventListener("pointermove", evt => {
+    if (dragging) dragSelected(evt);
+  });
+
+  window.addEventListener("pointerup", () => {
+    dragging = false;
+  });
+
+  resetBtn.addEventListener("click", resetLevel);
+  addBtn.addEventListener("click", addPointAtScanner);
+  removeBtn.addEventListener("click", removeSelectedPoint);
+  hintBtn.addEventListener("click", toggleHint);
+  animateBtn.addEventListener("click", startSweep);
+  checkBtn.addEventListener("click", checkGraph);
+  nextBtn.addEventListener("click", nextLevel);
+
+  window.addEventListener("keydown", evt => {
+    if (evt.key === "Delete" || evt.key === "Backspace") {
+      removeSelectedPoint();
+    }
+  });
+
+  resetLevel();
+})();
+</script>
+  <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#ececec"
+    }
+  </script>
+</body>
+</html>

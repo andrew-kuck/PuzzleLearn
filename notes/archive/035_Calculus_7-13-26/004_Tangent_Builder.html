@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tangent Builder: Discovering the Derivative Visually</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --panel: #ffffff;
+      --ink: #17202a;
+      --muted: #617085;
+      --blue: #2563eb;
+      --blue2: #60a5fa;
+      --green: #16a34a;
+      --red: #dc2626;
+      --orange: #f97316;
+      --purple: #7c3aed;
+      --grid: #dbe3ef;
+      --axis: #7a8699;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.35;
+    }
+
+    header {
+      padding: 1rem 1.25rem;
+      background: #00274c;
+      color: white;
+    }
+
+    header h1 {
+      margin: 0 0 0.25rem;
+      font-size: clamp(1.35rem, 3vw, 2rem);
+    }
+
+    header p {
+      margin: 0;
+      color: #d6e6ff;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(320px, 1fr) 360px;
+      gap: 1rem;
+      padding: 1rem;
+      max-width: 1300px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 950px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--panel);
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(20, 30, 50, 0.08);
+      border: 1px solid #e5eaf3;
+    }
+
+    .plot-card {
+      padding: 0.75rem;
+    }
+
+    .side {
+      padding: 1rem;
+    }
+
+    .controls {
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    label {
+      font-weight: 650;
+      font-size: 0.95rem;
+    }
+
+    select,
+    button,
+    input[type="range"] {
+      width: 100%;
+      font: inherit;
+    }
+
+    select,
+    button {
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 0.62rem 0.75rem;
+      background: white;
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: 700;
+      transition: 0.15s transform, 0.15s background, 0.15s border-color;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      border-color: var(--blue2);
+      background: #f8fbff;
+    }
+
+    .primary {
+      background: var(--blue);
+      color: white;
+      border-color: var(--blue);
+    }
+
+    .primary:hover {
+      background: #1d4ed8;
+      color: white;
+    }
+
+    .danger {
+      background: #fff7ed;
+      color: #9a3412;
+      border-color: #fed7aa;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.65rem;
+    }
+
+    .small {
+      font-size: 0.87rem;
+      color: var(--muted);
+    }
+
+    .readout {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 0.75rem;
+    }
+
+    .readout strong {
+      display: inline-block;
+      min-width: 8.5rem;
+    }
+
+    .status {
+      padding: 0.8rem;
+      border-radius: 12px;
+      background: #eef6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e3a8a;
+      min-height: 3.25rem;
+    }
+
+    .status.good {
+      background: #ecfdf5;
+      border-color: #bbf7d0;
+      color: #14532d;
+    }
+
+    .status.bad {
+      background: #fef2f2;
+      border-color: #fecaca;
+      color: #7f1d1d;
+    }
+
+    .status.warn {
+      background: #fffbeb;
+      border-color: #fde68a;
+      color: #78350f;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 650;
+    }
+
+    .toggle-row input {
+      width: auto;
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+      background: white;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .curve {
+      fill: none;
+      stroke: #111827;
+      stroke-width: 3.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .grid {
+      stroke: var(--grid);
+      stroke-width: 1;
+    }
+
+    .axis {
+      stroke: var(--axis);
+      stroke-width: 1.6;
+    }
+
+    .secant {
+      stroke: var(--orange);
+      stroke-width: 3;
+      stroke-dasharray: 9 7;
+    }
+
+    .left-secant {
+      stroke: #9333ea;
+      stroke-width: 3;
+      stroke-dasharray: 5 6;
+    }
+
+    .right-secant {
+      stroke: #0891b2;
+      stroke-width: 3;
+      stroke-dasharray: 5 6;
+    }
+
+    .tangent {
+      stroke: var(--blue);
+      stroke-width: 4;
+      stroke-linecap: round;
+    }
+
+    .true-tangent {
+      stroke: var(--green);
+      stroke-width: 3;
+      stroke-dasharray: 5 5;
+      opacity: 0;
+    }
+
+    .laser-in {
+      stroke: #ef4444;
+      stroke-width: 4;
+      stroke-linecap: round;
+      marker-end: url(#arrowRed);
+    }
+
+    .laser-out {
+      stroke: #f59e0b;
+      stroke-width: 4;
+      stroke-linecap: round;
+      marker-end: url(#arrowGold);
+    }
+
+    .target {
+      fill: none;
+      stroke: var(--green);
+      stroke-width: 4;
+    }
+
+    .target-hit {
+      fill: rgba(22, 163, 74, 0.14);
+    }
+
+    .point-p {
+      fill: var(--blue);
+      stroke: white;
+      stroke-width: 3;
+    }
+
+    .point-q {
+      fill: var(--orange);
+      stroke: white;
+      stroke-width: 3;
+      cursor: grab;
+    }
+
+    .point-q:active {
+      cursor: grabbing;
+    }
+
+    .handle-line {
+      stroke: #93c5fd;
+      stroke-width: 2;
+      stroke-dasharray: 4 5;
+    }
+
+    .handle {
+      fill: white;
+      stroke: var(--blue);
+      stroke-width: 4;
+      cursor: grab;
+    }
+
+    .label {
+      font-size: 16px;
+      font-weight: 800;
+      paint-order: stroke;
+      stroke: white;
+      stroke-width: 4px;
+      stroke-linejoin: round;
+    }
+
+    .gauge-wrap {
+      display: grid;
+      grid-template-columns: 42px 1fr 42px;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .gauge {
+      height: 18px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #9333ea, #e5e7eb 50%, #16a34a);
+      border: 1px solid #cbd5e1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .needle {
+      position: absolute;
+      top: -4px;
+      width: 4px;
+      height: 26px;
+      background: #111827;
+      border-radius: 2px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .pill {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 0.18rem 0.5rem;
+      font-size: 0.78rem;
+      font-weight: 800;
+      background: #e0f2fe;
+      color: #075985;
+    }
+
+    .hidden-equation .equation,
+    .hidden-equation .numeric-slope {
+      display: none;
+    }
+
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+      gap: 0.45rem;
+      font-size: 0.84rem;
+      color: var(--muted);
+      margin-top: 0.65rem;
+    }
+
+    .swatch {
+      display: inline-block;
+      width: 28px;
+      height: 0;
+      border-top: 4px solid black;
+      vertical-align: middle;
+      margin-right: 0.35rem;
+    }
+
+    .swatch.sec {
+      border-color: var(--orange);
+      border-top-style: dashed;
+    }
+
+    .swatch.tan {
+      border-color: var(--blue);
+    }
+
+    .swatch.cur {
+      border-color: #111827;
+    }
+
+    .swatch.las {
+      border-color: #f59e0b;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Tangent Builder</h1>
+    <p>Discover the derivative as the limiting slope of secant lines.</p>
+  </header>
+
+  <main>
+    <section class="card plot-card">
+      <svg id="svg" viewBox="0 0 900 560" role="img" aria-label="Interactive graph for secant and tangent exploration">
+        <defs>
+          <clipPath id="plotClip">
+            <rect id="clipRect" x="55" y="25" width="790" height="475" rx="8"></rect>
+          </clipPath>
+
+          <marker id="arrowRed" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L9,3 z" fill="#ef4444"></path>
+          </marker>
+
+          <marker id="arrowGold" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L9,3 z" fill="#f59e0b"></path>
+          </marker>
+        </defs>
+
+        <rect x="55" y="25" width="790" height="475" rx="8" fill="#ffffff" stroke="#d7deea"></rect>
+
+        <g id="grid"></g>
+
+        <g clip-path="url(#plotClip)">
+          <path id="curve" class="curve"></path>
+
+          <line id="leftSecant" class="left-secant" x1="0" y1="0" x2="0" y2="0" opacity="0"></line>
+          <line id="rightSecant" class="right-secant" x1="0" y1="0" x2="0" y2="0" opacity="0"></line>
+
+          <line id="secant" class="secant" x1="0" y1="0" x2="0" y2="0"></line>
+          <line id="trueTangent" class="true-tangent" x1="0" y1="0" x2="0" y2="0"></line>
+          <line id="tangent" class="tangent" x1="0" y1="0" x2="0" y2="0"></line>
+
+          <line id="laserIn" class="laser-in" x1="0" y1="0" x2="0" y2="0"></line>
+          <line id="laserOut" class="laser-out" x1="0" y1="0" x2="0" y2="0"></line>
+
+          <circle id="target" class="target" cx="0" cy="0" r="15"></circle>
+          <circle id="targetFill" class="target-hit" cx="0" cy="0" r="15" opacity="0"></circle>
+        </g>
+
+        <line id="handleLine" class="handle-line" x1="0" y1="0" x2="0" y2="0"></line>
+        <circle id="pPoint" class="point-p" cx="0" cy="0" r="9"></circle>
+        <circle id="qPoint" class="point-q" cx="0" cy="0" r="9"></circle>
+        <circle id="handle" class="handle" cx="0" cy="0" r="11"></circle>
+
+        <text id="pLabel" class="label" x="0" y="0" fill="#2563eb">P</text>
+        <text id="qLabel" class="label" x="0" y="0" fill="#f97316">Q</text>
+        <text id="hLabel" class="label" x="0" y="0" fill="#2563eb">rotate</text>
+      </svg>
+
+      <div class="legend">
+        <span><span class="swatch cur"></span>curve</span>
+        <span><span class="swatch sec"></span>secant through P and Q</span>
+        <span><span class="swatch tan"></span>your tangent</span>
+        <span><span class="swatch las"></span>reflected laser</span>
+      </div>
+    </section>
+
+    <aside class="card side" id="sidePanel">
+      <div class="controls">
+        <div>
+          <label for="functionSelect">Function / level</label>
+          <select id="functionSelect">
+            <option value="parabola">1. Parabola: f(x) = x²</option>
+            <option value="cubic">2. Cubic: f(x) = x³ − x</option>
+            <option value="sin">3. Trig: f(x) = sin(x)</option>
+            <option value="sqrt">4. Root: f(x) = √x</option>
+            <option value="abs">5. Corner: f(x) = |x|</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="pointSelect">Fixed point P</label>
+          <select id="pointSelect"></select>
+        </div>
+
+        <div class="row">
+          <button id="resetQ">Reset Q</button>
+          <button id="randomTangent">Random tangent</button>
+        </div>
+
+        <div class="readout">
+          <div class="equation">
+            <strong>Secant slope:</strong>
+            <span id="secantFormula">
+              [f(xQ)-f(xP)] / [xQ-xP]
+            </span>
+          </div>
+
+          <div class="numeric-slope">
+            <strong>Current secant:</strong>
+            <span id="secantValue">—</span>
+          </div>
+
+          <div class="numeric-slope">
+            <strong>Your tangent:</strong>
+            <span id="studentSlope">—</span>
+          </div>
+
+          <div class="numeric-slope">
+            <strong>Error:</strong>
+            <span id="errorValue">—</span>
+          </div>
+
+          <div class="gauge-wrap" aria-label="Slope gauge">
+            <span class="small">negative</span>
+            <div class="gauge">
+              <div id="needle" class="needle"></div>
+            </div>
+            <span class="small">positive</span>
+          </div>
+
+          <p class="small" style="margin-bottom:0;">
+            Gauge position uses <code>atan(slope)</code>, so very steep slopes stay visible.
+          </p>
+        </div>
+
+        <div class="toggle-row">
+          <input id="visualOnly" type="checkbox" />
+          <label for="visualOnly">Visual-only mode: hide equations and numbers</label>
+        </div>
+
+        <div class="row">
+          <button id="showAnswer">Peek true tangent</button>
+          <button id="check" class="primary">Check tangent</button>
+        </div>
+
+        <div class="row">
+          <button id="noTangent" class="danger">No tangent here</button>
+          <button id="showEvidence">Show left/right secants</button>
+        </div>
+
+        <button id="nextChallenge">Next challenge point</button>
+
+        <div id="status" class="status">
+          Drag Q along the curve. Watch the orange secant line approach the tangent direction. Then rotate the blue tangent line.
+        </div>
+
+        <div class="small">
+          <p>
+            <span class="pill">Goal</span>
+            Match the limiting direction of the curve at P. The laser hits the target only when your tangent mirror is accurate.
+          </p>
+          <p>
+            For a corner such as <code>|x|</code> at <code>0</code>, choose <strong>No tangent here</strong> and use left/right secants as evidence.
+          </p>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    const svg = document.getElementById("svg");
+
+    const els = {
+      grid: document.getElementById("grid"),
+      curve: document.getElementById("curve"),
+      secant: document.getElementById("secant"),
+      leftSecant: document.getElementById("leftSecant"),
+      rightSecant: document.getElementById("rightSecant"),
+      trueTangent: document.getElementById("trueTangent"),
+      tangent: document.getElementById("tangent"),
+      laserIn: document.getElementById("laserIn"),
+      laserOut: document.getElementById("laserOut"),
+      target: document.getElementById("target"),
+      targetFill: document.getElementById("targetFill"),
+      pPoint: document.getElementById("pPoint"),
+      qPoint: document.getElementById("qPoint"),
+      handle: document.getElementById("handle"),
+      handleLine: document.getElementById("handleLine"),
+      pLabel: document.getElementById("pLabel"),
+      qLabel: document.getElementById("qLabel"),
+      hLabel: document.getElementById("hLabel"),
+      functionSelect: document.getElementById("functionSelect"),
+      pointSelect: document.getElementById("pointSelect"),
+      resetQ: document.getElementById("resetQ"),
+      randomTangent: document.getElementById("randomTangent"),
+      visualOnly: document.getElementById("visualOnly"),
+      sidePanel: document.getElementById("sidePanel"),
+      showAnswer: document.getElementById("showAnswer"),
+      check: document.getElementById("check"),
+      noTangent: document.getElementById("noTangent"),
+      showEvidence: document.getElementById("showEvidence"),
+      nextChallenge: document.getElementById("nextChallenge"),
+      secantValue: document.getElementById("secantValue"),
+      studentSlope: document.getElementById("studentSlope"),
+      errorValue: document.getElementById("errorValue"),
+      needle: document.getElementById("needle"),
+      status: document.getElementById("status"),
+    };
+
+    const plot = {
+      left: 55,
+      top: 25,
+      width: 790,
+      height: 475,
+      right: 845,
+      bottom: 500
+    };
+
+    const functions = {
+      parabola: {
+        name: "f(x)=x²",
+        domain: [-3, 3],
+        range: [-1, 9],
+        f: x => x * x,
+        d: x => 2 * x,
+        points: [-2, -1, 0, 1, 2],
+        qOffset: 1.2
+      },
+      cubic: {
+        name: "f(x)=x³−x",
+        domain: [-2, 2],
+        range: [-4, 4],
+        f: x => x * x * x - x,
+        d: x => 3 * x * x - 1,
+        points: [-1.25, -0.577, 0, 0.577, 1.25],
+        qOffset: 0.9
+      },
+      sin: {
+        name: "f(x)=sin(x)",
+        domain: [-2 * Math.PI, 2 * Math.PI],
+        range: [-1.6, 1.6],
+        f: x => Math.sin(x),
+        d: x => Math.cos(x),
+        points: [-Math.PI, -Math.PI / 2, 0, Math.PI / 2, Math.PI],
+        qOffset: 1.1
+      },
+      sqrt: {
+        name: "f(x)=√x",
+        domain: [0, 9],
+        range: [-0.5, 3.5],
+        f: x => Math.sqrt(Math.max(0, x)),
+        d: x => x <= 0 ? undefined : 1 / (2 * Math.sqrt(x)),
+        points: [0.25, 1, 2.25, 4, 6.25],
+        qOffset: 1.2
+      },
+      abs: {
+        name: "f(x)=|x|",
+        domain: [-4, 4],
+        range: [-0.8, 4.5],
+        f: x => Math.abs(x),
+        d: x => Math.abs(x) < 1e-9 ? undefined : (x < 0 ? -1 : 1),
+        points: [-2, -1, 0, 1, 2],
+        qOffset: 1.1
+      }
+    };
+
+    let state = {
+      fnKey: "parabola",
+      pX: 1,
+      qX: 2.2,
+      studentSlope: 0,
+      dragging: null,
+      showTrue: false,
+      evidenceShown: false,
+      challengeIndex: 0
+    };
+
+    function currentFn() {
+      return functions[state.fnKey];
+    }
+
+    function clamp(v, lo, hi) {
+      return Math.max(lo, Math.min(hi, v));
+    }
+
+    function fmt(n) {
+      if (n === undefined || !Number.isFinite(n)) return "undefined";
+      if (Math.abs(n) < 0.0005) return "0.000";
+      return n.toFixed(3);
+    }
+
+    function xToPx(x) {
+      const fn = currentFn();
+      const [xmin, xmax] = fn.domain;
+      return plot.left + ((x - xmin) / (xmax - xmin)) * plot.width;
+    }
+
+    function yToPx(y) {
+      const fn = currentFn();
+      const [ymin, ymax] = fn.range;
+      return plot.bottom - ((y - ymin) / (ymax - ymin)) * plot.height;
+    }
+
+    function pxToX(px) {
+      const fn = currentFn();
+      const [xmin, xmax] = fn.domain;
+      return xmin + ((px - plot.left) / plot.width) * (xmax - xmin);
+    }
+
+    function pyToY(py) {
+      const fn = currentFn();
+      const [ymin, ymax] = fn.range;
+      return ymin + ((plot.bottom - py) / plot.height) * (ymax - ymin);
+    }
+
+    function svgPointFromEvent(evt) {
+      const pt = svg.createSVGPoint();
+      pt.x = evt.clientX;
+      pt.y = evt.clientY;
+      return pt.matrixTransform(svg.getScreenCTM().inverse());
+    }
+
+    function setLine(line, x1, y1, x2, y2) {
+      line.setAttribute("x1", x1);
+      line.setAttribute("y1", y1);
+      line.setAttribute("x2", x2);
+      line.setAttribute("y2", y2);
+    }
+
+    function setCircle(c, x, y, r = null) {
+      c.setAttribute("cx", x);
+      c.setAttribute("cy", y);
+      if (r !== null) c.setAttribute("r", r);
+    }
+
+    function setText(t, x, y) {
+      t.setAttribute("x", x);
+      t.setAttribute("y", y);
+    }
+
+    function slopeToAnglePosition(m) {
+      // Converts slope to a 0..100 gauge position using atan.
+      const angle = Math.atan(Number.isFinite(m) ? m : 999);
+      return ((angle + Math.PI / 2) / Math.PI) * 100;
+    }
+
+    function drawGrid() {
+      const fn = currentFn();
+      const [xmin, xmax] = fn.domain;
+      const [ymin, ymax] = fn.range;
+
+      els.grid.innerHTML = "";
+
+      const xSteps = 8;
+      const ySteps = 6;
+
+      for (let i = 0; i <= xSteps; i++) {
+        const x = xmin + (i / xSteps) * (xmax - xmin);
+        const px = xToPx(x);
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", px);
+        line.setAttribute("y1", plot.top);
+        line.setAttribute("x2", px);
+        line.setAttribute("y2", plot.bottom);
+        line.setAttribute("class", "grid");
+        els.grid.appendChild(line);
+      }
+
+      for (let i = 0; i <= ySteps; i++) {
+        const y = ymin + (i / ySteps) * (ymax - ymin);
+        const py = yToPx(y);
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", plot.left);
+        line.setAttribute("y1", py);
+        line.setAttribute("x2", plot.right);
+        line.setAttribute("y2", py);
+        line.setAttribute("class", "grid");
+        els.grid.appendChild(line);
+      }
+
+      if (xmin <= 0 && xmax >= 0) {
+        const axis = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        const px = xToPx(0);
+        axis.setAttribute("x1", px);
+        axis.setAttribute("y1", plot.top);
+        axis.setAttribute("x2", px);
+        axis.setAttribute("y2", plot.bottom);
+        axis.setAttribute("class", "axis");
+        els.grid.appendChild(axis);
+      }
+
+      if (ymin <= 0 && ymax >= 0) {
+        const axis = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        const py = yToPx(0);
+        axis.setAttribute("x1", plot.left);
+        axis.setAttribute("y1", py);
+        axis.setAttribute("x2", plot.right);
+        axis.setAttribute("y2", py);
+        axis.setAttribute("class", "axis");
+        els.grid.appendChild(axis);
+      }
+    }
+
+    function drawCurve() {
+      const fn = currentFn();
+      const [xmin, xmax] = fn.domain;
+      const samples = 420;
+      let d = "";
+
+      for (let i = 0; i <= samples; i++) {
+        const x = xmin + (i / samples) * (xmax - xmin);
+        const y = fn.f(x);
+        const px = xToPx(x);
+        const py = yToPx(y);
+
+        d += i === 0 ? `M ${px} ${py}` : ` L ${px} ${py}`;
+      }
+
+      els.curve.setAttribute("d", d);
+    }
+
+    function tangentEndpoints(m) {
+      const fn = currentFn();
+      const [xmin, xmax] = fn.domain;
+      const a = state.pX;
+      const fa = fn.f(a);
+
+      if (!Number.isFinite(m) || Math.abs(m) > 5000) {
+        return {
+          x1: xToPx(a),
+          y1: plot.top,
+          x2: xToPx(a),
+          y2: plot.bottom
+        };
+      }
+
+      const x1 = xmin;
+      const y1 = fa + m * (x1 - a);
+      const x2 = xmax;
+      const y2 = fa + m * (x2 - a);
+
+      return {
+        x1: xToPx(x1),
+        y1: yToPx(y1),
+        x2: xToPx(x2),
+        y2: yToPx(y2)
+      };
+    }
+
+    function secantSlope() {
+      const fn = currentFn();
+      const dx = state.qX - state.pX;
+      if (Math.abs(dx) < 1e-6) return undefined;
+      return (fn.f(state.qX) - fn.f(state.pX)) / dx;
+    }
+
+    function trueDerivative() {
+      return currentFn().d(state.pX);
+    }
+
+    function slopeError() {
+      const m = trueDerivative();
+      if (m === undefined || !Number.isFinite(m)) return undefined;
+      return Math.abs(state.studentSlope - m);
+    }
+
+    function updateLaser() {
+      const fn = currentFn();
+      const px = xToPx(state.pX);
+      const py = yToPx(fn.f(state.pX));
+      const trueM = trueDerivative();
+
+      if (trueM === undefined || !Number.isFinite(trueM)) {
+        els.laserIn.setAttribute("opacity", "0");
+        els.laserOut.setAttribute("opacity", "0");
+        els.target.setAttribute("opacity", "0");
+        els.targetFill.setAttribute("opacity", "0");
+        return;
+      }
+
+      els.laserIn.setAttribute("opacity", "1");
+      els.laserOut.setAttribute("opacity", "1");
+      els.target.setAttribute("opacity", "1");
+
+      // Incoming beam direction in screen coordinates.
+      const incoming = { x: 0.62, y: 0.78 };
+      const sourceDistance = 165;
+      let sx = px - incoming.x * sourceDistance;
+      let sy = py - incoming.y * sourceDistance;
+
+      // Keep source somewhat visible.
+      sx = clamp(sx, plot.left + 12, plot.right - 12);
+      sy = clamp(sy, plot.top + 12, plot.bottom - 12);
+
+      const d = normalize({ x: px - sx, y: py - sy });
+
+      const studentLine = normalize({ x: 1, y: -state.studentSlope });
+      const trueLine = normalize({ x: 1, y: -trueM });
+
+      const reflectedStudent = reflectAcrossLine(d, studentLine);
+      const reflectedTrue = reflectAcrossLine(d, trueLine);
+
+      const rayLen = 230;
+      const outX = px + reflectedStudent.x * rayLen;
+      const outY = py + reflectedStudent.y * rayLen;
+
+      const targetX = px + reflectedTrue.x * rayLen;
+      const targetY = py + reflectedTrue.y * rayLen;
+
+      setLine(els.laserIn, sx, sy, px, py);
+      setLine(els.laserOut, px, py, outX, outY);
+      setCircle(els.target, targetX, targetY);
+      setCircle(els.targetFill, targetX, targetY);
+
+      const hitDistance = Math.hypot(outX - targetX, outY - targetY);
+      els.targetFill.setAttribute("opacity", hitDistance < 18 ? "1" : "0");
+    }
+
+    function normalize(v) {
+      const len = Math.hypot(v.x, v.y) || 1;
+      return { x: v.x / len, y: v.y / len };
+    }
+
+    function dot(a, b) {
+      return a.x * b.x + a.y * b.y;
+    }
+
+    function reflectAcrossLine(d, lineUnit) {
+      // Reflection across a line through the origin:
+      // reflected = 2 projection_on_line - original
+      const k = dot(d, lineUnit);
+      return normalize({
+        x: 2 * k * lineUnit.x - d.x,
+        y: 2 * k * lineUnit.y - d.y
+      });
+    }
+
+    function updateEvidenceLines() {
+      const fn = currentFn();
+      const a = state.pX;
+      const fa = fn.f(a);
+
+      if (!state.evidenceShown) {
+        els.leftSecant.setAttribute("opacity", "0");
+        els.rightSecant.setAttribute("opacity", "0");
+        return;
+      }
+
+      const [xmin, xmax] = fn.domain;
+      const h = Math.min((xmax - xmin) * 0.12, 0.7);
+      const leftX = clamp(a - h, xmin, xmax);
+      const rightX = clamp(a + h, xmin, xmax);
+
+      setLine(
+        els.leftSecant,
+        xToPx(a),
+        yToPx(fa),
+        xToPx(leftX),
+        yToPx(fn.f(leftX))
+      );
+
+      setLine(
+        els.rightSecant,
+        xToPx(a),
+        yToPx(fa),
+        xToPx(rightX),
+        yToPx(fn.f(rightX))
+      );
+
+      els.leftSecant.setAttribute("opacity", "1");
+      els.rightSecant.setAttribute("opacity", "1");
+    }
+
+    function update() {
+      const fn = currentFn();
+      const pY = fn.f(state.pX);
+      const qY = fn.f(state.qX);
+
+      const pPx = xToPx(state.pX);
+      const pPy = yToPx(pY);
+      const qPx = xToPx(state.qX);
+      const qPy = yToPx(qY);
+
+      setCircle(els.pPoint, pPx, pPy);
+      setCircle(els.qPoint, qPx, qPy);
+
+      setText(els.pLabel, pPx + 12, pPy - 12);
+      setText(els.qLabel, qPx + 12, qPy - 12);
+
+      setLine(els.secant, pPx, pPy, qPx, qPy);
+
+      const tan = tangentEndpoints(state.studentSlope);
+      setLine(els.tangent, tan.x1, tan.y1, tan.x2, tan.y2);
+
+      const trueM = trueDerivative();
+      if (trueM !== undefined && Number.isFinite(trueM)) {
+        const tt = tangentEndpoints(trueM);
+        setLine(els.trueTangent, tt.x1, tt.y1, tt.x2, tt.y2);
+        els.trueTangent.setAttribute("opacity", state.showTrue ? "0.9" : "0");
+      } else {
+        els.trueTangent.setAttribute("opacity", "0");
+      }
+
+      // Tangent handle.
+      const handleDistance = 92;
+      const theta = Math.atan(state.studentSlope);
+      const hx = pPx + Math.cos(theta) * handleDistance;
+      const hy = pPy - Math.sin(theta) * handleDistance;
+
+      setCircle(els.handle, hx, hy);
+      setLine(els.handleLine, pPx, pPy, hx, hy);
+      setText(els.hLabel, hx + 13, hy + 5);
+
+      updateEvidenceLines();
+      updateLaser();
+
+      const sec = secantSlope();
+      const err = slopeError();
+
+      els.secantValue.textContent =
+        sec === undefined ? "Q is on P; limiting slope?" : fmt(sec);
+
+      els.studentSlope.textContent = fmt(state.studentSlope);
+      els.errorValue.textContent =
+        err === undefined ? "not defined here" : fmt(err);
+
+      const gaugePos = slopeToAnglePosition(sec ?? state.studentSlope);
+      els.needle.style.left = `${gaugePos}%`;
+
+      if (Math.abs(state.qX - state.pX) < 0.08) {
+        setStatus(
+          "Q is very close to P. The secant is almost showing the instantaneous direction.",
+          "warn"
+        );
+      }
+    }
+
+    function populatePoints() {
+      const fn = currentFn();
+      els.pointSelect.innerHTML = "";
+
+      fn.points.forEach((x, i) => {
+        const opt = document.createElement("option");
+        opt.value = String(x);
+        opt.textContent = `Point ${i + 1}: x = ${fmt(x)}`;
+        els.pointSelect.appendChild(opt);
+      });
+
+      state.pX = fn.points[0];
+      els.pointSelect.value = String(state.pX);
+      resetQ();
+      randomizeTangent();
+    }
+
+    function resetQ() {
+      const fn = currentFn();
+      const [xmin, xmax] = fn.domain;
+      const offset = fn.qOffset;
+      let q = state.pX + offset;
+
+      if (q > xmax) q = state.pX - offset;
+      if (q < xmin) q = state.pX + offset;
+
+      state.qX = clamp(q, xmin, xmax);
+      state.evidenceShown = false;
+      state.showTrue = false;
+      update();
+    }
+
+    function randomizeTangent() {
+      const m = trueDerivative();
+      if (m === undefined) {
+        state.studentSlope = Math.tan((Math.random() - 0.5) * 1.8);
+      } else {
+        state.studentSlope = m + (Math.random() * 2.4 - 1.2);
+      }
+      update();
+    }
+
+    function setStatus(msg, kind = "") {
+      els.status.className = `status ${kind}`;
+      els.status.textContent = msg;
+    }
+
+    function checkTangent() {
+      const m = trueDerivative();
+
+      if (m === undefined || !Number.isFinite(m)) {
+        setStatus(
+          "This point does not have a single tangent slope. Try the “No tangent here” button and show left/right secants.",
+          "warn"
+        );
+        return;
+      }
+
+      const eps = 0.08;
+      const err = Math.abs(state.studentSlope - m);
+
+      if (err < eps) {
+        setStatus(
+          `Great! Your slope is within ${eps} of the true derivative. The tangent is the limiting secant direction.`,
+          "good"
+        );
+        els.trueTangent.setAttribute("opacity", "0.9");
+      } else {
+        setStatus(
+          `Not quite. Your slope differs by about ${fmt(err)}. Drag Q closer to P and rotate the blue line toward the limiting secant direction.`,
+          "bad"
+        );
+      }
+    }
+
+    function checkNoTangent() {
+      const m = trueDerivative();
+
+      if (m !== undefined && Number.isFinite(m)) {
+        setStatus(
+          "This point does have a tangent slope. Use the blue handle to match it.",
+          "bad"
+        );
+        return;
+      }
+
+      if (!state.evidenceShown) {
+        setStatus(
+          "Correct idea, but show evidence first: click “Show left/right secants.”",
+          "warn"
+        );
+        return;
+      }
+
+      setStatus(
+        "Correct. The left and right secant slopes approach different values, so there is no single tangent slope here.",
+        "good"
+      );
+    }
+
+    function nextChallengePoint() {
+      const fn = currentFn();
+      state.challengeIndex = (state.challengeIndex + 1) % fn.points.length;
+      state.pX = fn.points[state.challengeIndex];
+      els.pointSelect.value = String(state.pX);
+      resetQ();
+      randomizeTangent();
+      setStatus(
+        "New challenge: adjust the tangent at this point. Use Q if you want to investigate first.",
+        ""
+      );
+    }
+
+    // Pointer interaction.
+    els.qPoint.addEventListener("pointerdown", evt => {
+      state.dragging = "q";
+      els.qPoint.setPointerCapture(evt.pointerId);
+    });
+
+    els.handle.addEventListener("pointerdown", evt => {
+      state.dragging = "handle";
+      els.handle.setPointerCapture(evt.pointerId);
+    });
+
+    svg.addEventListener("pointermove", evt => {
+      if (!state.dragging) return;
+
+      const pt = svgPointFromEvent(evt);
+      const fn = currentFn();
+
+      if (state.dragging === "q") {
+        const [xmin, xmax] = fn.domain;
+        state.qX = clamp(pxToX(pt.x), xmin, xmax);
+        update();
+      }
+
+      if (state.dragging === "handle") {
+        const px = xToPx(state.pX);
+        const py = yToPx(fn.f(state.pX));
+
+        const dx = pt.x - px;
+        const dy = py - pt.y; // invert screen y to math y
+
+        if (Math.abs(dx) < 1e-4) {
+          state.studentSlope = dy >= 0 ? 999 : -999;
+        } else {
+          state.studentSlope = clamp(dy / dx, -25, 25);
+        }
+
+        update();
+      }
+    });
+
+    svg.addEventListener("pointerup", () => {
+      state.dragging = null;
+    });
+
+    svg.addEventListener("pointercancel", () => {
+      state.dragging = null;
+    });
+
+    // Controls.
+    els.functionSelect.addEventListener("change", () => {
+      state.fnKey = els.functionSelect.value;
+      state.challengeIndex = 0;
+      state.evidenceShown = false;
+      state.showTrue = false;
+      drawGrid();
+      drawCurve();
+      populatePoints();
+      setStatus("Drag Q toward P, then predict the tangent direction.", "");
+    });
+
+    els.pointSelect.addEventListener("change", () => {
+      state.pX = Number(els.pointSelect.value);
+      state.evidenceShown = false;
+      state.showTrue = false;
+      resetQ();
+      setStatus("Point P changed. Explore the nearby secants, then set the tangent.", "");
+    });
+
+    els.resetQ.addEventListener("click", () => {
+      resetQ();
+      setStatus("Q reset. Drag it along the curve toward P.", "");
+    });
+
+    els.randomTangent.addEventListener("click", () => {
+      randomizeTangent();
+      setStatus("Tangent randomized. Rotate the blue handle to match the limiting direction.", "");
+    });
+
+    els.visualOnly.addEventListener("change", () => {
+      els.sidePanel.classList.toggle("hidden-equation", els.visualOnly.checked);
+      setStatus(
+        els.visualOnly.checked
+          ? "Visual-only mode is on. Use the gauge, curve shape, and laser target."
+          : "Numbers are visible again.",
+        ""
+      );
+    });
+
+    els.showAnswer.addEventListener("click", () => {
+      const m = trueDerivative();
+
+      if (m === undefined) {
+        setStatus("No true tangent line exists at this point.", "warn");
+        return;
+      }
+
+      state.showTrue = !state.showTrue;
+      update();
+      setStatus(
+        state.showTrue
+          ? "Green dashed line shows the true tangent. Try to align the blue line with it."
+          : "True tangent hidden again.",
+        ""
+      );
+    });
+
+    els.check.addEventListener("click", checkTangent);
+    els.noTangent.addEventListener("click", checkNoTangent);
+
+    els.showEvidence.addEventListener("click", () => {
+      state.evidenceShown = !state.evidenceShown;
+      update();
+
+      if (state.evidenceShown) {
+        const fn = currentFn();
+        const h = Math.min((fn.domain[1] - fn.domain[0]) * 0.12, 0.7);
+        const a = state.pX;
+        const fa = fn.f(a);
+        const leftX = clamp(a - h, fn.domain[0], fn.domain[1]);
+        const rightX = clamp(a + h, fn.domain[0], fn.domain[1]);
+
+        const leftSlope =
+          Math.abs(leftX - a) < 1e-9
+            ? undefined
+            : (fn.f(leftX) - fa) / (leftX - a);
+
+        const rightSlope =
+          Math.abs(rightX - a) < 1e-9
+            ? undefined
+            : (fn.f(rightX) - fa) / (rightX - a);
+
+        setStatus(
+          `Evidence shown. Left secant slope ≈ ${fmt(leftSlope)}, right secant slope ≈ ${fmt(rightSlope)}.`,
+          "warn"
+        );
+      } else {
+        setStatus("Evidence secants hidden.", "");
+      }
+    });
+
+    els.nextChallenge.addEventListener("click", nextChallengePoint);
+
+    // Init.
+    drawGrid();
+    drawCurve();
+    populatePoints();
+    setStatus(
+      "Stage 1: Drag Q along the curve toward P. Stage 2: rotate the blue line to predict the tangent. Stage 3: check whether the laser hits the target.",
+      ""
+    );
+  </script>
+    <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#f6f6f6"
+    }
+  </script>
+</body>
+</html>

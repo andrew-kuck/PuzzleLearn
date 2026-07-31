@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Slope Field Navigator</title>
+<style>
+  :root{
+    --bg:#0f172a;
+    --panel:#111827;
+    --panel2:#1f2937;
+    --text:#e5e7eb;
+    --muted:#9ca3af;
+    --accent:#60a5fa;
+    --good:#34d399;
+    --bad:#fb7185;
+    --warn:#fbbf24;
+    --purple:#c084fc;
+  }
+
+  *{box-sizing:border-box}
+
+  body{
+    margin:0;
+    min-height:100vh;
+    background:radial-gradient(circle at top,#1e3a8a 0,#0f172a 45%,#020617 100%);
+    color:var(--text);
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+  }
+
+  .app{
+    width:min(1180px,100%);
+    background:rgba(17,24,39,.96);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:18px;
+    box-shadow:0 24px 70px rgba(0,0,0,.45);
+    overflow:hidden;
+  }
+
+  header{
+    padding:18px 22px 12px;
+    border-bottom:1px solid rgba(255,255,255,.1);
+    display:flex;
+    gap:16px;
+    flex-wrap:wrap;
+    align-items:end;
+    justify-content:space-between;
+  }
+
+  h1{
+    margin:0;
+    font-size:clamp(1.35rem,2.4vw,2rem);
+    letter-spacing:.02em;
+  }
+
+  .subtitle{
+    color:var(--muted);
+    font-size:.92rem;
+    margin-top:4px;
+  }
+
+  .equationBox{
+    background:#020617;
+    border:1px solid rgba(96,165,250,.35);
+    padding:10px 14px;
+    border-radius:12px;
+    min-width:230px;
+  }
+
+  .eqLabel{
+    color:var(--muted);
+    font-size:.75rem;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+  }
+
+  #equation{
+    color:#bfdbfe;
+    font-size:1.18rem;
+    font-weight:700;
+    margin-top:2px;
+  }
+
+  main{
+    display:grid;
+    grid-template-columns:1fr 280px;
+    gap:0;
+  }
+
+  @media (max-width:900px){
+    main{grid-template-columns:1fr}
+  }
+
+  .canvasWrap{
+    padding:16px;
+  }
+
+  canvas{
+    width:100%;
+    height:590px;
+    max-height:70vh;
+    display:block;
+    background:#f8fafc;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.16);
+    touch-action:none;
+    cursor:crosshair;
+  }
+
+  aside{
+    border-left:1px solid rgba(255,255,255,.1);
+    padding:16px;
+    background:rgba(2,6,23,.32);
+  }
+
+  @media (max-width:900px){
+    aside{border-left:none;border-top:1px solid rgba(255,255,255,.1)}
+  }
+
+  .card{
+    background:rgba(31,41,55,.78);
+    border:1px solid rgba(255,255,255,.09);
+    border-radius:14px;
+    padding:13px;
+    margin-bottom:12px;
+  }
+
+  .row{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+
+  button{
+    appearance:none;
+    border:none;
+    border-radius:10px;
+    padding:9px 11px;
+    color:#f8fafc;
+    background:#2563eb;
+    cursor:pointer;
+    font-weight:700;
+    transition:.15s transform,.15s background,.15s opacity;
+  }
+
+  button:hover{transform:translateY(-1px);background:#1d4ed8}
+  button:active{transform:translateY(0)}
+  button.secondary{background:#374151}
+  button.secondary:hover{background:#4b5563}
+  button.good{background:#059669}
+  button.good:hover{background:#047857}
+  button.warn{background:#d97706}
+  button.warn:hover{background:#b45309}
+  button:disabled{
+    opacity:.45;
+    cursor:not-allowed;
+    transform:none;
+  }
+
+  .stat{
+    display:flex;
+    justify-content:space-between;
+    color:var(--muted);
+    padding:5px 0;
+    border-bottom:1px dashed rgba(255,255,255,.1);
+    font-size:.94rem;
+  }
+
+  .stat:last-child{border-bottom:none}
+
+  .stat strong{color:var(--text)}
+
+  #status{
+    min-height:68px;
+    color:#dbeafe;
+    line-height:1.4;
+  }
+
+  #hintText{
+    color:#fde68a;
+    min-height:54px;
+    line-height:1.35;
+  }
+
+  .mini{
+    font-size:.84rem;
+    color:var(--muted);
+    line-height:1.4;
+  }
+
+  .legend{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:6px;
+    font-size:.87rem;
+    color:var(--muted);
+  }
+
+  .dot{
+    width:11px;
+    height:11px;
+    border-radius:999px;
+    display:inline-block;
+    margin-right:7px;
+    vertical-align:-1px;
+  }
+
+  .target{background:var(--good)}
+  .obstacle{background:var(--bad)}
+  .guide{background:var(--purple)}
+  .start{background:var(--accent)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Slope Field Navigator</h1>
+      <div class="subtitle">Pilot the glider by choosing an initial condition. The glider can only follow solution curves.</div>
+    </div>
+    <div class="equationBox" aria-live="polite">
+      <div class="eqLabel">Current wind law</div>
+      <div id="equation">dy/dx = x</div>
+    </div>
+  </header>
+
+  <main>
+    <div class="canvasWrap">
+      <canvas id="field" aria-label="Interactive slope field canvas"></canvas>
+    </div>
+
+    <aside>
+      <div class="card">
+        <div class="row">
+          <button id="launchBtn" class="good">Launch</button>
+          <button id="resetBtn" class="secondary">Reset run</button>
+          <button id="hintBtn" class="warn">Hint</button>
+          <button id="nextBtn">Next level</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="stat"><span>Level</span><strong id="levelStat">1 / 5</strong></div>
+        <div class="stat"><span>Attempts</span><strong id="attemptStat">0</strong></div>
+        <div class="stat"><span>Prediction</span><strong id="predictionStat">0 / 5</strong></div>
+        <div class="stat"><span>Last accuracy</span><strong id="accuracyStat">—</strong></div>
+        <div class="stat"><span>Score</span><strong id="scoreStat">0</strong></div>
+      </div>
+
+      <div class="card">
+        <div id="status">
+          Drag the blue initial condition on the start line. Place 3–5 purple guide points predicting the route, then launch.
+        </div>
+      </div>
+
+      <div class="card">
+        <strong>Hint panel</strong>
+        <div id="hintText" style="margin-top:7px;">Hints highlight slope information; they do not reveal the full path.</div>
+      </div>
+
+      <div class="card legend">
+        <div><span class="dot start"></span>Start line / initial condition</div>
+        <div><span class="dot guide"></span>Your predicted guide points</div>
+        <div><span class="dot target"></span>Target zone</div>
+        <div><span class="dot obstacle"></span>Obstacle</div>
+      </div>
+
+      <div class="card mini">
+        Think locally: positive slopes rise, negative slopes fall, zero slopes flatten. Initial conditions choose one curve from the family.
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById("field");
+  const ctx = canvas.getContext("2d");
+
+  const equationEl = document.getElementById("equation");
+  const levelStat = document.getElementById("levelStat");
+  const attemptStat = document.getElementById("attemptStat");
+  const predictionStat = document.getElementById("predictionStat");
+  const accuracyStat = document.getElementById("accuracyStat");
+  const scoreStat = document.getElementById("scoreStat");
+  const statusEl = document.getElementById("status");
+  const hintText = document.getElementById("hintText");
+
+  const launchBtn = document.getElementById("launchBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const hintBtn = document.getElementById("hintBtn");
+  const nextBtn = document.getElementById("nextBtn");
+
+  let W = 900, H = 590, dpr = 1;
+  const pad = 46;
+
+  const levels = [
+    {
+      name:"Parabolic drift",
+      eq:"dy/dx = x",
+      f:(x,y)=>x,
+      xMin:-3, xMax:3, yMin:-3, yMax:3,
+      startX:-2.6, startY:-0.4, startYMin:-2.4, startYMax:2.4,
+      goodY:0.75, targetX:2.5, targetR:0.34,
+      obstacles:[{x:0.2,y:-1.15,r:0.34},{x:1.55,y:0.85,r:0.32}],
+      hintA:"Zero slopes occur along the vertical line x = 0. Curves flatten there before turning.",
+      hintB:"Compare arrows left and right of x = 0: left side tilts downward, right side tilts upward."
+    },
+    {
+      name:"Growth or decay",
+      eq:"dy/dx = y",
+      f:(x,y)=>y,
+      xMin:-2.2, xMax:2.2, yMin:-2.2, yMax:2.2,
+      startX:-1.6, startY:0.20, startYMin:-1.6, startYMax:1.6,
+      goodY:0.075, targetX:1.4, targetR:0.25,
+      obstacles:[{x:-0.15,y:1.05,r:0.28},{x:0.9,y:-0.75,r:0.28}],
+      hintA:"The horizontal line y = 0 is an equilibrium solution. Starting exactly there stays flat.",
+      hintB:"Above y = 0, slopes are positive and get steeper as y grows. Below y = 0, slopes are negative."
+    },
+    {
+      name:"Converging toward a trend",
+      eq:"dy/dx = x - y",
+      f:(x,y)=>x-y,
+      xMin:-3, xMax:3, yMin:-2.8, yMax:3.2,
+      startX:-2.8, startY:0.0, startYMin:-2.0, startYMax:2.4,
+      goodY:0.0, targetX:2.4, targetR:0.30,
+      obstacles:[{x:-0.6,y:-0.15,r:0.31},{x:1.0,y:0.25,r:0.28}],
+      hintA:"Zero slopes lie on y = x. Arrows below that line tilt upward; arrows above it tilt downward.",
+      hintB:"Many nearby solutions bend toward the same slanted long-term behavior."
+    },
+    {
+      name:"Equilibrium corridor",
+      eq:"dy/dx = y(1 - y)",
+      f:(x,y)=>y*(1-y),
+      xMin:-3, xMax:3, yMin:-0.55, yMax:1.65,
+      startX:-2.7, startY:0.45, startYMin:-0.25, startYMax:1.35,
+      goodY:0.45, targetX:2.25, targetR:0.16,
+      obstacles:[{x:-0.15,y:0.43,r:0.14},{x:0.95,y:1.24,r:0.16}],
+      hintA:"There are two equilibrium solutions: y = 0 and y = 1. Slopes are zero along both.",
+      hintB:"Between y = 0 and y = 1, solutions rise toward y = 1. Above y = 1, they fall toward y = 1."
+    },
+    {
+      name:"Mixed sinusoidal wind",
+      eq:"dy/dx = sin(x) - 0.3y",
+      f:(x,y)=>Math.sin(x)-0.3*y,
+      xMin:-5, xMax:5, yMin:-3, yMax:3,
+      startX:-4.75, startY:-1.1, startYMin:-2.4, startYMax:2.4,
+      goodY:-1.1, targetX:4.15, targetR:0.34,
+      obstacles:[{x:-1.45,y:1.35,r:0.32},{x:1.55,y:-1.55,r:0.32},{x:2.65,y:0.95,r:0.25}],
+      hintA:"Zero slopes occur where y = sin(x) / 0.3. That wavy nullcline separates upward from downward tilt.",
+      hintB:"The -0.3y term damps motion: high paths tend to be pulled downward, low paths upward."
+    }
+  ];
+
+  const state = {
+    levelIndex:0,
+    startY:0,
+    guides:[],
+    path:[],
+    attempts:0,
+    score:0,
+    success:false,
+    dragging:false,
+    hintMode:0,
+    lastAccuracy:null
+  };
+
+  function fitCanvas(){
+    const rect = canvas.getBoundingClientRect();
+    dpr = window.devicePixelRatio || 1;
+    W = rect.width;
+    H = rect.height;
+    canvas.width = Math.round(W*dpr);
+    canvas.height = Math.round(H*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    draw();
+  }
+
+  window.addEventListener("resize", fitCanvas);
+
+  function level(){ return levels[state.levelIndex]; }
+
+  function sx(x){
+    const L = level();
+    return pad + (x - L.xMin) / (L.xMax - L.xMin) * (W - 2*pad);
+  }
+
+  function sy(y){
+    const L = level();
+    return H - pad - (y - L.yMin) / (L.yMax - L.yMin) * (H - 2*pad);
+  }
+
+  function wx(px){
+    const L = level();
+    return L.xMin + (px - pad) / (W - 2*pad) * (L.xMax - L.xMin);
+  }
+
+  function wy(py){
+    const L = level();
+    return L.yMin + (H - pad - py) / (H - 2*pad) * (L.yMax - L.yMin);
+  }
+
+  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+
+  function rk4Step(L,x,y,h){
+    const k1 = L.f(x,y);
+    const k2 = L.f(x+h/2, y+h*k1/2);
+    const k3 = L.f(x+h/2, y+h*k2/2);
+    const k4 = L.f(x+h, y+h*k3);
+    return y + h*(k1 + 2*k2 + 2*k3 + k4)/6;
+  }
+
+  function traceFrom(startY, stopX=null){
+    const L = level();
+    const pts = [{x:L.startX,y:startY}];
+    const h = (L.xMax - L.xMin) / 900;
+    let x = L.startX;
+    let y = startY;
+    const endX = stopX ?? L.xMax;
+
+    while(x < endX){
+      const step = Math.min(h, endX - x);
+      const ny = rk4Step(L,x,y,step);
+      const nx = x + step;
+
+      if(!Number.isFinite(ny) || ny < L.yMin - 4 || ny > L.yMax + 4){
+        break;
+      }
+
+      pts.push({x:nx,y:ny});
+      x = nx;
+      y = ny;
+    }
+    return pts;
+  }
+
+  function yAtTargetForGoodStart(L){
+    const old = state.levelIndex;
+    state.levelIndex = levels.indexOf(L);
+    const pts = traceFrom(L.goodY, L.targetX);
+    state.levelIndex = old;
+    return pts[pts.length-1].y;
+  }
+
+  function prepareTargets(){
+    levels.forEach(L => {
+      if(!L.targets){
+        const old = state.levelIndex;
+        state.levelIndex = levels.indexOf(L);
+        const pts = traceFrom(L.goodY, L.targetX);
+        const y = pts[pts.length-1].y;
+        L.targets = [{x:L.targetX,y,r:L.targetR}];
+        state.levelIndex = old;
+      }
+    });
+  }
+
+  function initLevel(){
+    const L = level();
+    state.startY = L.startY;
+    state.guides = [];
+    state.path = [];
+    state.attempts = 0;
+    state.success = false;
+    state.hintMode = 0;
+    state.lastAccuracy = null;
+
+    equationEl.textContent = L.eq;
+    levelStat.textContent = `${state.levelIndex+1} / ${levels.length}`;
+    statusEl.textContent = "Drag the blue initial condition on the start line. Place 3–5 purple guide points predicting the route, then launch.";
+    hintText.textContent = "Hints highlight slope information; they do not reveal the full path.";
+    nextBtn.disabled = state.levelIndex >= levels.length-1;
+    updateStats();
+    draw();
+  }
+
+  function updateStats(){
+    attemptStat.textContent = state.attempts;
+    predictionStat.textContent = `${state.guides.length} / 5`;
+    scoreStat.textContent = state.score;
+    accuracyStat.textContent = state.lastAccuracy == null ? "—" : `${Math.round(state.lastAccuracy)}%`;
+  }
+
+  function clearRun(){
+    state.guides = [];
+    state.path = [];
+    state.success = false;
+    state.lastAccuracy = null;
+    statusEl.textContent = "Run reset. Place 3–5 guide points, then launch again.";
+    updateStats();
+    draw();
+  }
+
+  function draw(){
+    const L = level();
+    ctx.clearRect(0,0,W,H);
+
+    drawBackground();
+    drawSlopeField();
+    drawHintOverlay();
+    drawZones();
+    drawPrediction();
+    drawPath();
+    drawStartLine();
+    drawLabels();
+  }
+
+  function drawBackground(){
+    const L = level();
+
+    ctx.fillStyle = "#f8fafc";
+    roundRect(ctx,0,0,W,H,14,true,false);
+
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.lineWidth = 1;
+
+    const xStep = niceStep((L.xMax-L.xMin)/8);
+    const yStep = niceStep((L.yMax-L.yMin)/7);
+
+    for(let x=Math.ceil(L.xMin/xStep)*xStep; x<=L.xMax+1e-9; x+=xStep){
+      line(sx(x),pad,sx(x),H-pad);
+    }
+    for(let y=Math.ceil(L.yMin/yStep)*yStep; y<=L.yMax+1e-9; y+=yStep){
+      line(pad,sy(y),W-pad,sy(y));
+    }
+
+    ctx.strokeStyle = "#94a3b8";
+    ctx.lineWidth = 1.5;
+    if(L.yMin <= 0 && L.yMax >= 0) line(pad,sy(0),W-pad,sy(0));
+    if(L.xMin <= 0 && L.xMax >= 0) line(sx(0),pad,sx(0),H-pad);
+
+    ctx.strokeStyle = "#334155";
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(pad,pad,W-2*pad,H-2*pad);
+  }
+
+  function drawSlopeField(){
+    const L = level();
+    const nx = 22;
+    const ny = 16;
+
+    for(let i=0;i<nx;i++){
+      const x = L.xMin + (i+.5)*(L.xMax-L.xMin)/nx;
+      for(let j=0;j<ny;j++){
+        const y = L.yMin + (j+.5)*(L.yMax-L.yMin)/ny;
+        const m = L.f(x,y);
+        if(!Number.isFinite(m)) continue;
+
+        const px = sx(x), py = sy(y);
+        const vx = (W-2*pad)/(L.xMax-L.xMin);
+        const vy = -m*(H-2*pad)/(L.yMax-L.yMin);
+        const len = Math.hypot(vx,vy) || 1;
+        const ux = vx/len, uy = vy/len;
+        const seg = 15;
+
+        const mag = Math.min(1,Math.abs(m)/2.5);
+        if(Math.abs(m) < 0.06) ctx.strokeStyle = "#64748b";
+        else if(m > 0) ctx.strokeStyle = `rgba(37,99,235,${0.38+0.42*mag})`;
+        else ctx.strokeStyle = `rgba(234,88,12,${0.38+0.42*mag})`;
+
+        ctx.lineWidth = 1.7;
+        line(px-ux*seg/2,py-uy*seg/2,px+ux*seg/2,py+uy*seg/2);
+
+        const ax = px+ux*seg/2, ay = py+uy*seg/2;
+        ctx.beginPath();
+        ctx.moveTo(ax,ay);
+        ctx.lineTo(ax-ux*4-uy*2.4, ay-uy*4+ux*2.4);
+        ctx.moveTo(ax,ay);
+        ctx.lineTo(ax-ux*4+uy*2.4, ay-uy*4-ux*2.4);
+        ctx.stroke();
+      }
+    }
+  }
+
+  function drawHintOverlay(){
+    const L = level();
+    if(state.hintMode === 0) return;
+
+    ctx.save();
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = "rgba(251,191,36,.83)";
+    ctx.fillStyle = "rgba(251,191,36,.16)";
+
+    if(state.hintMode % 2 === 1){
+      drawNullcline(L);
+    } else {
+      const target = L.targets[0];
+      highlightLocalSlopeBox(L.startX,state.startY);
+      highlightLocalSlopeBox(target.x,target.y);
+    }
+
+    ctx.restore();
+  }
+
+  function drawNullcline(L){
+    if(L.eq === "dy/dx = x"){
+      line(sx(0),pad,sx(0),H-pad);
+      label("zero slope",sx(0)+8,pad+24);
+    }
+    else if(L.eq === "dy/dx = y"){
+      line(pad,sy(0),W-pad,sy(0));
+      label("equilibrium y = 0",pad+12,sy(0)-10);
+    }
+    else if(L.eq === "dy/dx = x - y"){
+      ctx.beginPath();
+      let first = true;
+      for(let x=L.xMin; x<=L.xMax; x+=(L.xMax-L.xMin)/180){
+        const y = x;
+        if(y < L.yMin || y > L.yMax) continue;
+        if(first){ ctx.moveTo(sx(x),sy(y)); first=false; }
+        else ctx.lineTo(sx(x),sy(y));
+      }
+      ctx.stroke();
+      label("zero slope: y = x",sx(-1.4),sy(-1.4)-10);
+    }
+    else if(L.eq === "dy/dx = y(1 - y)"){
+      line(pad,sy(0),W-pad,sy(0));
+      line(pad,sy(1),W-pad,sy(1));
+      label("equilibrium y = 0",pad+12,sy(0)-8);
+      label("equilibrium y = 1",pad+12,sy(1)-8);
+    }
+    else {
+      ctx.beginPath();
+      let first = true;
+      for(let x=L.xMin; x<=L.xMax; x+=(L.xMax-L.xMin)/260){
+        const y = Math.sin(x)/0.3;
+        if(y < L.yMin || y > L.yMax){ first=true; continue; }
+        if(first){ ctx.moveTo(sx(x),sy(y)); first=false; }
+        else ctx.lineTo(sx(x),sy(y));
+      }
+      ctx.stroke();
+      label("zero-slope nullcline",sx(-4.6),sy(Math.sin(-4.6)/0.3)+18);
+    }
+  }
+
+  function highlightLocalSlopeBox(x,y){
+    ctx.beginPath();
+    ctx.arc(sx(x),sy(y),38,0,Math.PI*2);
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  function drawZones(){
+    const L = level();
+
+    for(const ob of L.obstacles){
+      ctx.fillStyle = "rgba(251,113,133,.78)";
+      ctx.strokeStyle = "#be123c";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(sx(ob.x),sy(ob.y),worldRadiusToPx(ob.r),0,Math.PI*2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "#7f1d1d";
+      ctx.font = "700 12px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText("!",sx(ob.x),sy(ob.y)+4);
+    }
+
+    for(const t of L.targets){
+      ctx.fillStyle = "rgba(52,211,153,.30)";
+      ctx.strokeStyle = "#059669";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(sx(t.x),sy(t.y),worldRadiusToPx(t.r),0,Math.PI*2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "#047857";
+      ctx.font = "700 12px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText("TARGET",sx(t.x),sy(t.y)-worldRadiusToPx(t.r)-6);
+    }
+  }
+
+  function drawPrediction(){
+    if(state.guides.length === 0) return;
+
+    ctx.strokeStyle = "rgba(192,132,252,.65)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5,5]);
+    ctx.beginPath();
+    ctx.moveTo(sx(level().startX),sy(state.startY));
+    for(const g of state.guides) ctx.lineTo(sx(g.x),sy(g.y));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    state.guides.forEach((g,i) => {
+      ctx.fillStyle = "#c084fc";
+      ctx.strokeStyle = "#581c87";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(sx(g.x),sy(g.y),7,0,Math.PI*2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "#fff";
+      ctx.font = "700 10px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText(String(i+1),sx(g.x),sy(g.y)+3);
+    });
+  }
+
+  function drawPath(){
+    if(state.path.length < 2) return;
+
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = state.success ? "#10b981" : "#2563eb";
+    ctx.beginPath();
+    ctx.moveTo(sx(state.path[0].x),sy(state.path[0].y));
+    for(let i=1;i<state.path.length;i++){
+      ctx.lineTo(sx(state.path[i].x),sy(state.path[i].y));
+    }
+    ctx.stroke();
+
+    const last = state.path[state.path.length-1];
+    ctx.fillStyle = state.success ? "#10b981" : "#2563eb";
+    ctx.beginPath();
+    ctx.arc(sx(last.x),sy(last.y),5,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  function drawStartLine(){
+    const L = level();
+    const x = sx(L.startX);
+
+    ctx.setLineDash([8,7]);
+    ctx.strokeStyle = "rgba(37,99,235,.75)";
+    ctx.lineWidth = 2.2;
+    line(x,sy(L.startYMin),x,sy(L.startYMax));
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = "#60a5fa";
+    ctx.strokeStyle = "#1e3a8a";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(x,sy(state.startY),10,0,Math.PI*2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#1e3a8a";
+    ctx.font = "700 12px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText("IC",x,sy(state.startY)-15);
+  }
+
+  function drawLabels(){
+    const L = level();
+
+    ctx.fillStyle = "#334155";
+    ctx.font = "600 12px system-ui";
+    ctx.textAlign = "left";
+    ctx.fillText(L.name,pad+6,pad-16);
+
+    ctx.fillStyle = "#64748b";
+    ctx.font = "11px system-ui";
+    ctx.fillText("click 3–5 predicted guide points",pad+6,H-pad+25);
+  }
+
+  function worldRadiusToPx(r){
+    const L = level();
+    const px = r * (W-2*pad)/(L.xMax-L.xMin);
+    const py = r * (H-2*pad)/(L.yMax-L.yMin);
+    return (px+py)/2;
+  }
+
+  function niceStep(raw){
+    const pow = Math.pow(10,Math.floor(Math.log10(raw)));
+    const n = raw/pow;
+    if(n < 1.5) return pow;
+    if(n < 3) return 2*pow;
+    if(n < 7) return 5*pow;
+    return 10*pow;
+  }
+
+  function line(x1,y1,x2,y2){
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+  }
+
+  function label(text,x,y){
+    ctx.save();
+    ctx.fillStyle = "rgba(15,23,42,.78)";
+    ctx.strokeStyle = "rgba(255,255,255,.75)";
+    ctx.lineWidth = 3;
+    ctx.font = "700 12px system-ui";
+    ctx.textAlign = "left";
+    ctx.strokeText(text,x,y);
+    ctx.fillText(text,x,y);
+    ctx.restore();
+  }
+
+  function roundRect(c,x,y,w,h,r,fill,stroke){
+    c.beginPath();
+    c.moveTo(x+r,y);
+    c.arcTo(x+w,y,x+w,y+h,r);
+    c.arcTo(x+w,y+h,x,y+h,r);
+    c.arcTo(x,y+h,x,y,r);
+    c.arcTo(x,y,x+w,y,r);
+    if(fill) c.fill();
+    if(stroke) c.stroke();
+  }
+
+  function canvasPoint(evt){
+    const rect = canvas.getBoundingClientRect();
+    return {
+      px:evt.clientX - rect.left,
+      py:evt.clientY - rect.top
+    };
+  }
+
+  canvas.addEventListener("pointerdown", evt => {
+    canvas.setPointerCapture(evt.pointerId);
+    const p = canvasPoint(evt);
+    const L = level();
+    const startPx = sx(L.startX);
+
+    if(Math.abs(p.px - startPx) < 20 &&
+       p.py >= sy(L.startYMax)-25 &&
+       p.py <= sy(L.startYMin)+25){
+      state.dragging = true;
+      moveStartTo(p.py);
+      return;
+    }
+
+    addGuide(p);
+  });
+
+  canvas.addEventListener("pointermove", evt => {
+    if(!state.dragging) return;
+    const p = canvasPoint(evt);
+    moveStartTo(p.py);
+  });
+
+  canvas.addEventListener("pointerup", () => state.dragging = false);
+  canvas.addEventListener("pointercancel", () => state.dragging = false);
+
+  function moveStartTo(py){
+    const L = level();
+    state.startY = clamp(wy(py),L.startYMin,L.startYMax);
+    state.path = [];
+    state.success = false;
+    state.lastAccuracy = null;
+    statusEl.textContent = "Initial condition changed. Update your guide points, then launch.";
+    updateStats();
+    draw();
+  }
+
+  function addGuide(p){
+    const L = level();
+    const x = wx(p.px), y = wy(p.py);
+
+    if(x < L.xMin || x > L.xMax || y < L.yMin || y > L.yMax) return;
+    if(x <= L.startX + 0.08){
+      statusEl.textContent = "Guide points should be to the right of the start line.";
+      return;
+    }
+    if(state.guides.length >= 5){
+      statusEl.textContent = "You already placed 5 guide points. Launch or reset the run.";
+      return;
+    }
+
+    state.guides.push({x,y});
+    state.guides.sort((a,b)=>a.x-b.x);
+    state.path = [];
+    state.success = false;
+    state.lastAccuracy = null;
+    statusEl.textContent = state.guides.length < 3
+      ? `Place ${3-state.guides.length} more guide point${3-state.guides.length===1?"":"s"} before launching.`
+      : "Prediction ready. Launch when you are confident.";
+    updateStats();
+    draw();
+  }
+
+  function launch(){
+    if(state.guides.length < 3){
+      statusEl.textContent = "Prediction required: place at least 3 guide points before launch.";
+      return;
+    }
+
+    const L = level();
+    state.attempts++;
+    const path = traceFrom(state.startY);
+    state.path = path;
+
+    const obstacleHit = intersectsAny(path,L.obstacles);
+    const targetHit = intersectsAny(path,L.targets);
+    const accuracy = predictionAccuracy(path);
+    state.lastAccuracy = accuracy;
+
+    if(targetHit && !obstacleHit){
+      state.success = true;
+      const earned = Math.max(15, Math.round(120 + accuracy*0.9 - state.attempts*12));
+      state.score += earned;
+      statusEl.innerHTML = `Target reached! Prediction accuracy: <strong>${Math.round(accuracy)}%</strong>. Score +${earned}.`;
+    } else if(obstacleHit){
+      state.success = false;
+      statusEl.innerHTML = `Obstacle hit. Prediction accuracy: <strong>${Math.round(accuracy)}%</strong>. Try a nearby initial condition.`;
+    } else {
+      state.success = false;
+      statusEl.innerHTML = `Missed the target. Prediction accuracy: <strong>${Math.round(accuracy)}%</strong>. Use the slope arrows to adjust your start.`;
+    }
+
+    updateStats();
+    draw();
+  }
+
+  function intersectsAny(path,zones){
+    for(let i=1;i<path.length;i++){
+      for(const z of zones){
+        if(distPointToSegment(z,path[i-1],path[i]) <= z.r) return true;
+      }
+    }
+    return false;
+  }
+
+  function distPointToSegment(p,a,b){
+    const vx = b.x-a.x, vy = b.y-a.y;
+    const wxp = p.x-a.x, wyp = p.y-a.y;
+    const c1 = vx*wxp + vy*wyp;
+    if(c1 <= 0) return Math.hypot(p.x-a.x,p.y-a.y);
+    const c2 = vx*vx + vy*vy;
+    if(c2 <= c1) return Math.hypot(p.x-b.x,p.y-b.y);
+    const t = c1/c2;
+    const px = a.x + t*vx;
+    const py = a.y + t*vy;
+    return Math.hypot(p.x-px,p.y-py);
+  }
+
+  function predictionAccuracy(path){
+    if(path.length < 2 || state.guides.length === 0) return 0;
+
+    let totalPx = 0;
+    for(const g of state.guides){
+      const actualY = interpolateY(path,g.x);
+      if(actualY == null){
+        totalPx += 150;
+      } else {
+        const dx = sx(g.x) - sx(g.x);
+        const dy = sy(g.y) - sy(actualY);
+        totalPx += Math.hypot(dx,dy);
+      }
+    }
+
+    const avg = totalPx/state.guides.length;
+    return clamp(100 - avg*1.55, 0, 100);
+  }
+
+  function interpolateY(path,x){
+    for(let i=1;i<path.length;i++){
+      const a = path[i-1], b = path[i];
+      if(a.x <= x && x <= b.x){
+        const t = (x-a.x)/(b.x-a.x || 1);
+        return a.y + t*(b.y-a.y);
+      }
+    }
+    return null;
+  }
+
+  launchBtn.addEventListener("click", launch);
+  resetBtn.addEventListener("click", clearRun);
+
+  hintBtn.addEventListener("click", () => {
+    state.hintMode = (state.hintMode + 1) % 3;
+    const L = level();
+    if(state.hintMode === 0){
+      hintText.textContent = "Hints highlight slope information; they do not reveal the full path.";
+    } else if(state.hintMode === 1){
+      hintText.textContent = L.hintA;
+    } else {
+      hintText.textContent = L.hintB;
+    }
+    draw();
+  });
+
+  nextBtn.addEventListener("click", () => {
+    if(state.levelIndex < levels.length-1){
+      state.levelIndex++;
+      initLevel();
+    } else {
+      statusEl.textContent = "You completed all levels. Nice navigating!";
+    }
+  });
+
+  prepareTargets();
+  initLevel();
+  fitCanvas();
+})();
+</script>
+  <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#ececec"
+    }
+  </script>
+</body>
+</html>

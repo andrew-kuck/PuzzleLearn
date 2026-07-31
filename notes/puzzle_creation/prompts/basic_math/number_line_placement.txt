@@ -1,0 +1,798 @@
+create an activity using html, css, and javascript. there is a number line across the entire width of the screen with arrows on each end. the far left of the number line is labeled -20 and the far right is labeled 20, but there are no other labels or tick marks on the number line. at the top of the page the user is presented with 5 unique integers between -20 and 20 (exclusive). Each of the five integers is in a small circle that is 1/40 of the distance from -20 to 20 on the number line. the user must drag each circle to a position on the number line. if they release their drag over the number line the circle and inside number will snap to the number line, but not necessarily at an exact integer. the user can click and re-drag numbers to other positions. however, after all 5 numbers have been snapped to the number line, the positions are fixed. at this point the positions of the placed numbers are corrected, moving from left to right from the position the the numbers were placed. for each number, the circle and number slowly slide from their placed position to the correct position. for each unit moved on the number line, a unit is added to a running error total. if the number has to cross over another placed number, both numbers turn red and jiggle while crossing over each other, and 10 is added to the error total (in addition to the accumulation from the distance traveled). after all the numbers have moved to the correct positions, a new question is presented, but the error total remains. a progress bar advances with each question completed, so that it is full after 10 completed questions, at which point the function activityComplete() is called. have the circles with numbers initially start at a larger size, but then change to a smaller size when snapping to the number line. whenever 2 circles intersect each other, they should always both turn red. for the turning red, have a margin of error, so that circles do not turn red until 25% of each circle is overlapped with the other.
+
+Save this as a single `.html` file and open it in a browser.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Number Line Drag Activity</title>
+
+  <style>
+    :root {
+      --blue: #00274c;
+      --maize: #ffcb05;
+      --red: #d92727;
+      --dark: #1d1d1d;
+      --light: #f7f8fb;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--light);
+      color: var(--dark);
+      overflow: hidden;
+    }
+
+    #activity {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 16px 24px 10px;
+      background: white;
+      border-bottom: 1px solid #ddd;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      z-index: 5;
+    }
+
+    .top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.2rem, 2vw, 1.8rem);
+      color: var(--blue);
+    }
+
+    .stats {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      font-weight: 700;
+    }
+
+    #errorDisplay {
+      color: var(--blue);
+      min-width: 130px;
+      text-align: right;
+    }
+
+    .progress-wrap {
+      width: min(480px, 100%);
+      height: 16px;
+      border: 2px solid var(--blue);
+      border-radius: 999px;
+      overflow: hidden;
+      background: white;
+      margin-top: 12px;
+    }
+
+    #progressBar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--maize), #ffd84d);
+      transition: width 0.45s ease;
+    }
+
+    #stage {
+      position: relative;
+      flex: 1;
+      min-height: 520px;
+      overflow: hidden;
+    }
+
+    #instructions {
+      position: absolute;
+      top: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(900px, calc(100vw - 40px));
+      text-align: center;
+      font-size: clamp(1rem, 1.6vw, 1.25rem);
+      line-height: 1.4;
+      color: #333;
+      z-index: 1;
+    }
+
+    #questionText {
+      font-weight: 700;
+      color: var(--blue);
+    }
+
+    #gameLayer {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+    }
+
+    .number-circle {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      border: 2px solid var(--dark);
+      background: white;
+      color: var(--dark);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      line-height: 1;
+      user-select: none;
+      touch-action: none;
+      cursor: grab;
+      z-index: 4;
+      box-shadow: 0 5px 14px rgba(0, 0, 0, 0.16);
+      transition:
+        width 0.18s ease,
+        height 0.18s ease,
+        background-color 0.12s ease,
+        color 0.12s ease,
+        border-color 0.12s ease,
+        box-shadow 0.12s ease;
+    }
+
+    .number-circle.dragging {
+      cursor: grabbing;
+      z-index: 10;
+      box-shadow: 0 9px 24px rgba(0, 0, 0, 0.28);
+    }
+
+    .number-circle.snapped {
+      background: #fff8d6;
+    }
+
+    .number-circle.overlap,
+    .number-circle.crossing {
+      background: var(--red);
+      color: white;
+      border-color: #9b0000;
+    }
+
+    .number-circle.jiggle {
+      animation: jiggle 0.18s linear infinite;
+    }
+
+    @keyframes jiggle {
+      0% {
+        transform: translate(-50%, -50%) rotate(0deg);
+      }
+      25% {
+        transform: translate(-50%, -50%) rotate(6deg);
+      }
+      50% {
+        transform: translate(-50%, -50%) rotate(0deg);
+      }
+      75% {
+        transform: translate(-50%, -50%) rotate(-6deg);
+      }
+      100% {
+        transform: translate(-50%, -50%) rotate(0deg);
+      }
+    }
+
+    #lineArea {
+      position: absolute;
+      left: 32px;
+      right: 32px;
+      top: 64%;
+      height: 80px;
+      transform: translateY(-50%);
+      z-index: 2;
+    }
+
+    #lineTrack {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 34px;
+      height: 6px;
+      background: var(--dark);
+      border-radius: 999px;
+    }
+
+    #lineTrack::before,
+    #lineTrack::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      width: 0;
+      height: 0;
+      transform: translateY(-50%);
+    }
+
+    #lineTrack::before {
+      left: 0;
+      border-top: 12px solid transparent;
+      border-bottom: 12px solid transparent;
+      border-right: 20px solid var(--dark);
+      transform: translate(-100%, -50%);
+    }
+
+    #lineTrack::after {
+      right: 0;
+      border-top: 12px solid transparent;
+      border-bottom: 12px solid transparent;
+      border-left: 20px solid var(--dark);
+      transform: translate(100%, -50%);
+    }
+
+    .endpoint-label {
+      position: absolute;
+      top: 50px;
+      font-size: clamp(1rem, 2vw, 1.4rem);
+      font-weight: 800;
+      color: var(--blue);
+    }
+
+    #labelLeft {
+      left: 0;
+      transform: translateX(-50%);
+    }
+
+    #labelRight {
+      right: 0;
+      transform: translateX(50%);
+    }
+
+    #completionMessage {
+      position: absolute;
+      inset: 0;
+      display: none;
+      place-items: center;
+      background: rgba(255, 255, 255, 0.88);
+      z-index: 20;
+      text-align: center;
+      padding: 24px;
+    }
+
+    #completionMessage.show {
+      display: grid;
+    }
+
+    #completionMessage div {
+      background: white;
+      border: 3px solid var(--blue);
+      border-radius: 18px;
+      padding: 28px 36px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+      max-width: 560px;
+    }
+
+    #completionMessage h2 {
+      margin-top: 0;
+      color: var(--blue);
+    }
+  </style>
+</head>
+
+<body>
+  <main id="activity">
+    <header>
+      <div class="top-row">
+        <h1>Place the Numbers on the Number Line</h1>
+
+        <div class="stats">
+          <div id="questionCounter">Question 1 of 10</div>
+          <div id="errorDisplay">Error: 0.0</div>
+        </div>
+      </div>
+
+      <div class="progress-wrap" aria-label="Activity progress">
+        <div id="progressBar"></div>
+      </div>
+    </header>
+
+    <section id="stage" aria-label="Interactive number line activity">
+      <div id="instructions">
+        <div id="questionText">Drag each number onto the number line.</div>
+        <div>
+          Release a circle over the line to snap it into place.
+          Once all five are placed, they will correct themselves.
+        </div>
+      </div>
+
+      <div id="gameLayer"></div>
+
+      <div id="lineArea" aria-hidden="true">
+        <div id="lineTrack"></div>
+        <div id="labelLeft" class="endpoint-label">-20</div>
+        <div id="labelRight" class="endpoint-label">20</div>
+      </div>
+
+      <div id="completionMessage">
+        <div>
+          <h2>Activity Complete!</h2>
+          <p id="finalScore"></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const TOTAL_QUESTIONS = 10;
+    const VALUES_MIN = -20;
+    const VALUES_MAX = 20;
+    const NUMBER_COUNT = 5;
+
+    const stage = document.getElementById("stage");
+    const gameLayer = document.getElementById("gameLayer");
+    const lineTrack = document.getElementById("lineTrack");
+    const questionText = document.getElementById("questionText");
+    const errorDisplay = document.getElementById("errorDisplay");
+    const questionCounter = document.getElementById("questionCounter");
+    const progressBar = document.getElementById("progressBar");
+    const completionMessage = document.getElementById("completionMessage");
+    const finalScore = document.getElementById("finalScore");
+
+    let circles = [];
+    let activeDrag = null;
+
+    let completedQuestions = 0;
+    let errorTotal = 0;
+
+    let locked = false;
+    let correcting = false;
+
+    let lineStart = 0;
+    let lineEnd = 0;
+    let lineY = 0;
+    let lineWidth = 0;
+    let unitPx = 1;
+
+    let startDiameter = 32;
+    let snappedDiameter = 24;
+
+    let crossedPairsThisQuestion = new Set();
+
+    function activityComplete() {
+      completionMessage.classList.add("show");
+      finalScore.textContent = `Final running error total: ${errorTotal.toFixed(1)}`;
+      console.log("activityComplete() called");
+    }
+
+    function measureLine() {
+      const stageRect = stage.getBoundingClientRect();
+      const lineRect = lineTrack.getBoundingClientRect();
+
+      lineStart = lineRect.left - stageRect.left;
+      lineEnd = lineRect.right - stageRect.left;
+      lineY = lineRect.top + lineRect.height / 2 - stageRect.top;
+
+      lineWidth = lineEnd - lineStart;
+      unitPx = lineWidth / 40;
+
+      /*
+        Initial circle diameter is 1/40 of the number-line distance
+        from -20 to 20. Snapped circles become smaller.
+      */
+      startDiameter = lineWidth / 40;
+      snappedDiameter = startDiameter * 0.74;
+    }
+
+    function valueToX(value) {
+      return lineStart + ((value - VALUES_MIN) / (VALUES_MAX - VALUES_MIN)) * lineWidth;
+    }
+
+    function randomUniqueIntegers(count, minExclusive, maxExclusive) {
+      const pool = [];
+
+      for (let n = minExclusive + 1; n < maxExclusive; n++) {
+        pool.push(n);
+      }
+
+      shuffle(pool);
+      return pool.slice(0, count);
+    }
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function setupQuestion() {
+      measureLine();
+
+      locked = false;
+      correcting = false;
+      activeDrag = null;
+      crossedPairsThisQuestion.clear();
+
+      gameLayer.innerHTML = "";
+      circles = [];
+
+      const values = randomUniqueIntegers(NUMBER_COUNT, VALUES_MIN, VALUES_MAX);
+
+      questionCounter.textContent =
+        `Question ${Math.min(completedQuestions + 1, TOTAL_QUESTIONS)} of ${TOTAL_QUESTIONS}`;
+
+      questionText.textContent =
+        `Drag these numbers onto the number line: ${values.join(", ")}`;
+
+      const topY = 118;
+      const spacing = lineWidth / (NUMBER_COUNT + 1);
+
+      values.forEach((value, index) => {
+        const el = document.createElement("div");
+        el.className = "number-circle";
+        el.textContent = value;
+        el.setAttribute("role", "button");
+        el.setAttribute("aria-label", `Number ${value}`);
+
+        gameLayer.appendChild(el);
+
+        const homeX = lineStart + spacing * (index + 1);
+        const homeY = topY;
+
+        const circle = {
+          id: crypto.randomUUID ? crypto.randomUUID() : String(Math.random()),
+          value,
+          el,
+          x: homeX,
+          y: homeY,
+          homeX,
+          homeY,
+          placed: false,
+          diameter: startDiameter
+        };
+
+        circles.push(circle);
+
+        setCircleSize(circle, startDiameter);
+        renderCircle(circle);
+
+        el.addEventListener("pointerdown", event => startDrag(event, circle));
+      });
+
+      updateOverlaps();
+    }
+
+    function setCircleSize(circle, diameter) {
+      circle.diameter = diameter;
+      circle.el.style.width = `${diameter}px`;
+      circle.el.style.height = `${diameter}px`;
+      circle.el.style.fontSize = `${Math.max(10, diameter * 0.42)}px`;
+    }
+
+    function renderCircle(circle) {
+      circle.el.style.left = `${circle.x}px`;
+      circle.el.style.top = `${circle.y}px`;
+    }
+
+    function getStagePoint(event) {
+      const rect = stage.getBoundingClientRect();
+
+      return {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top
+      };
+    }
+
+    function startDrag(event, circle) {
+      if (locked || correcting) return;
+
+      event.preventDefault();
+
+      const point = getStagePoint(event);
+
+      activeDrag = {
+        circle,
+        offsetX: circle.x - point.x,
+        offsetY: circle.y - point.y,
+        previousX: circle.x,
+        previousY: circle.y,
+        wasPlaced: circle.placed
+      };
+
+      circle.el.setPointerCapture(event.pointerId);
+      circle.el.classList.add("dragging");
+
+      window.addEventListener("pointermove", moveDrag);
+      window.addEventListener("pointerup", endDrag, { once: true });
+    }
+
+    function moveDrag(event) {
+      if (!activeDrag) return;
+
+      const point = getStagePoint(event);
+      const circle = activeDrag.circle;
+
+      circle.x = point.x + activeDrag.offsetX;
+      circle.y = point.y + activeDrag.offsetY;
+
+      renderCircle(circle);
+      updateOverlaps();
+    }
+
+    function endDrag(event) {
+      if (!activeDrag) return;
+
+      const circle = activeDrag.circle;
+      circle.el.classList.remove("dragging");
+
+      const overLine = isCircleOverLine(circle);
+
+      if (overLine) {
+        circle.x = clamp(circle.x, lineStart, lineEnd);
+        circle.y = lineY;
+        circle.placed = true;
+
+        setCircleSize(circle, snappedDiameter);
+        circle.el.classList.add("snapped");
+      } else {
+        if (activeDrag.wasPlaced) {
+          circle.x = activeDrag.previousX;
+          circle.y = activeDrag.previousY;
+          circle.placed = true;
+          setCircleSize(circle, snappedDiameter);
+          circle.el.classList.add("snapped");
+        } else {
+          circle.x = circle.homeX;
+          circle.y = circle.homeY;
+          circle.placed = false;
+          setCircleSize(circle, startDiameter);
+          circle.el.classList.remove("snapped");
+        }
+      }
+
+      renderCircle(circle);
+      activeDrag = null;
+
+      updateOverlaps();
+
+      if (circles.every(c => c.placed)) {
+        locked = true;
+        correcting = true;
+
+        setTimeout(correctPlacedNumbers, 550);
+      }
+
+      window.removeEventListener("pointermove", moveDrag);
+    }
+
+    function isCircleOverLine(circle) {
+      const verticalTolerance = Math.max(34, snappedDiameter * 1.2);
+      const withinY = Math.abs(circle.y - lineY) <= verticalTolerance;
+      const withinX =
+        circle.x >= lineStart - snappedDiameter &&
+        circle.x <= lineEnd + snappedDiameter;
+
+      return withinY && withinX;
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    async function correctPlacedNumbers() {
+      questionText.textContent =
+        "All numbers placed. Correcting from left to right...";
+
+      const placedLeftToRight = [...circles].sort((a, b) => a.x - b.x);
+
+      for (const circle of placedLeftToRight) {
+        await animateCircleToCorrectPosition(circle);
+      }
+
+      circles.forEach(circle => {
+        circle.x = valueToX(circle.value);
+        circle.y = lineY;
+        renderCircle(circle);
+      });
+
+      updateOverlaps();
+
+      completedQuestions++;
+      updateProgress();
+
+      if (completedQuestions >= TOTAL_QUESTIONS) {
+        questionText.textContent = "Activity complete!";
+        activityComplete();
+        return;
+      }
+
+      questionText.textContent = "Nice! Loading the next question...";
+
+      setTimeout(setupQuestion, 1000);
+    }
+
+    function animateCircleToCorrectPosition(circle) {
+      const startX = circle.x;
+      const targetX = valueToX(circle.value);
+      const distancePx = Math.abs(targetX - startX);
+      const distanceUnits = distancePx / unitPx;
+
+      if (distancePx < 0.5) {
+        circle.x = targetX;
+        renderCircle(circle);
+        return Promise.resolve();
+      }
+
+      const duration = Math.max(750, distanceUnits * 260);
+      let previousX = startX;
+
+      return new Promise(resolve => {
+        const animationStart = performance.now();
+
+        function step(now) {
+          const rawProgress = Math.min(1, (now - animationStart) / duration);
+          const progress = easeInOutCubic(rawProgress);
+
+          const newX = startX + (targetX - startX) * progress;
+
+          const movedUnits = Math.abs(newX - previousX) / unitPx;
+          if (movedUnits > 0) {
+            addError(movedUnits);
+          }
+
+          checkCrossings(circle, previousX, newX);
+
+          circle.x = newX;
+          circle.y = lineY;
+          renderCircle(circle);
+          updateOverlaps();
+
+          previousX = newX;
+
+          if (rawProgress < 1) {
+            requestAnimationFrame(step);
+          } else {
+            circle.x = targetX;
+            renderCircle(circle);
+            updateOverlaps();
+            resolve();
+          }
+        }
+
+        requestAnimationFrame(step);
+      });
+    }
+
+    function easeInOutCubic(t) {
+      return t < 0.5
+        ? 4 * t * t * t
+        : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    function checkCrossings(movingCircle, oldX, newX) {
+      for (const other of circles) {
+        if (other === movingCircle) continue;
+
+        const key = pairKey(movingCircle, other);
+        if (crossedPairsThisQuestion.has(key)) continue;
+
+        const otherX = other.x;
+
+        const crossed =
+          (oldX < otherX && newX >= otherX) ||
+          (oldX > otherX && newX <= otherX);
+
+        if (crossed) {
+          crossedPairsThisQuestion.add(key);
+          addError(10);
+          triggerCrossingEffect(movingCircle, other);
+        }
+      }
+    }
+
+    function pairKey(a, b) {
+      return [a.id, b.id].sort().join("-");
+    }
+
+    function triggerCrossingEffect(a, b) {
+      [a, b].forEach(circle => {
+        circle.el.classList.add("crossing", "jiggle");
+      });
+
+      setTimeout(() => {
+        [a, b].forEach(circle => {
+          circle.el.classList.remove("crossing", "jiggle");
+        });
+
+        updateOverlaps();
+      }, 900);
+    }
+
+    function addError(amount) {
+      errorTotal += amount;
+      errorDisplay.textContent = `Error: ${errorTotal.toFixed(1)}`;
+    }
+
+    function updateProgress() {
+      const percent = (completedQuestions / TOTAL_QUESTIONS) * 100;
+      progressBar.style.width = `${percent}%`;
+    }
+
+    function updateOverlaps() {
+      circles.forEach(circle => {
+        circle.el.classList.remove("overlap");
+      });
+
+      for (let i = 0; i < circles.length; i++) {
+        for (let j = i + 1; j < circles.length; j++) {
+          const a = circles[i];
+          const b = circles[j];
+
+          if (hasTwentyFivePercentOverlap(a, b)) {
+            a.el.classList.add("overlap");
+            b.el.classList.add("overlap");
+          }
+        }
+      }
+    }
+
+    function hasTwentyFivePercentOverlap(a, b) {
+      const r1 = a.diameter / 2;
+      const r2 = b.diameter / 2;
+
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+
+      const area = circleIntersectionArea(r1, r2, d);
+
+      const area1 = Math.PI * r1 * r1;
+      const area2 = Math.PI * r2 * r2;
+
+      return area >= area1 * 0.25 && area >= area2 * 0.25;
+    }
+
+    function circleIntersectionArea(r1, r2, d) {
+      if (d >= r1 + r2) return 0;
+
+      if (d <= Math.abs(r1 - r2)) {
+        const smaller = Math.min(r1, r2);
+        return Math.PI * smaller * smaller;
+      }
+
+      const part1 =
+        r1 * r1 *
+        Math.acos((d * d + r1 * r1 - r2 * r2) / (2 * d * r1));
+
+      const part2 =
+        r2 * r2 *
+        Math.acos((d * d + r2 * r2 - r1 * r1) / (2 * d * r2));
+
+      const part3 =
+        0.5 *
+        Math.sqrt(
+          Math.max(
+            0,
+            (-d + r1 + r2) *
+              (d + r1 - r2) *
+              (d - r1 + r2) *
+              (d + r1 + r2)
+          )
+        );
+
+      return part1 + part2 - part3;
+    }
+
+    window.addEventListener("resize", () => {
+      if (!correcting && !locked) {
+        setupQuestion();
+      }
+    });
+
+    setupQuestion();
+  </script>
+</body>
+</html>
+```

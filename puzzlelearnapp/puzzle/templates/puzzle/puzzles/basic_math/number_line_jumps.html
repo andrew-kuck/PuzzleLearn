@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ puzzle_name }}</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f4f7fb;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      color: #111;
+    }
+
+    .activity-container {
+      width: 100%;
+      max-width: 900px;
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0 0 18px;
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 800;
+    }
+
+    .progress-wrapper {
+      width: 100%;
+      height: 24px;
+      background: #e5e7eb;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 2px solid #d1d5db;
+      margin-bottom: 42px;
+    }
+
+    .progress-fill {
+      width: 0%;
+      height: 100%;
+      background: #22c55e;
+      border-radius: 999px;
+      transition: width 0.35s ease, background-color 0.2s ease;
+    }
+
+    .progress-fill.penalty {
+      background: #ef4444;
+    }
+
+    .number-line-area {
+      position: relative;
+      width: 100%;
+      padding: 20px 18px 20px;
+      margin-bottom: 0px;
+    }
+
+    .number-axis {
+      position: relative;
+      width: 100%;
+      height: 100px;
+    }
+
+    /* The track leaves room on both ends for arrowheads */
+    .axis-track {
+      position: absolute;
+      top: 0;
+      left: 28px;
+      right: 28px;
+      height: 100px;
+    }
+
+    .axis-line {
+      position: absolute;
+      top: 36px;
+      left: 0;
+      width: 100%;
+      height: 7px;
+      background: #000;
+      border-radius: 999px;
+    }
+
+    /* Arrowheads now appear just beyond the final tick marks */
+    .axis-line::before,
+    .axis-line::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 0;
+      height: 0;
+    }
+
+    .axis-line::before {
+      left: -20px;
+      border-top: 12px solid transparent;
+      border-bottom: 12px solid transparent;
+      border-right: 18px solid #000;
+    }
+
+    .axis-line::after {
+      right: -20px;
+      border-top: 12px solid transparent;
+      border-bottom: 12px solid transparent;
+      border-left: 18px solid #000;
+    }
+
+    .tick {
+      position: absolute;
+      top: 27px;
+      transform: translateX(-50%);
+      text-align: center;
+    }
+
+    .tick-mark {
+      width: 3px;
+      height: 24px;
+      background: #000;
+      margin: 0 auto;
+      border-radius: 2px;
+    }
+
+    .tick-label {
+      margin-top: 10px;
+      font-size: clamp(0.65rem, 1.8vw, 0.9rem);
+      font-weight: 700;
+      color: #111827;
+      user-select: none;
+    }
+
+    .dot {
+      position: absolute;
+      top: 25px;
+      left: 50%;
+      width: 30px;
+      height: 30px;
+      background: #2563eb;
+      border: 4px solid #ffffff;
+      border-radius: 50%;
+      box-shadow: 0 3px 10px rgba(37, 99, 235, 0.55);
+      transform: translateX(-50%);
+      z-index: 5;
+      transition: left 0.5s ease, opacity 0.25s ease;
+    }
+
+    .choices {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 12px;
+    }
+
+    .choice-button {
+      width: clamp(58px, 11vw, 78px);
+      height: clamp(58px, 11vw, 78px);
+      border-radius: 50%;
+      border: 3px solid #111827;
+      background: #ffffff;
+      color: #111827;
+      font-size: clamp(1.1rem, 3vw, 1.6rem);
+      font-weight: 800;
+      cursor: pointer;
+      transition:
+        transform 0.15s ease,
+        background-color 0.15s ease,
+        box-shadow 0.15s ease;
+    }
+
+    .choice-button:hover {
+      transform: translateY(-4px) scale(1.04);
+      background: #eff6ff;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    .choice-button:active {
+      transform: translateY(0) scale(0.95);
+      background: #dbeafe;
+    }
+
+    .choice-button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .success-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.82);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+      z-index: 1000;
+    }
+
+    .success-overlay.show {
+      opacity: 1;
+    }
+
+    .checkmark {
+      font-size: clamp(8rem, 22vw, 16rem);
+      color: #22c55e;
+      font-weight: 900;
+      animation: pop 0.45s ease;
+    }
+
+    @keyframes pop {
+      0% {
+        transform: scale(0.35);
+      }
+
+      70% {
+        transform: scale(1.18);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    @media (max-width: 600px) {
+      .activity-container {
+        padding: 22px 14px;
+      }
+
+      .number-line-area {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+
+      .tick-label {
+        transform: rotate(-45deg);
+        transform-origin: top center;
+        margin-top: 12px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="activity-container">
+    <h1>Reach 0</h1>
+
+    <div class="progress-wrapper" aria-label="Progress">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+
+    <section class="number-line-area" aria-label="Number line from negative fifteen to fifteen">
+      <div class="number-axis" id="numberAxis">
+        <div class="axis-track" id="axisTrack">
+          <div class="axis-line"></div>
+          <div class="dot" id="dot"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="choices" id="choices" aria-label="Choice buttons"></section>
+  </main>
+
+  <div class="success-overlay" id="successOverlay" aria-hidden="true">
+    <div class="checkmark">✓</div>
+  </div>
+
+  <script>
+    const MIN = -15;
+    const MAX = 15;
+
+    const SUCCESS_INCREMENT = 20;
+    const PENALTY_DECREMENT = 2;
+
+    let currentPosition = 0;
+    let progress = 0;
+    let isAnimating = false;
+
+    const numberAxis = document.getElementById("numberAxis");
+    const axisTrack = document.getElementById("axisTrack");
+    const dot = document.getElementById("dot");
+    const choices = document.getElementById("choices");
+    const progressFill = document.getElementById("progressFill");
+    const successOverlay = document.getElementById("successOverlay");
+
+    // Default fallback in case this activity is not inside a larger platform.
+    window.activityComplete = window.activityComplete || function () {
+      console.log("Activity complete!");
+    };
+
+    function randomInteger(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function randomStartingPosition() {
+      let value = 0;
+
+      while (value === 0) {
+        value = randomInteger(MIN, MAX);
+      }
+
+      return value;
+    }
+
+    function randomChoiceValue() {
+      return randomInteger(-10, 10);
+    }
+
+    function formatNumber(value) {
+      return value > 0 ? `+${value}` : `${value}`;
+    }
+
+    function positionToPercent(position) {
+      return ((position - MIN) / (MAX - MIN)) * 100;
+    }
+
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function createTicks() {
+      for (let value = MIN; value <= MAX; value++) {
+        const tick = document.createElement("div");
+        tick.className = "tick";
+        tick.style.left = `${positionToPercent(value)}%`;
+
+        const mark = document.createElement("div");
+        mark.className = "tick-mark";
+
+        const label = document.createElement("div");
+        label.className = "tick-label";
+        label.textContent = value;
+
+        tick.appendChild(mark);
+        tick.appendChild(label);
+        axisTrack.appendChild(tick);
+      }
+    }
+
+    function setDotPosition(position, instant = false) {
+      if (instant) {
+        dot.style.transition = "none";
+      } else {
+        dot.style.transition = "left 0.5s ease, opacity 0.25s ease";
+      }
+
+      dot.style.left = `${positionToPercent(position)}%`;
+
+      if (instant) {
+        dot.offsetHeight; // force reflow
+        dot.style.transition = "left 0.5s ease, opacity 0.25s ease";
+      }
+    }
+
+    function setDotPercent(percent, instant = false) {
+      if (instant) {
+        dot.style.transition = "none";
+      } else {
+        dot.style.transition = "left 0.5s ease, opacity 0.25s ease";
+      }
+
+      dot.style.left = `${percent}%`;
+
+      if (instant) {
+        dot.offsetHeight; // force reflow
+        dot.style.transition = "left 0.5s ease, opacity 0.25s ease";
+      }
+    }
+
+    function updateProgress(newProgress, flashRed = false) {
+      progress = Math.max(0, Math.min(100, newProgress));
+      progressFill.style.width = `${progress}%`;
+
+      if (flashRed) {
+        progressFill.classList.add("penalty");
+
+        setTimeout(() => {
+          progressFill.classList.remove("penalty");
+        }, 250);
+      }
+    }
+
+    function createChoiceButton(value) {
+      const button = document.createElement("button");
+      button.className = "choice-button";
+      button.type = "button";
+      button.textContent = formatNumber(value);
+      button.dataset.value = value;
+
+      button.addEventListener("click", () => handleChoiceClick(button));
+
+      return button;
+    }
+
+    function generateChoices() {
+      choices.innerHTML = "";
+
+      for (let i = 0; i < 7; i++) {
+        choices.appendChild(createChoiceButton(randomChoiceValue()));
+      }
+    }
+
+    function replaceChoiceButton(button) {
+      const newButton = createChoiceButton(randomChoiceValue());
+      choices.replaceChild(newButton, button);
+    }
+
+    function setButtonsDisabled(disabled) {
+      document.querySelectorAll(".choice-button").forEach(button => {
+        button.disabled = disabled;
+      });
+    }
+
+    async function animateOverflowRight() {
+      setDotPercent(106);
+      await delay(500);
+
+      dot.style.opacity = "0";
+      await delay(260);
+
+      currentPosition = MAX;
+      setDotPosition(MAX, true);
+
+      dot.style.opacity = "1";
+      await delay(260);
+    }
+
+    async function animateOverflowLeft() {
+      setDotPercent(-6);
+      await delay(500);
+
+      dot.style.opacity = "0";
+      await delay(260);
+
+      currentPosition = MIN;
+      setDotPosition(MIN, true);
+
+      dot.style.opacity = "1";
+      await delay(260);
+    }
+
+    async function showSuccess() {
+      successOverlay.classList.add("show");
+      await delay(700);
+      successOverlay.classList.remove("show");
+      await delay(250);
+    }
+
+    async function startNewRound() {
+      currentPosition = randomStartingPosition();
+      setDotPosition(currentPosition, true);
+      generateChoices();
+    }
+
+    async function handleChoiceClick(button) {
+      if (isAnimating) return;
+
+      isAnimating = true;
+      setButtonsDisabled(true);
+
+      const value = Number(button.dataset.value);
+
+      updateProgress(progress - PENALTY_DECREMENT, true);
+
+      const newPosition = currentPosition + value;
+
+      replaceChoiceButton(button);
+
+      if (newPosition > MAX) {
+        await animateOverflowRight();
+      } else if (newPosition < MIN) {
+        await animateOverflowLeft();
+      } else {
+        currentPosition = newPosition;
+        setDotPosition(currentPosition);
+        await delay(520);
+      }
+
+      if (currentPosition === 0) {
+        updateProgress(progress + SUCCESS_INCREMENT);
+
+        await showSuccess();
+
+        if (progress >= 100) {
+          activityComplete();
+          return;
+        }
+
+        await startNewRound();
+      }
+
+      setButtonsDisabled(false);
+      isAnimating = false;
+    }
+
+    createTicks();
+    startNewRound();
+
+  </script>
+<script src="/static/puzzle/js/activity.js"></script>
+<script>autoZoom();</script>
+</body>
+</html>

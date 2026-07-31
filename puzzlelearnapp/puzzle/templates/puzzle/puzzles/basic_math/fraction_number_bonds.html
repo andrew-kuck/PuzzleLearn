@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ puzzle_name }}</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: #f7f7fb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #222;
+    }
+
+    .activity {
+      width: min(95vw, 700px);
+      background: white;
+      border-radius: 18px;
+      padding: 32px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+      text-align: center;
+      position: relative;
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 1.6rem;
+    }
+
+    .instructions {
+      margin-bottom: 24px;
+      color: #555;
+    }
+
+    .tree {
+      width: 520px;
+      height: 330px;
+      max-width: 100%;
+      margin: 0 auto 30px;
+      position: relative;
+    }
+
+    .branches {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .branch-line {
+      stroke: #333;
+      stroke-width: 4;
+      stroke-linecap: round;
+    }
+
+    .node {
+      width: 90px;
+      height: 90px;
+      border: 4px solid #333;
+      border-radius: 50%;
+      background: #fff;
+      position: absolute;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: bold;
+    }
+
+    .root {
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .left-leaf {
+      top: 210px;
+      left: 65px;
+    }
+
+    .right-leaf {
+      top: 210px;
+      right: 65px;
+    }
+
+    .node input {
+      width: 70px;
+      height: 52px;
+      border: none;
+      outline: none;
+      text-align: center;
+      font-size: 2rem;
+      font-weight: bold;
+      background: transparent;
+      color: #111;
+    }
+
+    .node input::-webkit-outer-spin-button,
+    .node input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    .node input[type="number"] {
+      appearance: textfield;
+      -moz-appearance: textfield;
+    }
+
+    .progress-wrapper {
+      width: 100%;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    .progress-bar {
+      height: 28px;
+      background: #e5e5e5;
+      border-radius: 999px;
+      overflow: hidden;
+      position: relative;
+      border: 2px solid #ccc;
+    }
+
+    .zero-line {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: #888;
+      transform: translateX(-50%);
+      z-index: 3;
+    }
+
+    .fill-positive,
+    .fill-negative {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      width: 0;
+      transition: width 0.25s ease;
+    }
+
+    .fill-positive {
+      left: 50%;
+      background: #27ae60;
+    }
+
+    .fill-negative {
+      right: 50%;
+      background: #e74c3c;
+    }
+
+    .feedback {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 10rem;
+      font-weight: bold;
+      z-index: 100;
+      pointer-events: none;
+      animation: pop 0.35s ease;
+    }
+
+    .feedback.correct {
+      color: #20b15a;
+      display: flex;
+    }
+
+    .feedback.incorrect {
+      color: #e53935;
+      display: flex;
+    }
+
+    @keyframes pop {
+      from {
+        transform: scale(0.6);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .complete-message {
+      margin-top: 20px;
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: #27ae60;
+      display: none;
+    }
+
+    @media (max-width: 560px) {
+      .activity {
+        padding: 24px 14px;
+      }
+
+      .tree {
+        height: 300px;
+      }
+
+      .node {
+        width: 78px;
+        height: 78px;
+        font-size: 1.7rem;
+      }
+
+      .node input {
+        width: 60px;
+        font-size: 1.7rem;
+      }
+
+      .left-leaf {
+        left: 25px;
+        top: 205px;
+      }
+
+      .right-leaf {
+        right: 25px;
+        top: 205px;
+      }
+
+      .feedback {
+        font-size: 7rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="activity">
+    <h1>Complete the Multiplication Number Bond</h1>
+    <p class="instructions">
+      Type your answers as improper fractions (like 4/3) or whole numbers (like 2).
+    </p>
+
+    <section class="tree" aria-label="Integer tree problem">
+      <svg class="branches" viewBox="0 0 520 330" preserveAspectRatio="none">
+        <line class="branch-line" x1="260" y1="110" x2="110" y2="250"></line>
+        <line class="branch-line" x1="260" y1="110" x2="410" y2="250"></line>
+      </svg>
+
+      <div class="node root" id="rootNode"></div>
+      <div class="node left-leaf" id="leftNode"></div>
+      <div class="node right-leaf" id="rightNode"></div>
+    </section>
+
+    <div class="progress-wrapper" aria-label="Progress from negative ten to positive ten">
+      <div class="progress-bar">
+        <div class="fill-negative" id="fillNegative"></div>
+        <div class="fill-positive" id="fillPositive"></div>
+        <div class="zero-line"></div>
+      </div>
+    </div>
+
+    <div class="complete-message" id="completeMessage">
+      Activity complete!
+    </div>
+  </main>
+
+  <div class="feedback" id="feedback" aria-hidden="true"></div>
+
+  <script>
+    const rootNode = document.getElementById("rootNode");
+    const leftNode = document.getElementById("leftNode");
+    const rightNode = document.getElementById("rightNode");
+
+    const fillPositive = document.getElementById("fillPositive");
+    const fillNegative = document.getElementById("fillNegative");
+    const feedback = document.getElementById("feedback");
+    const completeMessage = document.getElementById("completeMessage");
+
+    let currentAnswer = null;
+    let progress = 0;
+    let completed = false;
+
+    const fractionLeafOptions = [
+      { numerator: 1, denominator: 2 },
+      { numerator: 1, denominator: 3 },
+      { numerator: 1, denominator: 4 },
+      { numerator: 1, denominator: 5 },
+      { numerator: 1, denominator: 6 },
+      { numerator: 1, denominator: 7 },
+      { numerator: 1, denominator: 8 },
+      { numerator: 1, denominator: 9 }
+    ];
+
+    function randomInteger(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function randomItem(array) {
+      return array[Math.floor(Math.random() * array.length)];
+    }
+
+    function gcd(a, b) {
+      a = Math.abs(a);
+      b = Math.abs(b);
+
+      while (b !== 0) {
+        const temp = b;
+        b = a % b;
+        a = temp;
+      }
+
+      return a;
+    }
+
+    function simplifyFraction(fraction) {
+      let numerator = fraction.numerator;
+      let denominator = fraction.denominator;
+
+      if (denominator < 0) {
+        numerator *= -1;
+        denominator *= -1;
+      }
+
+      const divisor = gcd(numerator, denominator);
+
+      return {
+        numerator: numerator / divisor,
+        denominator: denominator / divisor
+      };
+    }
+
+    function multiplyFractions(a, b) {
+      return simplifyFraction({
+        numerator: a.numerator * b.numerator,
+        denominator: a.denominator * b.denominator
+      });
+    }
+
+    function integerToFraction(value) {
+      return {
+        numerator: value,
+        denominator: 1
+      };
+    }
+
+    function formatFraction(fraction) {
+      const simplified = simplifyFraction(fraction);
+
+      if (simplified.denominator === 1) {
+        return String(simplified.numerator);
+      }
+
+      return `${simplified.numerator}/${simplified.denominator}`;
+    }
+
+    function fractionsAreEqual(a, b) {
+      const first = simplifyFraction(a);
+      const second = simplifyFraction(b);
+
+      return (
+        first.numerator === second.numerator &&
+        first.denominator === second.denominator
+      );
+    }
+
+    function parseUserInput(value) {
+      const trimmed = value.trim();
+
+      if (trimmed === "") {
+        return null;
+      }
+
+      // Fraction input, such as 1/2 or 3/4
+      if (trimmed.includes("/")) {
+        const parts = trimmed.split("/");
+
+        if (parts.length !== 2) {
+          return null;
+        }
+
+        const numerator = Number(parts[0].trim());
+        const denominator = Number(parts[1].trim());
+
+        if (
+          !Number.isInteger(numerator) ||
+          !Number.isInteger(denominator) ||
+          denominator === 0
+        ) {
+          return null;
+        }
+
+        return simplifyFraction({ numerator, denominator });
+      }
+
+      // Whole number input, such as 3
+      const number = Number(trimmed);
+
+      if (!Number.isInteger(number)) {
+        return null;
+      }
+
+      return {
+        numerator: number,
+        denominator: 1
+      };
+    }
+
+    function clearNodes() {
+      rootNode.innerHTML = "";
+      leftNode.innerHTML = "";
+      rightNode.innerHTML = "";
+    }
+
+    function makeInput(answer) {
+      const input = document.createElement("input");
+
+      // Use text instead of number so fractions like 1/2 can be typed.
+      input.type = "text";
+      input.inputMode = "text";
+      input.setAttribute("aria-label", "Missing value");
+      input.autocomplete = "off";
+
+      input.addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+          checkAnswer(input.value);
+        }
+      });
+
+      currentAnswer = answer;
+      return input;
+    }
+
+    function newProblem() {
+      if (completed) return;
+
+      clearNodes();
+
+      const integerLeaf = integerToFraction(randomInteger(1, 9));
+      const fractionLeaf = randomItem(fractionLeafOptions);
+      const root = multiplyFractions(integerLeaf, fractionLeaf);
+
+      // Randomly decide whether the integer leaf or fraction leaf goes on the left.
+      let left;
+      let right;
+
+      if (Math.random() < 0.5) {
+        left = integerLeaf;
+        right = fractionLeaf;
+      } else {
+        left = fractionLeaf;
+        right = integerLeaf;
+      }
+
+      const missing = randomInteger(0, 2);
+      let input;
+
+      if (missing === 0) {
+        input = makeInput(root);
+        rootNode.appendChild(input);
+        leftNode.textContent = formatFraction(left);
+        rightNode.textContent = formatFraction(right);
+      } else if (missing === 1) {
+        rootNode.textContent = formatFraction(root);
+        input = makeInput(left);
+        leftNode.appendChild(input);
+        rightNode.textContent = formatFraction(right);
+      } else {
+        rootNode.textContent = formatFraction(root);
+        leftNode.textContent = formatFraction(left);
+        input = makeInput(right);
+        rightNode.appendChild(input);
+      }
+
+      // Automatically activate the input so the user can type immediately.
+      setTimeout(() => {
+        input.focus();
+        input.select();
+      }, 0);
+    }
+
+    function checkAnswer(value) {
+      if (completed) return;
+
+      const userAnswer = parseUserInput(value);
+
+      if (userAnswer === null) {
+        showFeedback(false);
+        updateProgress(-1);
+        scheduleNextProblem();
+        return;
+      }
+
+      if (fractionsAreEqual(userAnswer, currentAnswer)) {
+        showFeedback(true);
+        updateProgress(1);
+
+        if (progress >= 10) {
+          completed = true;
+          activityComplete();
+          return;
+        }
+
+        scheduleNextProblem();
+      } else {
+        showFeedback(false);
+        updateProgress(-1);
+        scheduleNextProblem();
+      }
+    }
+
+    function updateProgress(change) {
+      progress += change;
+
+      if (progress < -10) {
+        progress = -10;
+      }
+
+      if (progress > 10) {
+        progress = 10;
+      }
+
+      renderProgress();
+    }
+
+    function renderProgress() {
+      // The full progress range is -10 to 10.
+      // Each side of the bar is 50% wide.
+      // Therefore, each unit equals 5% of the full bar.
+      const fillWidth = Math.abs(progress) * 5;
+
+      if (progress > 0) {
+        fillPositive.style.width = fillWidth + "%";
+        fillNegative.style.width = "0";
+      } else if (progress < 0) {
+        fillNegative.style.width = fillWidth + "%";
+        fillPositive.style.width = "0";
+      } else {
+        fillPositive.style.width = "0";
+        fillNegative.style.width = "0";
+      }
+    }
+
+    function showFeedback(isCorrect) {
+      feedback.textContent = isCorrect ? "✓" : "×";
+      feedback.className = "feedback " + (isCorrect ? "correct" : "incorrect");
+
+      setTimeout(() => {
+        feedback.className = "feedback";
+        feedback.textContent = "";
+      }, 450);
+    }
+
+    function scheduleNextProblem() {
+      setTimeout(() => {
+        newProblem();
+      }, 500);
+    }
+
+    // This function is called when progress reaches 10.
+    // Replace the contents with whatever should happen at completion.
+    function activityComplete() {
+      completeMessage.style.display = "block";
+      clearNodes();
+      rootNode.textContent = "✓";
+      leftNode.textContent = "✓";
+      rightNode.textContent = "✓";
+      console.log("Activity complete!");
+    }
+
+    renderProgress();
+    newProblem();
+
+  </script>
+<script src="/static/puzzle/js/activity.js"></script>
+<script>autoZoom();</script>
+</body>
+</html>

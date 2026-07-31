@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>{{ puzzle_name }}</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      margin: 0;
+      padding: 30px;
+      text-align: center;
+      color: #222;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    .instructions {
+      margin-bottom: 25px;
+      font-size: 18px;
+    }
+
+    .activity {
+      position: relative;
+      display: inline-block;
+      background: white;
+      padding: 25px;
+      border-radius: 14px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 90px) 90px;
+      grid-template-rows: repeat(3, 90px) 60px;
+      gap: 8px;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 25px;
+    }
+
+    .cell {
+      width: 90px;
+      height: 90px;
+      border: 3px solid #333;
+      border-radius: 10px;
+      background: #fffdf5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .cell img {
+      width: 65px;
+      height: 65px;
+      object-fit: contain;
+    }
+
+    .sum {
+      font-size: 24px;
+      font-weight: bold;
+      color: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .corner {
+      width: 90px;
+      height: 60px;
+    }
+
+    .inputs {
+      display: flex;
+      justify-content: center;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .input-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .input-label img {
+      width: 32px;
+      height: 32px;
+    }
+
+    input {
+      width: 80px;
+      padding: 8px;
+      font-size: 20px;
+      text-align: center;
+      border: 2px solid #888;
+      border-radius: 8px;
+    }
+
+    button {
+      font-size: 18px;
+      padding: 10px 22px;
+      border: none;
+      border-radius: 8px;
+      background: #00274c;
+      color: white;
+      cursor: pointer;
+      margin-bottom: 25px;
+    }
+
+    button:hover {
+      background: #004b8d;
+    }
+
+    .progress-wrapper {
+      width: 420px;
+      max-width: 90vw;
+      height: 34px;
+      margin: 0 auto;
+      position: relative;
+      background: #e5e5e5;
+      border: 2px solid #999;
+      border-radius: 18px;
+      overflow: hidden;
+    }
+
+    .progress-zero-line {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      width: 3px;
+      height: 100%;
+      background: #777;
+      z-index: 3;
+    }
+
+    .progress-fill {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      width: 0;
+      z-index: 2;
+      transition: all 0.3s ease;
+    }
+
+    .progress-fill.positive {
+      left: 50%;
+      background: #2eaf4a;
+    }
+
+    .progress-fill.negative {
+      right: 50%;
+      background: #d93025;
+    }
+
+    .overlay-symbol {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 180px;
+      font-weight: bold;
+      z-index: 999;
+      pointer-events: none;
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .overlay-symbol.correct {
+      color: #23a455;
+    }
+
+    .overlay-symbol.incorrect {
+      color: #d93025;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- <h1>Fruit Price Puzzle</h1> -->
+  <div class="instructions">
+    Use the row and column totals to figure out the cost of each fruit.
+  </div>
+
+  <div class="activity">
+    <div id="board" class="board"></div>
+
+    <div class="inputs">
+      <div class="input-group">
+        <label class="input-label" for="appleInput">
+          <img id="appleIcon" alt="Apple" />
+          Apple
+        </label>
+        <input id="appleInput" type="number" min="1" max="20" />
+      </div>
+
+      <div class="input-group">
+        <label class="input-label" for="bananaInput">
+          <img id="bananaIcon" alt="Banana" />
+          Banana
+        </label>
+        <input id="bananaInput" type="number" min="1" max="20" />
+      </div>
+
+      <div class="input-group">
+        <label class="input-label" for="strawberryInput">
+          <img id="strawberryIcon" alt="Strawberry" />
+          Strawberry
+        </label>
+        <input id="strawberryInput" type="number" min="1" max="20" />
+      </div>
+    </div>
+
+    <button onclick="checkAnswers()">Check Answers</button>
+
+    <div class="progress-wrapper" aria-label="Progress from negative ten to positive ten">
+      <div id="progressFill" class="progress-fill"></div>
+      <div class="progress-zero-line"></div>
+    </div>
+  </div>
+
+  <div id="overlaySymbol" class="overlay-symbol"></div>
+
+  <script>
+    const fruitImages = {
+      apple: `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+          <path d="M54 20 C60 8, 72 8, 78 12 C70 15, 64 22, 60 30" fill="#3f8f3a"/>
+          <path d="M50 25 C35 12, 15 25, 18 50 C21 78, 38 92, 50 82 C62 92, 79 78, 82 50 C85 25, 65 12, 50 25Z" fill="#63c14a"/>
+          <path d="M38 32 C30 38, 28 48, 30 58" stroke="#8edb63" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <rect x="47" y="10" width="8" height="20" rx="4" fill="#7a4a20"/>
+        </svg>
+      `,
+      banana: `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+          <path d="M20 30 C32 70, 66 84, 86 52 C68 68, 39 59, 31 25 Z" fill="#ffd84d"/>
+          <path d="M20 30 C32 70, 66 84, 86 52" fill="none" stroke="#d8a800" stroke-width="5" stroke-linecap="round"/>
+          <path d="M29 25 L18 24 L21 34 Z" fill="#6b4a1e"/>
+          <path d="M86 52 L91 43 L80 48 Z" fill="#6b4a1e"/>
+        </svg>
+      `,
+      strawberry: `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+          <!-- Strawberry Body -->
+          <path d="M50 15 C80 15, 85 55, 65 75 C55 85, 45 85, 35 75 C15 55, 20 15, 50 15 Z" fill="#FF3344" />
+          
+          <!-- Stem and Leaves -->
+          <path d="M50 12 C45 5, 35 5, 30 10 C35 15, 45 15, 50 12 Z" fill="#2ECC71" />
+          <path d="M50 12 C55 5, 65 5, 70 10 C65 15, 55 15, 50 12 Z" fill="#2ECC71" />
+          <path d="M48 12 Q42 18 38 15 Q45 12 48 12 Z" fill="#2ECC71" />
+          <path d="M52 12 Q58 18 62 15 Q55 12 52 12 Z" fill="#2ECC71" />
+
+          <!-- Seeds -->
+          <circle cx="40" cy="35" r="1.5" fill="#FFF" opacity="0.8" />
+          <circle cx="60" cy="35" r="1.5" fill="#FFF" opacity="0.8" />
+          <circle cx="35" cy="45" r="1.5" fill="#FFF" opacity="0.8" />
+          <circle cx="65" cy="45" r="1.5" fill="#FFF" opacity="0.8" />
+          <circle cx="45" cy="50" r="1.5" fill="#FFF" opacity="0.8" />
+          <circle cx="55" cy="50" r="1.5" fill="#FFF" opacity="0.8" />
+          <circle cx="40" cy="60" r="1.5" fill="#FFF" opacity="0.8" />
+          <circle cx="60" cy="60" r="1.5" fill="#FFF" opacity="0.8" />
+          <circle cx="50" cy="65" r="1.5" fill="#FFF" opacity="0.8" />
+        </svg>
+      `
+    };
+
+    const fruitNames = ["apple", "banana", "strawberry"];
+
+    let prices = {};
+    let grid = [];
+    let progress = 0;
+
+    const MAX_PROGRESS = 5;
+
+    function svgToDataUri(svg) {
+      return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
+    }
+
+    const imageSources = {
+      apple: svgToDataUri(fruitImages.apple),
+      banana: svgToDataUri(fruitImages.banana),
+      strawberry: svgToDataUri(fruitImages.strawberry)
+    };
+
+    document.getElementById("appleIcon").src = imageSources.apple;
+    document.getElementById("bananaIcon").src = imageSources.banana;
+    document.getElementById("strawberryIcon").src = imageSources.strawberry;
+
+    function randomPrice() {
+      return Math.floor(Math.random() * 20) + 1;
+    }
+
+    function randomFruit() {
+      return fruitNames[Math.floor(Math.random() * fruitNames.length)];
+    }
+
+    function generateProblem() {
+      prices = {
+        apple: randomPrice(),
+        banana: randomPrice(),
+        strawberry: randomPrice()
+      };
+
+      /*
+        Generate a random grid that contains enough information
+        to determine all three fruit prices.
+      */
+      do {
+        grid = [];
+        for (let r = 0; r < 3; r++) {
+          const row = [];
+          for (let c = 0; c < 3; c++) {
+            row.push(randomFruit());
+          }
+          grid.push(row);
+        }
+      } while (!isGoodGrid(grid));
+
+      renderBoard();
+      clearInputs();
+    }
+
+    function isGoodGrid(testGrid) {
+      const equations = [];
+
+      // Row equations
+      for (let r = 0; r < 3; r++) {
+        equations.push(countFruits(testGrid[r]));
+      }
+
+      // Column equations
+      for (let c = 0; c < 3; c++) {
+        const column = [];
+        for (let r = 0; r < 3; r++) {
+          column.push(testGrid[r][c]);
+        }
+        equations.push(countFruits(column));
+      }
+
+      return matrixRank(equations) === 3;
+    }
+
+    function countFruits(items) {
+      return [
+        items.filter(f => f === "apple").length,
+        items.filter(f => f === "banana").length,
+        items.filter(f => f === "strawberry").length
+      ];
+    }
+
+    function matrixRank(matrix) {
+      const m = matrix.map(row => row.slice());
+      let rank = 0;
+      let row = 0;
+
+      for (let col = 0; col < 3; col++) {
+        let pivot = row;
+
+        while (pivot < m.length && Math.abs(m[pivot][col]) < 1e-10) {
+          pivot++;
+        }
+
+        if (pivot === m.length) continue;
+
+        [m[row], m[pivot]] = [m[pivot], m[row]];
+
+        const pivotValue = m[row][col];
+        for (let c = col; c < 3; c++) {
+          m[row][c] /= pivotValue;
+        }
+
+        for (let r = 0; r < m.length; r++) {
+          if (r !== row) {
+            const factor = m[r][col];
+            for (let c = col; c < 3; c++) {
+              m[r][c] -= factor * m[row][c];
+            }
+          }
+        }
+
+        rank++;
+        row++;
+      }
+
+      return rank;
+    }
+
+    function renderBoard() {
+      const board = document.getElementById("board");
+      board.innerHTML = "";
+
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 3; c++) {
+          const fruit = grid[r][c];
+
+          const cell = document.createElement("div");
+          cell.className = "cell";
+
+          const img = document.createElement("img");
+          img.src = imageSources[fruit];
+          img.alt = fruit;
+
+          cell.appendChild(img);
+          board.appendChild(cell);
+        }
+
+        const rowSum = grid[r].reduce((sum, fruit) => sum + prices[fruit], 0);
+        const sumCell = document.createElement("div");
+        sumCell.className = "sum";
+        sumCell.textContent = "$" + rowSum;
+        board.appendChild(sumCell);
+      }
+
+      for (let c = 0; c < 3; c++) {
+        let colSum = 0;
+        for (let r = 0; r < 3; r++) {
+          colSum += prices[grid[r][c]];
+        }
+
+        const sumCell = document.createElement("div");
+        sumCell.className = "sum";
+        sumCell.textContent = "$" + colSum;
+        board.appendChild(sumCell);
+      }
+
+      const corner = document.createElement("div");
+      corner.className = "corner";
+      board.appendChild(corner);
+    }
+
+    function clearInputs() {
+      document.getElementById("appleInput").value = "";
+      document.getElementById("bananaInput").value = "";
+      document.getElementById("strawberryInput").value = "";
+    }
+
+    function checkAnswers() {
+      const appleGuess = Number(document.getElementById("appleInput").value);
+      const bananaGuess = Number(document.getElementById("bananaInput").value);
+      const strawberryGuess = Number(document.getElementById("strawberryInput").value);
+
+      const correct =
+        appleGuess === prices.apple &&
+        bananaGuess === prices.banana &&
+        strawberryGuess === prices.strawberry;
+
+      if (correct) {
+        showSymbol("✓", true);
+        progress = Math.min(MAX_PROGRESS, progress + 1);
+        updateProgressBar();
+
+        if (progress >= MAX_PROGRESS) {
+          activityComplete();
+        } else {
+          setTimeout(generateProblem, 700);
+        }
+      } else {
+        showSymbol("✕", false);
+        progress = Math.max(-MAX_PROGRESS, progress - 1);
+        updateProgressBar();
+      }
+    }
+
+    function showSymbol(symbol, isCorrect) {
+      const overlay = document.getElementById("overlaySymbol");
+      overlay.textContent = symbol;
+      overlay.className = "overlay-symbol " + (isCorrect ? "correct" : "incorrect");
+      overlay.style.display = "flex";
+
+      setTimeout(() => {
+        overlay.style.display = "none";
+      }, 650);
+    }
+
+    function updateProgressBar() {
+      const fill = document.getElementById("progressFill");
+
+      fill.className = "progress-fill";
+      fill.style.width = "0";
+
+      if (progress > 0) {
+        fill.classList.add("positive");
+        fill.style.width = `${progress * (50/(MAX_PROGRESS))}%`;
+      } else if (progress < 0) {
+        fill.classList.add("negative");
+        fill.style.width = `${Math.abs(progress) * (50/(MAX_PROGRESS))}%`;
+      }
+    }
+
+    function activityComplete() {
+      alert("Activity complete! Great work!");
+    }
+
+    generateProblem();
+    updateProgressBar();
+
+  </script>
+
+<script src="/static/puzzle/js/activity.js"></script>
+<script>autoZoom();</script>
+</body>
+</html>

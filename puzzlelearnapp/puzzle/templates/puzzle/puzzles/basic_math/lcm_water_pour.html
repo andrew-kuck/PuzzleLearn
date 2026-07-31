@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>{{ puzzle_name }}</title>
+
+<style>
+  :root {
+    --side-cup-w: clamp(42px, 5vw, 78px);
+    --side-cup-h: clamp(70px, 13vh, 105px);
+
+    --middle-cup-w: calc(var(--side-cup-w) * 3);
+    --middle-cup-h: calc(var(--side-cup-h) * 4);
+
+    --water: #38aeea;
+    --cup-border: #333;
+    --success: #2ecc71;
+    --danger: #e74c3c;
+    --bg: #f7fbff;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: #1f2937;
+    padding-bottom: 20px;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .top {
+    padding: 12px 18px 6px;
+  }
+
+  .title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  h1 {
+    font-size: clamp(1rem, 2vw, 1.45rem);
+    margin: 0;
+  }
+
+  .progress-wrap {
+    width: 100%;
+    height: 18px;
+    background: #dbeafe;
+    border: 2px solid #93c5fd;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #60a5fa, #22c55e);
+    transition: width 0.4s ease;
+  }
+
+  .progress-text {
+    font-weight: 700;
+    font-size: 0.95rem;
+    white-space: nowrap;
+  }
+
+  .activity {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr 1.3fr 1.3fr 1fr;
+    align-items: end;
+    justify-items: center;
+    gap: clamp(8px, 2vw, 28px);
+    padding: 4px clamp(10px, 3vw, 40px) 8px;
+    position: relative;
+    margin-bottom: 10px;
+  }
+
+  .station {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .cup-area {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    position: relative;
+  }
+
+  .cup {
+    position: relative;
+    border: 4px solid var(--cup-border);
+    border-top: none;
+    border-radius: 0 0 14px 14px;
+    background: rgba(255, 255, 255, 0.75);
+    overflow: hidden;
+    box-shadow: inset 0 0 8px rgba(0,0,0,0.08);
+  }
+
+  .cup::before {
+    content: "";
+    position: absolute;
+    left: -4px;
+    right: -4px;
+    top: 0;
+    height: 4px;
+    background: var(--cup-border);
+    border-radius: 999px;
+    z-index: 4;
+  }
+
+  .side-cup {
+    width: var(--side-cup-w);
+    height: var(--side-cup-h);
+  }
+
+  .middle-cup {
+    width: var(--middle-cup-w);
+    height: var(--middle-cup-h);
+  }
+
+  .fill {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 0%;
+    background: linear-gradient(#67d8ff, var(--water));
+    transition: height 0.7s ease;
+  }
+
+  .fill::before {
+    content: "";
+    position: absolute;
+    left: -20%;
+    top: -6px;
+    width: 140%;
+    height: 14px;
+    background: rgba(255,255,255,0.35);
+    border-radius: 50%;
+  }
+
+  .amount-label {
+    position: absolute;
+    z-index: 5;
+    font-weight: 800;
+    font-size: clamp(0.85rem, 1.5vw, 1.2rem);
+    color: #111827;
+    text-shadow: 0 1px 2px white;
+  }
+
+  .middle-label {
+    font-size: clamp(0.85rem, 1.4vw, 1.1rem);
+  }
+
+  .equation {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: clamp(1rem, 2vw, 1.35rem);
+    font-weight: 700;
+    background: white;
+    padding: 8px 10px;
+    border-radius: 12px;
+    border: 2px solid #cbd5e1;
+    box-shadow: 0 4px 10px rgba(15,23,42,0.08);
+    white-space: nowrap;
+  }
+
+  .equation input {
+    width: clamp(48px, 6vw, 74px);
+    font-size: clamp(1rem, 2vw, 1.25rem);
+    font-weight: 700;
+    text-align: center;
+    border: 2px solid #64748b;
+    border-radius: 8px;
+    padding: 3px 4px;
+  }
+
+  /* Remove up/down spinner buttons from number inputs */
+
+    /* Chrome, Safari, Edge, Opera */
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    /* Firefox */
+    input[type="number"] {
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+
+  .equation input:disabled {
+    background: #e5e7eb;
+    color: #111827;
+    opacity: 1;
+  }
+
+  .c-value {
+    min-width: 42px;
+    text-align: center;
+    color: #0f766e;
+  }
+
+  .c-hidden {
+    color: transparent;
+    user-select: none;
+  }
+
+  .controls {
+    height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 6px 12px 12px;
+  }
+
+  button {
+    border: none;
+    border-radius: 12px;
+    background: #2563eb;
+    color: white;
+    padding: 10px 18px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 5px 12px rgba(37,99,235,0.25);
+  }
+
+  button:hover {
+    background: #1d4ed8;
+  }
+
+  .message {
+    font-weight: 700;
+    min-width: min(520px, 55vw);
+    color: #334155;
+  }
+
+  .pour-stream {
+    position: absolute;
+    width: 9px;
+    height: 0;
+    background: linear-gradient(var(--water), #7dd3fc);
+    border-radius: 999px;
+    opacity: 0;
+    z-index: 20;
+    pointer-events: none;
+  }
+
+  .pour-stream.active {
+    animation: pour 0.65s ease-in-out;
+  }
+
+  @keyframes pour {
+    0% {
+      height: 0;
+      opacity: 0;
+      transform: translateY(0);
+    }
+    20% {
+      opacity: 1;
+    }
+    50% {
+      height: 90px;
+      opacity: 1;
+    }
+    100% {
+      height: 0;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+  }
+
+  .check-overlay {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 100;
+    transition: opacity 0.25s ease;
+  }
+
+  .check-overlay.show {
+    opacity: 1;
+  }
+
+  .checkmark {
+    width: clamp(110px, 22vw, 240px);
+    height: clamp(110px, 22vw, 240px);
+    border-radius: 50%;
+    background: rgba(46, 204, 113, 0.92);
+    color: white;
+    display: grid;
+    place-items: center;
+    font-size: clamp(4rem, 14vw, 10rem);
+    font-weight: 900;
+    box-shadow: 0 12px 40px rgba(22, 163, 74, 0.45);
+  }
+
+  .cup-caption {
+    font-size: clamp(0.75rem, 1.4vw, 0.95rem);
+    font-weight: 700;
+    color: #475569;
+    text-align: center;
+  }
+
+  @media (max-width: 760px) {
+    .activity {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      align-items: center;
+    }
+
+    :root {
+      --side-cup-w: clamp(38px, 9vw, 58px);
+      --side-cup-h: clamp(58px, 10vh, 80px);
+    }
+
+    .message {
+      min-width: 0;
+      font-size: 0.9rem;
+    }
+
+    .controls {
+      height: 54px;
+    }
+  }
+</style>
+</head>
+
+<body>
+  <header class="top">
+    <div class="title-row" style="display: none;">
+      <h1>Make the Middle Cups Match the LCM</h1>
+      <div class="progress-text">
+        Correct: <span id="score">0</span>/10
+      </div>
+    </div>
+    <div class="progress-wrap" aria-label="Progress">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+  </header>
+
+  <main class="activity" id="activity">
+    <section class="station side-station" id="leftStation">
+      <div class="cup-area">
+        <div class="cup side-cup">
+          <div class="fill" id="leftSideFill"></div>
+          <div class="amount-label" id="leftAmountLabel"></div>
+        </div>
+      </div>
+      <div class="equation">
+        <span id="leftA"></span>
+        <span>×</span>
+        <input id="leftB" type="number" min="1" inputmode="numeric" aria-label="Left multiplier" />
+        <span>=</span>
+        <span class="c-value c-hidden" id="leftC">?</span>
+      </div>
+    </section>
+
+    <section class="station middle-station" id="leftMiddleStation">
+      <div class="cup-area">
+        <div class="cup middle-cup">
+          <div class="fill" id="leftMiddleFill"></div>
+          <div class="amount-label middle-label" id="leftMiddleLabel">0</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="station middle-station" id="rightMiddleStation">
+      <div class="cup-area">
+        <div class="cup middle-cup">
+          <div class="fill" id="rightMiddleFill"></div>
+          <div class="amount-label middle-label" id="rightMiddleLabel">0</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="station side-station" id="rightStation">
+      <div class="cup-area">
+        <div class="cup side-cup">
+          <div class="fill" id="rightSideFill"></div>
+          <div class="amount-label" id="rightAmountLabel"></div>
+        </div>
+      </div>
+      <div class="equation">
+        <span id="rightA"></span>
+        <span>×</span>
+        <input id="rightB" type="number" min="1" inputmode="numeric" aria-label="Right multiplier" />
+        <span>=</span>
+        <span class="c-value c-hidden" id="rightC">?</span>
+      </div>
+    </section>
+
+    <div class="pour-stream" id="leftPour"></div>
+    <div class="pour-stream" id="rightPour"></div>
+  </main>
+
+  <footer class="controls">
+    <button id="resetBtn">Reset</button>
+    <div class="message" id="message">Enter a multiplier for each side.</div>
+  </footer>
+
+  <div class="check-overlay" id="checkOverlay">
+    <div class="checkmark">✓</div>
+  </div>
+
+<script>
+  const CAPACITY_SMALL = 13;
+  const CAPACITY_BIG = 156;
+  const GOAL_COUNT = 10;
+
+  let leftAmount = 0;
+  let rightAmount = 0;
+  let leftCValue = null;
+  let rightCValue = null;
+  let correctCount = 0;
+  let locked = false;
+
+  const els = {
+    leftSideFill: document.getElementById("leftSideFill"),
+    rightSideFill: document.getElementById("rightSideFill"),
+    leftMiddleFill: document.getElementById("leftMiddleFill"),
+    rightMiddleFill: document.getElementById("rightMiddleFill"),
+
+    leftAmountLabel: document.getElementById("leftAmountLabel"),
+    rightAmountLabel: document.getElementById("rightAmountLabel"),
+    leftMiddleLabel: document.getElementById("leftMiddleLabel"),
+    rightMiddleLabel: document.getElementById("rightMiddleLabel"),
+
+    leftA: document.getElementById("leftA"),
+    rightA: document.getElementById("rightA"),
+    leftB: document.getElementById("leftB"),
+    rightB: document.getElementById("rightB"),
+    leftC: document.getElementById("leftC"),
+    rightC: document.getElementById("rightC"),
+
+    resetBtn: document.getElementById("resetBtn"),
+    message: document.getElementById("message"),
+    progressFill: document.getElementById("progressFill"),
+    score: document.getElementById("score"),
+
+    checkOverlay: document.getElementById("checkOverlay"),
+    leftPour: document.getElementById("leftPour"),
+    rightPour: document.getElementById("rightPour"),
+
+    leftStation: document.getElementById("leftStation"),
+    rightStation: document.getElementById("rightStation"),
+    leftMiddleStation: document.getElementById("leftMiddleStation"),
+    rightMiddleStation: document.getElementById("rightMiddleStation")
+  };
+
+  function activityComplete() {
+    console.log("Activity complete!");
+    els.message.textContent = "Activity complete! Excellent work.";
+  }
+
+  function randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  function gcd(a, b) {
+    while (b !== 0) {
+      const temp = b;
+      b = a % b;
+      a = temp;
+    }
+    return a;
+  }
+
+  function lcm(a, b) {
+    return Math.abs(a * b) / gcd(a, b);
+  }
+
+  function setFill(fillEl, amount, capacity) {
+    const pct = Math.max(0, Math.min(100, (amount / capacity) * 100));
+    fillEl.style.height = pct + "%";
+  }
+
+  function setProgress() {
+    els.score.textContent = correctCount;
+    els.progressFill.style.width = `${(correctCount / GOAL_COUNT) * 100}%`;
+  }
+
+  function clearMiddleCups() {
+    leftCValue = null;
+    rightCValue = null;
+
+    setFill(els.leftMiddleFill, 0, CAPACITY_BIG);
+    setFill(els.rightMiddleFill, 0, CAPACITY_BIG);
+
+    els.leftMiddleLabel.textContent = "0";
+    els.rightMiddleLabel.textContent = "0";
+
+    els.leftB.value = "";
+    els.rightB.value = "";
+    els.leftB.disabled = false;
+    els.rightB.disabled = false;
+
+    els.leftC.textContent = "?";
+    els.rightC.textContent = "?";
+    els.leftC.classList.add("c-hidden");
+    els.rightC.classList.add("c-hidden");
+
+    locked = false;
+  }
+
+  function newQuestion() {
+    leftAmount = randomInt(2, 12);
+    rightAmount = randomInt(2, 12);
+
+    while (rightAmount === leftAmount) {
+      rightAmount = randomInt(2, 12);
+    }
+
+    els.leftA.textContent = leftAmount;
+    els.rightA.textContent = rightAmount;
+
+    els.leftAmountLabel.textContent = leftAmount;
+    els.rightAmountLabel.textContent = rightAmount;
+
+    setFill(els.leftSideFill, leftAmount, CAPACITY_SMALL);
+    setFill(els.rightSideFill, rightAmount, CAPACITY_SMALL);
+
+    els.leftB.max = Math.floor(CAPACITY_BIG / leftAmount);
+    els.rightB.max = Math.floor(CAPACITY_BIG / rightAmount);
+
+    clearMiddleCups();
+
+    const answer = lcm(leftAmount, rightAmount);
+    els.message.textContent =
+      `Find multipliers so both middle cups have the same amount: the LCM of ${leftAmount} and ${rightAmount}.`;
+  }
+
+  function resetCurrentQuestion() {
+    clearMiddleCups();
+    els.message.textContent = "Reset complete. Try the multipliers again.";
+  }
+
+  function positionPourStream(side) {
+    const stream = side === "left" ? els.leftPour : els.rightPour;
+    const source = side === "left" ? els.leftStation : els.rightStation;
+    const target = side === "left" ? els.leftMiddleStation : els.rightMiddleStation;
+
+    const sourceRect = source.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const activityRect = document.getElementById("activity").getBoundingClientRect();
+
+    const startX =
+      side === "left"
+        ? sourceRect.right - activityRect.left - 8
+        : sourceRect.left - activityRect.left + 8;
+
+    const endX =
+      side === "left"
+        ? targetRect.left - activityRect.left + targetRect.width * 0.35
+        : targetRect.right - activityRect.left - targetRect.width * 0.35;
+
+    const x = (startX + endX) / 2;
+
+    const y = Math.min(sourceRect.top, targetRect.top) - activityRect.top + 20;
+
+    stream.style.left = `${x}px`;
+    stream.style.top = `${y}px`;
+  }
+
+  function animatePour(side, repetitions) {
+    return new Promise(resolve => {
+      const stream = side === "left" ? els.leftPour : els.rightPour;
+      let count = 0;
+
+      positionPourStream(side);
+
+      function onePour() {
+        stream.classList.remove("active");
+        void stream.offsetWidth;
+        stream.classList.add("active");
+
+        count++;
+
+        if (count < repetitions) {
+          setTimeout(onePour, 210);
+        } else {
+          setTimeout(() => {
+            stream.classList.remove("active");
+            resolve();
+          }, 700);
+        }
+      }
+
+      onePour();
+    });
+  }
+
+  async function submitSide(side) {
+    if (locked) return;
+
+    const isLeft = side === "left";
+    const input = isLeft ? els.leftB : els.rightB;
+    const amount = isLeft ? leftAmount : rightAmount;
+    const cEl = isLeft ? els.leftC : els.rightC;
+    const middleFill = isLeft ? els.leftMiddleFill : els.rightMiddleFill;
+    const middleLabel = isLeft ? els.leftMiddleLabel : els.rightMiddleLabel;
+
+    if (input.disabled) return;
+
+    const b = Number(input.value);
+
+    if (!Number.isInteger(b) || b <= 0) {
+      els.message.textContent = "Please enter a positive whole number.";
+      input.value = "";
+      input.focus();
+      return;
+    }
+
+    const c = amount * b;
+
+    if (c > CAPACITY_BIG) {
+      els.message.textContent =
+        `That would overfill the middle cup. Try a smaller multiplier.`;
+      input.value = "";
+      input.focus();
+      return;
+    }
+
+    input.disabled = true;
+    els.message.textContent = `Pouring ${amount}, ${b} time${b === 1 ? "" : "s"}...`;
+
+    await animatePour(side, Math.min(b, 12));
+
+    setFill(middleFill, c, CAPACITY_BIG);
+    middleLabel.textContent = c;
+
+    cEl.textContent = c;
+    cEl.classList.remove("c-hidden");
+
+    if (isLeft) {
+      leftCValue = c;
+    } else {
+      rightCValue = c;
+    }
+
+    checkAnswer();
+  }
+
+  function checkAnswer() {
+    if (leftCValue === null || rightCValue === null) {
+      els.message.textContent = "Now complete the other side.";
+      return;
+    }
+
+    const targetLCM = lcm(leftAmount, rightAmount);
+
+    if (
+      leftCValue === rightCValue &&
+      leftCValue === targetLCM
+    ) {
+      correctCount++;
+      setProgress();
+      locked = true;
+
+      els.checkOverlay.classList.add("show");
+      els.message.textContent = `Correct! ${targetLCM} is the least common multiple.`;
+
+      setTimeout(() => {
+        els.checkOverlay.classList.remove("show");
+
+        if (correctCount >= GOAL_COUNT) {
+          activityComplete();
+        } else {
+          newQuestion();
+        }
+      }, 1200);
+    } else if (leftCValue === rightCValue) {
+      els.message.textContent =
+        `The amounts match, but ${leftCValue} is not the least common multiple. Press Reset and try smaller matching values.`;
+    } else {
+      els.message.textContent =
+        "The middle cups do not match. Press Reset and try again.";
+    }
+  }
+
+  els.leftB.addEventListener("change", () => submitSide("left"));
+  els.rightB.addEventListener("change", () => submitSide("right"));
+
+  els.leftB.addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      submitSide("left");
+    }
+  });
+
+  els.rightB.addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      submitSide("right");
+    }
+  });
+
+  els.resetBtn.addEventListener("click", resetCurrentQuestion);
+
+  window.addEventListener("resize", () => {
+    positionPourStream("left");
+    positionPourStream("right");
+  });
+
+  setProgress();
+  newQuestion();
+
+</script>
+<script src="/static/puzzle/js/activity.js"></script>
+<script>autoZoom();</script>
+</body>
+</html>

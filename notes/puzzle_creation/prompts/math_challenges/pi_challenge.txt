@@ -1,0 +1,594 @@
+create an activity using html, css, and javascript. there is javascript constant for a string that is a long sequence of digits. initially, the constant can be set to the number 8 1000 times. initially the page is filled with the string. the string should be in size 32 font and centered on the page vertically and horizontally. it should extend with 10 digits on each line, and then break midword to the next line, so that the only scroll would be a vertical scroll. at the very top of the page is a small header that informs the user to click enter when they are ready to begin. when the user clicks enter, the header and the number disappear. instead there is a sequence of boxes moving right to left along a line. each box corresponds to a number in the sequence. the boxes are moving towards a dropoff that is near the left side of the screen. if the user enters the number of the next box, the box turns into that number and then fades away. if the user enters a number that is different from the next box, then the box turns red without revealing the number, and the user is prevented from further input for time it takes a box to move two spaces along the line. there is a constant to set the speed of the boxes moving along the line. there is a counter that increments for every correct entry (for every box that disappears). if a box reaches the dropoff, it falls over the cliff. at that point a modal pops up to tell the user Game Over and to show them the number of boxes they got correct. there is a button on the modal to restart, at which point the screen returns to its original state showing the whole number, and the process repeats.
+
+the font for the numbers on the first page should be 52, and there should always be 10 digits in a row before breaking to the next line. the dropoff does not need to be labeled. no horizontal line should continue to the left of the dropoff. also, the vertical line marking the dropoff extends slightly above the horizontal line; it should touch the horizontal line but not extend above it.
+
+actually, have the row labels appear just to the right of the row, with only 15 pixels of separation. and make sure that the actual row of digits is centered on the screen, so that the space between the 5th and 6th digits of a given row are exactly at the center of the screen
+
+if the last digit of the digit_sequence is correctly guessed, call the function activityComplete()
+
+Below is a complete single-file HTML activity. Save it as `index.html` and open it in a browser.
+
+You can adjust the main constants near the top of the JavaScript:
+
+- `DIGIT_SEQUENCE`
+- `BOX_SPEED`
+- `BOX_SPACING`
+- `DROPOFF_X`
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Digit Dropoff Activity</title>
+
+  <style>
+    :root {
+      --box-size: 52px;
+      --dropoff-x: 120px;
+      --line-y: 50%;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f7f7fb;
+      color: #1f2937;
+      overflow-x: hidden;
+    }
+
+    body.game-active {
+      overflow: hidden;
+    }
+
+    #startHeader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      padding: 8px 12px;
+      text-align: center;
+      font-size: 14px;
+      background: #111827;
+      color: white;
+      letter-spacing: 0.02em;
+    }
+
+    #initialScreen {
+      min-height: 100vh;
+      padding: 56px 16px 32px;
+      display: grid;
+      place-items: safe center;
+    }
+
+    #numberDisplay {
+      font-size: 52px;
+      line-height: 1.25;
+      text-align: center;
+      white-space: pre;
+      letter-spacing: 0.04em;
+      font-family: "Courier New", monospace;
+    }
+
+    #gameScreen {
+      position: fixed;
+      inset: 0;
+      display: none;
+      background: #f7f7fb;
+      overflow: hidden;
+    }
+
+    #scoreBoard {
+      position: absolute;
+      top: 18px;
+      right: 24px;
+      z-index: 4;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: white;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+      font-weight: 700;
+    }
+
+    #inputStatus {
+      position: absolute;
+      top: 18px;
+      left: 24px;
+      z-index: 4;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: white;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+      font-size: 14px;
+    }
+
+    #track {
+      position: absolute;
+      inset: 0;
+    }
+
+    #line {
+      position: absolute;
+      left: var(--dropoff-x);
+      right: 0;
+      top: var(--line-y);
+      height: 4px;
+      background: #374151;
+    }
+
+    #dropoff {
+      position: absolute;
+      left: var(--dropoff-x);
+      top: var(--line-y);
+      width: 6px;
+      height: 120px;
+      background: #111827;
+      border-radius: 0 0 3px 3px;
+    }
+
+    .box {
+      position: absolute;
+      top: calc(var(--line-y) - var(--box-size) / 2);
+      left: 0;
+      width: var(--box-size);
+      height: var(--box-size);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      background: #2563eb;
+      color: white;
+      font-size: 30px;
+      font-weight: 800;
+      font-family: "Courier New", monospace;
+      box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+      user-select: none;
+      will-change: transform, opacity;
+    }
+
+    .box.correct {
+      background: #16a34a;
+      box-shadow: 0 8px 20px rgba(22, 163, 74, 0.35);
+      animation: fadeAway 280ms ease-out forwards;
+    }
+
+    .box.wrong {
+      background: #dc2626;
+      box-shadow: 0 8px 20px rgba(220, 38, 38, 0.35);
+      animation: shake 180ms ease-in-out 2;
+    }
+
+    .box.falling {
+      animation: fallOff 650ms ease-in forwards;
+      transform-origin: left bottom;
+    }
+
+    @keyframes fadeAway {
+      from {
+        opacity: 1;
+        transform: translate(var(--x), 0) scale(1);
+      }
+
+      to {
+        opacity: 0;
+        transform: translate(var(--x), -18px) scale(0.75);
+      }
+    }
+
+    @keyframes shake {
+      0%, 100% {
+        filter: brightness(1);
+      }
+
+      25% {
+        filter: brightness(1.25);
+      }
+
+      50% {
+        filter: brightness(0.9);
+      }
+
+      75% {
+        filter: brightness(1.15);
+      }
+    }
+
+    @keyframes fallOff {
+      0% {
+        opacity: 1;
+        transform: translate(var(--x), 0) rotate(0deg);
+      }
+
+      45% {
+        transform: translate(var(--x), 0) rotate(-70deg);
+      }
+
+      100% {
+        opacity: 0;
+        transform: translate(var(--x), 260px) rotate(-120deg);
+      }
+    }
+
+    #modalOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(17, 24, 39, 0.72);
+      padding: 24px;
+    }
+
+    #modal {
+      width: min(420px, 100%);
+      padding: 28px;
+      border-radius: 18px;
+      background: white;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+    }
+
+    #modal h2 {
+      margin: 0 0 12px;
+      font-size: 32px;
+    }
+
+    #modal p {
+      margin: 0 0 24px;
+      font-size: 18px;
+    }
+
+    #restartButton {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 22px;
+      background: #2563eb;
+      color: white;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    #restartButton:hover {
+      background: #1d4ed8;
+    }
+  </style>
+</head>
+
+<body>
+  <header id="startHeader">
+    Press Enter when you are ready to begin.
+  </header>
+
+  <main id="initialScreen">
+    <div id="numberDisplay" aria-label="Full digit sequence"></div>
+  </main>
+
+  <section id="gameScreen" aria-label="Digit entry game">
+    <div id="inputStatus">Type the next digit.</div>
+    <div id="scoreBoard">Correct: <span id="score">0</span></div>
+
+    <div id="track">
+      <div id="line"></div>
+      <div id="dropoff"></div>
+    </div>
+  </section>
+
+  <div id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div id="modal">
+      <h2 id="modalTitle">Game Over</h2>
+      <p id="modalMessage">You got 0 boxes correct.</p>
+      <button id="restartButton">Restart</button>
+    </div>
+  </div>
+
+  <script>
+    const DIGIT_SEQUENCE = "8".repeat(1000);
+    const BOX_SPEED = 140;
+    const BOX_SPACING = 76;
+    const BOX_SIZE = 52;
+    const DROPOFF_X = 120;
+    const SPAWN_BUFFER = 900;
+
+    const PENALTY_MS = Math.round((BOX_SPACING * 2 / BOX_SPEED) * 1000);
+
+    document.documentElement.style.setProperty("--box-size", `${BOX_SIZE}px`);
+    document.documentElement.style.setProperty("--dropoff-x", `${DROPOFF_X}px`);
+
+    const startHeader = document.getElementById("startHeader");
+    const initialScreen = document.getElementById("initialScreen");
+    const numberDisplay = document.getElementById("numberDisplay");
+    const gameScreen = document.getElementById("gameScreen");
+    const track = document.getElementById("track");
+    const scoreEl = document.getElementById("score");
+    const inputStatus = document.getElementById("inputStatus");
+    const modalOverlay = document.getElementById("modalOverlay");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalMessage = document.getElementById("modalMessage");
+    const restartButton = document.getElementById("restartButton");
+
+    let activeBoxes = [];
+    let nextSpawnIndex = 0;
+    let nextExpectedIndex = 0;
+    let score = 0;
+    let gameRunning = false;
+    let inputLocked = false;
+    let lastFrameTime = 0;
+    let animationId = null;
+    let lockTimer = null;
+
+    function formatSequenceInRows(sequence, rowLength) {
+      const rows = [];
+
+      for (let i = 0; i < sequence.length; i += rowLength) {
+        rows.push(sequence.slice(i, i + rowLength));
+      }
+
+      return rows.join("\n");
+    }
+
+    function showInitialScreen() {
+      document.body.classList.remove("game-active");
+      startHeader.style.display = "block";
+      initialScreen.style.display = "grid";
+      gameScreen.style.display = "none";
+      modalOverlay.style.display = "none";
+
+      numberDisplay.textContent = formatSequenceInRows(DIGIT_SEQUENCE, 10);
+
+      clearGameObjects();
+      window.scrollTo({ top: 0, behavior: "instant" });
+    }
+
+    function clearGameObjects() {
+      gameRunning = false;
+      inputLocked = false;
+
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+
+      if (lockTimer) {
+        clearTimeout(lockTimer);
+        lockTimer = null;
+      }
+
+      activeBoxes.forEach(box => box.el.remove());
+      activeBoxes = [];
+
+      nextSpawnIndex = 0;
+      nextExpectedIndex = 0;
+      score = 0;
+      scoreEl.textContent = "0";
+      inputStatus.textContent = "Type the next digit.";
+    }
+
+    function startGame() {
+      clearGameObjects();
+
+      document.body.classList.add("game-active");
+      startHeader.style.display = "none";
+      initialScreen.style.display = "none";
+      gameScreen.style.display = "block";
+      modalOverlay.style.display = "none";
+
+      gameRunning = true;
+      spawnBoxesIfNeeded();
+
+      lastFrameTime = performance.now();
+      animationId = requestAnimationFrame(gameLoop);
+    }
+
+    function spawnBox(x) {
+      if (nextSpawnIndex >= DIGIT_SEQUENCE.length) return;
+
+      const el = document.createElement("div");
+      el.className = "box";
+      el.textContent = "";
+      el.setAttribute("aria-label", `Box ${nextSpawnIndex + 1}`);
+      track.appendChild(el);
+
+      const box = {
+        index: nextSpawnIndex,
+        digit: DIGIT_SEQUENCE[nextSpawnIndex],
+        x,
+        el,
+        state: "normal"
+      };
+
+      activeBoxes.push(box);
+      updateBoxPosition(box);
+
+      nextSpawnIndex++;
+    }
+
+    function getRightmostBoxX() {
+      if (activeBoxes.length === 0) {
+        return window.innerWidth - 160;
+      }
+
+      return Math.max(...activeBoxes.map(box => box.x));
+    }
+
+    function spawnBoxesIfNeeded() {
+      let rightmostX = getRightmostBoxX();
+
+      while (
+        nextSpawnIndex < DIGIT_SEQUENCE.length &&
+        rightmostX < window.innerWidth + SPAWN_BUFFER
+      ) {
+        const newX = activeBoxes.length === 0 && nextSpawnIndex === 0
+          ? window.innerWidth - 160
+          : rightmostX + BOX_SPACING;
+
+        spawnBox(newX);
+        rightmostX = newX;
+      }
+    }
+
+    function updateBoxPosition(box) {
+      box.el.style.setProperty("--x", `${box.x}px`);
+      box.el.style.transform = `translate(${box.x}px, 0)`;
+    }
+
+    function gameLoop(timestamp) {
+      if (!gameRunning) return;
+
+      const dt = (timestamp - lastFrameTime) / 1000;
+      lastFrameTime = timestamp;
+
+      for (const box of activeBoxes) {
+        if (box.state !== "done") {
+          box.x -= BOX_SPEED * dt;
+          updateBoxPosition(box);
+        }
+      }
+
+      const nextBox = activeBoxes.find(
+        box => box.index === nextExpectedIndex && box.state !== "done"
+      );
+
+      if (nextBox && nextBox.x <= DROPOFF_X) {
+        makeBoxFall(nextBox);
+        return;
+      }
+
+      spawnBoxesIfNeeded();
+
+      animationId = requestAnimationFrame(gameLoop);
+    }
+
+    function handleDigitInput(key) {
+      if (!gameRunning || inputLocked) return;
+      if (!/^[0-9]$/.test(key)) return;
+
+      const expectedDigit = DIGIT_SEQUENCE[nextExpectedIndex];
+
+      const targetBox = activeBoxes.find(
+        box => box.index === nextExpectedIndex && box.state !== "done"
+      );
+
+      if (!targetBox) return;
+
+      if (key === expectedDigit) {
+        handleCorrectInput(targetBox, key);
+      } else {
+        handleWrongInput(targetBox);
+      }
+    }
+
+    function handleCorrectInput(box, digit) {
+      box.state = "done";
+      box.el.textContent = digit;
+      box.el.classList.remove("wrong");
+      box.el.classList.add("correct");
+
+      score++;
+      nextExpectedIndex++;
+      scoreEl.textContent = score;
+
+      setTimeout(() => {
+        box.el.remove();
+        activeBoxes = activeBoxes.filter(active => active !== box);
+      }, 300);
+
+      if (nextExpectedIndex >= DIGIT_SEQUENCE.length) {
+        endGame(true);
+      }
+    }
+
+    function handleWrongInput(box) {
+      inputLocked = true;
+      inputStatus.textContent = `Wrong digit. Input locked for ${PENALTY_MS} ms.`;
+
+      box.state = "wrong";
+      box.el.textContent = "";
+      box.el.classList.add("wrong");
+
+      lockTimer = setTimeout(() => {
+        if (!gameRunning) return;
+
+        inputLocked = false;
+        inputStatus.textContent = "Type the next digit.";
+
+        if (box.state === "wrong") {
+          box.state = "normal";
+          box.el.classList.remove("wrong");
+        }
+      }, PENALTY_MS);
+    }
+
+    function makeBoxFall(box) {
+      gameRunning = false;
+      inputLocked = true;
+
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+
+      if (lockTimer) {
+        clearTimeout(lockTimer);
+        lockTimer = null;
+      }
+
+      box.el.classList.remove("wrong");
+      box.el.classList.add("falling");
+
+      setTimeout(() => {
+        endGame(false);
+      }, 650);
+    }
+
+    function endGame(won) {
+      gameRunning = false;
+      inputLocked = true;
+
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+
+      if (lockTimer) {
+        clearTimeout(lockTimer);
+        lockTimer = null;
+      }
+
+      modalTitle.textContent = won ? "You Finished!" : "Game Over";
+      modalMessage.textContent = `You got ${score} box${score === 1 ? "" : "es"} correct.`;
+      modalOverlay.style.display = "flex";
+    }
+
+    document.addEventListener("keydown", event => {
+      if (!gameRunning && modalOverlay.style.display !== "flex") {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          startGame();
+        }
+
+        return;
+      }
+
+      if (gameRunning) {
+        handleDigitInput(event.key);
+      }
+    });
+
+    restartButton.addEventListener("click", () => {
+      showInitialScreen();
+    });
+
+    showInitialScreen();
+  </script>
+</body>
+</html>
+```
+

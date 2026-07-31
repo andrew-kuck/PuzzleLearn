@@ -1,0 +1,692 @@
+create an activity using html, css, and javascript. the page retrieves a random article from wikipedia, then reduces the article to a readable text-only string. the text is then split into sentences and the user is presented with one sentence at a time. for each sentence, one word has been removed and replaced with an inline input box. when showing a sentence, the user cursor automatically goes to that input. if the user inputs the correct word (case doesn't matter) and clicks enter, then that sentence disappears and a new sentence is shown. if the user goes s seconds without entering a correct word, then three words are shown in a box above the sentence. one of the three words is the correct word to input and the other two are picked at random from elsewhere in the wikipedia text. after completing the last sentence in the article, text appears that tells the user "Great job! Refresh the screen to read another article".
+
+require that the removed word for the user to input is at least 5 characters long, unless there are no such words in the sentence. also, before showing an article, show a page that prompts the user to input search terms and click enter. the page will then carry out the wikipedia activity as before. if the search input was blank, it should be a random wikipedia article. if something was entered for the search, then the article should be the article that best matches the search query
+
+have a javascript constant to determine how many words will be shown when the hint is given
+
+Here is an updated complete single-file version. Save it as `index.html`.
+
+Changes included:
+
+- The user first sees a search screen.
+- If the search box is blank, the activity loads a random Wikipedia article.
+- If the user enters search terms, the activity loads the best-matching Wikipedia article.
+- The removed word is at least 5 characters long whenever possible. If the sentence has no words that long, it falls back to a shorter word.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wikipedia Missing Word Activity</title>
+
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --blue: #2563eb;
+      --green: #16a34a;
+      --red: #dc2626;
+      --border: #d1d5db;
+      --hint-bg: #eef2ff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    main {
+      width: 100%;
+      max-width: 850px;
+      background: var(--card);
+      border-radius: 18px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.08);
+      padding: 32px;
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 2rem;
+      line-height: 1.2;
+    }
+
+    .meta {
+      color: var(--muted);
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    .article-title {
+      font-weight: 700;
+      color: var(--blue);
+    }
+
+    .search-form {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+      flex-wrap: wrap;
+    }
+
+    .search-input {
+      flex: 1;
+      min-width: 240px;
+      font-size: 1.1rem;
+      padding: 12px 14px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      outline: none;
+    }
+
+    .search-input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+    }
+
+    .progress {
+      margin-bottom: 16px;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .hint-box {
+      display: none;
+      background: var(--hint-bg);
+      border: 1px solid #c7d2fe;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .hint-box.visible {
+      display: block;
+    }
+
+    .hint-title {
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .hint-words {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .hint-word {
+      border: 1px solid #a5b4fc;
+      background: white;
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    .hint-word:hover {
+      background: #e0e7ff;
+    }
+
+    .sentence-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      font-size: 1.35rem;
+      line-height: 1.8;
+      min-height: 150px;
+    }
+
+    .missing-input {
+      display: inline-block;
+      width: 150px;
+      max-width: 70vw;
+      font: inherit;
+      padding: 4px 8px;
+      margin: 0 4px;
+      border: 2px solid var(--blue);
+      border-radius: 8px;
+      outline: none;
+      vertical-align: baseline;
+    }
+
+    .missing-input:focus {
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+    }
+
+    .feedback {
+      margin-top: 16px;
+      min-height: 24px;
+      font-weight: 600;
+    }
+
+    .feedback.correct {
+      color: var(--green);
+    }
+
+    .feedback.incorrect {
+      color: var(--red);
+    }
+
+    .loading,
+    .complete,
+    .error {
+      font-size: 1.25rem;
+      line-height: 1.6;
+    }
+
+    .complete {
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    .error {
+      color: var(--red);
+    }
+
+    button {
+      border: none;
+      background: var(--blue);
+      color: white;
+      padding: 10px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    .secondary-button {
+      background: #4b5563;
+      margin-top: 16px;
+    }
+
+    .secondary-button:hover {
+      background: #374151;
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <h1>Wikipedia Missing Word Activity</h1>
+
+    <p class="meta" id="meta">
+      Search for a Wikipedia topic, or leave the box blank for a random article.
+    </p>
+
+    <div id="app"></div>
+  </main>
+
+  <script>
+    /*
+      Change this value to control how many seconds pass
+      before the three-word hint box appears.
+    */
+    const HINT_DELAY_SECONDS = 8;
+
+    const app = document.getElementById("app");
+    const meta = document.getElementById("meta");
+
+    let articleTitle = "";
+    let articleText = "";
+    let articleWords = [];
+    let sentenceItems = [];
+    let currentIndex = 0;
+    let hintTimer = null;
+
+    renderSearchScreen();
+
+    function renderSearchScreen() {
+      clearTimeout(hintTimer);
+
+      meta.textContent =
+        "Search for a Wikipedia topic, or leave the box blank for a random article.";
+
+      app.innerHTML = `
+        <form class="search-form" id="searchForm">
+          <input
+            class="search-input"
+            id="searchInput"
+            type="text"
+            placeholder="Example: black holes, Ada Lovelace, Michigan Stadium"
+            autocomplete="off"
+            aria-label="Wikipedia search terms"
+          >
+          <button type="submit">Start</button>
+        </form>
+      `;
+
+      const searchForm = document.getElementById("searchForm");
+      const searchInput = document.getElementById("searchInput");
+
+      searchInput.focus();
+
+      searchForm.addEventListener("submit", event => {
+        event.preventDefault();
+
+        const query = searchInput.value.trim();
+        startActivity(query);
+      });
+    }
+
+    async function startActivity(query) {
+      try {
+        app.innerHTML = `
+          <p class="loading">
+            Loading and preparing your Wikipedia article...
+          </p>
+        `;
+
+        meta.textContent = query
+          ? `Searching Wikipedia for "${query}"...`
+          : "Loading a random Wikipedia article...";
+
+        resetActivityState();
+
+        const article = query
+          ? await fetchBestMatchingWikipediaArticle(query)
+          : await fetchRandomWikipediaArticle();
+
+        articleTitle = article.title;
+        articleText = cleanWikipediaText(article.extract);
+
+        articleWords = getWords(articleText);
+
+        sentenceItems = splitIntoSentences(articleText)
+          .map(createSentenceItem)
+          .filter(Boolean);
+
+        if (sentenceItems.length === 0) {
+          throw new Error("Could not find enough usable sentences in this article.");
+        }
+
+        meta.innerHTML = `
+          Article:
+          <span class="article-title">${escapeHTML(articleTitle)}</span>
+          <br>
+          Fill in the missing word. Press Enter to submit.
+        `;
+
+        renderCurrentSentence();
+      } catch (error) {
+        console.error(error);
+
+        app.innerHTML = `
+          <p class="error">
+            Sorry, something went wrong while loading the Wikipedia activity.
+            Try another search term or leave the search box blank for a random article.
+          </p>
+          <button class="secondary-button" id="backToSearchButton">
+            Back to search
+          </button>
+        `;
+
+        meta.textContent = "Unable to load article.";
+
+        document
+          .getElementById("backToSearchButton")
+          .addEventListener("click", renderSearchScreen);
+      }
+    }
+
+    function resetActivityState() {
+      articleTitle = "";
+      articleText = "";
+      articleWords = [];
+      sentenceItems = [];
+      currentIndex = 0;
+      clearTimeout(hintTimer);
+    }
+
+    async function fetchRandomWikipediaArticle() {
+      const url =
+        "https://en.wikipedia.org/w/api.php" +
+        "?origin=*" +
+        "&format=json" +
+        "&action=query" +
+        "&generator=random" +
+        "&grnnamespace=0" +
+        "&grnlimit=1" +
+        "&prop=extracts" +
+        "&explaintext=1" +
+        "&exsectionformat=plain" +
+        "&redirects=1";
+
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error("Wikipedia random article request failed.");
+      }
+
+      const data = await response.json();
+      const pages = data.query && data.query.pages;
+
+      if (!pages) {
+        throw new Error("No random Wikipedia page returned.");
+      }
+
+      const page = Object.values(pages)[0];
+
+      return {
+        title: page.title,
+        extract: page.extract || ""
+      };
+    }
+
+    async function fetchBestMatchingWikipediaArticle(query) {
+      /*
+        First, search Wikipedia and take the first result.
+        Wikipedia's search ranking usually puts the best match first.
+      */
+      const searchUrl =
+        "https://en.wikipedia.org/w/api.php" +
+        "?origin=*" +
+        "&format=json" +
+        "&action=query" +
+        "&list=search" +
+        "&srlimit=1" +
+        "&srsearch=" + encodeURIComponent(query);
+
+      const searchResponse = await fetch(searchUrl);
+
+      if (!searchResponse.ok) {
+        throw new Error("Wikipedia search request failed.");
+      }
+
+      const searchData = await searchResponse.json();
+      const results = searchData.query && searchData.query.search;
+
+      if (!results || results.length === 0) {
+        throw new Error("No matching Wikipedia article found.");
+      }
+
+      const bestPageId = results[0].pageid;
+
+      /*
+        Then, use the best result's page ID to retrieve the plain-text extract.
+      */
+      const extractUrl =
+        "https://en.wikipedia.org/w/api.php" +
+        "?origin=*" +
+        "&format=json" +
+        "&action=query" +
+        "&prop=extracts" +
+        "&explaintext=1" +
+        "&exsectionformat=plain" +
+        "&redirects=1" +
+        "&pageids=" + encodeURIComponent(bestPageId);
+
+      const extractResponse = await fetch(extractUrl);
+
+      if (!extractResponse.ok) {
+        throw new Error("Wikipedia article extract request failed.");
+      }
+
+      const extractData = await extractResponse.json();
+      const pages = extractData.query && extractData.query.pages;
+
+      if (!pages) {
+        throw new Error("No Wikipedia extract returned.");
+      }
+
+      const page = Object.values(pages)[0];
+
+      if (!page || !page.extract) {
+        throw new Error("The matching Wikipedia article did not contain readable text.");
+      }
+
+      return {
+        title: page.title,
+        extract: page.extract
+      };
+    }
+
+    function cleanWikipediaText(text) {
+      return text
+        .replace(/\[[^\]]*\]/g, "")           // remove bracketed references
+        .replace(/={2,}.*?={2,}/g, "")        // remove section heading markers if present
+        .replace(/\s+/g, " ")                 // normalize whitespace
+        .replace(/\s([.,;:!?])/g, "$1")       // remove spaces before punctuation
+        .trim();
+    }
+
+    function splitIntoSentences(text) {
+      /*
+        Simple sentence splitter.
+        It keeps sentences that are long enough to be useful
+        and avoids very long ones that are awkward for the activity.
+      */
+      return text
+        .match(/[^.!?]+[.!?]+/g)
+        ?.map(sentence => sentence.trim())
+        .filter(sentence => {
+          const wordCount = getWords(sentence).length;
+          return wordCount >= 6 && wordCount <= 35;
+        }) || [];
+    }
+
+    function getWords(text) {
+      return text.match(/\b[A-Za-z][A-Za-z'-]{2,}\b/g) || [];
+    }
+
+    function createSentenceItem(sentence) {
+      const matches = [...sentence.matchAll(/\b[A-Za-z][A-Za-z'-]{2,}\b/g)];
+
+      if (matches.length === 0) {
+        return null;
+      }
+
+      /*
+        Require the removed word to be at least 5 characters long,
+        unless there are no such words in the sentence.
+      */
+      const longEnoughCandidates = matches.filter(match => match[0].length >= 5);
+
+      const pool = longEnoughCandidates.length
+        ? longEnoughCandidates
+        : matches;
+
+      const chosen = pool[Math.floor(Math.random() * pool.length)];
+      const answer = chosen[0];
+      const start = chosen.index;
+      const end = start + answer.length;
+
+      return {
+        sentence,
+        answer,
+        before: sentence.slice(0, start),
+        after: sentence.slice(end)
+      };
+    }
+
+    function renderCurrentSentence() {
+      clearTimeout(hintTimer);
+
+      if (currentIndex >= sentenceItems.length) {
+        app.innerHTML = `
+          <p class="complete">
+            Great job! Refresh the screen to read another article
+          </p>
+        `;
+        meta.textContent = "";
+        return;
+      }
+
+      const item = sentenceItems[currentIndex];
+
+      app.innerHTML = `
+        <div class="progress">
+          Sentence ${currentIndex + 1} of ${sentenceItems.length}
+        </div>
+
+        <div class="hint-box" id="hintBox">
+          <div class="hint-title">Need a hint? Choose from these words:</div>
+          <div class="hint-words" id="hintWords"></div>
+        </div>
+
+        <div class="sentence-card" id="sentenceCard">
+          ${escapeHTML(item.before)}
+          <input
+            class="missing-input"
+            id="missingInput"
+            type="text"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            aria-label="Missing word"
+          >
+          ${escapeHTML(item.after)}
+        </div>
+
+        <div class="feedback" id="feedback"></div>
+      `;
+
+      const input = document.getElementById("missingInput");
+      const feedback = document.getElementById("feedback");
+
+      input.focus();
+
+      input.addEventListener("keydown", event => {
+        if (event.key === "Enter") {
+          const userAnswer = input.value.trim();
+
+          if (isCorrect(userAnswer, item.answer)) {
+            feedback.textContent = "Correct!";
+            feedback.className = "feedback correct";
+
+            currentIndex++;
+
+            setTimeout(() => {
+              renderCurrentSentence();
+            }, 250);
+          } else {
+            feedback.textContent = "Not quite. Try again.";
+            feedback.className = "feedback incorrect";
+            input.select();
+          }
+        }
+      });
+
+      hintTimer = setTimeout(() => {
+        showHint(item.answer);
+      }, HINT_DELAY_SECONDS * 1000);
+    }
+
+    function showHint(correctWord) {
+      const hintBox = document.getElementById("hintBox");
+      const hintWords = document.getElementById("hintWords");
+      const input = document.getElementById("missingInput");
+
+      if (!hintBox || !hintWords || !input) {
+        return;
+      }
+
+      const choices = makeHintChoices(correctWord);
+
+      hintWords.innerHTML = "";
+
+      choices.forEach(word => {
+        const button = document.createElement("button");
+        button.className = "hint-word";
+        button.type = "button";
+        button.textContent = word;
+
+        button.addEventListener("click", () => {
+          input.value = word;
+          input.focus();
+        });
+
+        hintWords.appendChild(button);
+      });
+
+      hintBox.classList.add("visible");
+    }
+
+    function makeHintChoices(correctWord) {
+      const normalizedCorrect = normalize(correctWord);
+
+      const otherWords = articleWords
+        .filter(word => normalize(word) !== normalizedCorrect)
+        .filter(word => word.length >= 3);
+
+      const uniqueOtherWords = [...new Map(
+        otherWords.map(word => [normalize(word), word])
+      ).values()];
+
+      shuffleInPlace(uniqueOtherWords);
+
+      const fallbackWords = ["article", "history", "people", "world"];
+
+      const choices = [correctWord];
+
+      for (const word of uniqueOtherWords) {
+        if (choices.length >= 3) break;
+        choices.push(word);
+      }
+
+      for (const word of fallbackWords) {
+        if (choices.length >= 3) break;
+        if (normalize(word) !== normalizedCorrect) {
+          choices.push(word);
+        }
+      }
+
+      return shuffle(choices);
+    }
+
+    function isCorrect(userAnswer, correctAnswer) {
+      return normalize(userAnswer) === normalize(correctAnswer);
+    }
+
+    function normalize(value) {
+      return value
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}'-]/gu, "")
+        .trim();
+    }
+
+    function shuffle(array) {
+      const copy = [...array];
+      shuffleInPlace(copy);
+      return copy;
+    }
+
+    function shuffleInPlace(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+
+      return array;
+    }
+
+    function escapeHTML(value) {
+      return value
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
+```

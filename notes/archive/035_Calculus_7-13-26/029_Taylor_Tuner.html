@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Taylor Tuner</title>
+<style>
+body{margin:0;background:#101827;color:white;font-family:system-ui;display:flex;justify-content:center}
+.app{max-width:950px;padding:20px}
+canvas{background:white;border-radius:16px;width:100%;max-width:900px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin:10px 0}
+label{background:#243b55;border-radius:12px;padding:8px}
+input{width:100%}
+button{font-size:17px;border:0;border-radius:10px;padding:10px;background:#ffcb05;color:#00274c;font-weight:800}
+.pill{background:#243b55;border-radius:999px;padding:8px 13px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+</style>
+</head>
+<body>
+<div class="app">
+<h1>Taylor Tuner</h1>
+<p>Tune coefficients of P(x)=c₀+c₁x+c₂x²+... so the yellow polynomial hugs the blue function near 0.</p>
+<canvas id="cv" width="900" height="430"></canvas>
+<div class="row"><span id="lvl" class="pill"></span><button onclick="check()">Test Approximation</button><button onclick="zero()">Zero Sliders</button><span id="msg" class="pill"></span></div>
+<div class="grid" id="sl"></div>
+</div>
+<script>
+const cv=document.getElementById("cv"),c=cv.getContext("2d"),X=x=>450+x*120,Y=y=>215-y*70;
+const L=[
+ {name:"sin x",f:x=>Math.sin(x),coef:[0,1,0,-1/6,0,1/120]},
+ {name:"cos x",f:x=>Math.cos(x),coef:[1,0,-1/2,0,1/24,0]},
+ {name:"eˣ",f:x=>Math.exp(x),coef:[1,1,1/2,1/6,1/24,1/120]},
+ {name:"ln(1+x)",f:x=>Math.log(1+x),coef:[0,1,-1/2,1/3,-1/4,1/5]},
+ {name:"1/(1-x)",f:x=>1/(1-x),coef:[1,1,1,1,1,1]}
+];
+let i=0,coef=Array(6).fill(0);
+sl.innerHTML=coef.map((_,j)=>`<label>c${j}: <span id="v${j}">0</span><input id="s${j}" type="range" min="-2" max="2" step=".001" value="0"></label>`).join("");
+for(let j=0;j<6;j++)window["s"+j].oninput=()=>{coef[j]=+window["s"+j].value;window["v"+j].textContent=coef[j].toFixed(3);draw()}
+function P(x){return coef.reduce((s,a,j)=>s+a*x**j,0)}
+function draw(){
+ lvl.textContent=`Level ${i+1}/${L.length}: target ${L[i].name}`;
+ c.clearRect(0,0,900,430);
+ c.strokeStyle="#ddd";for(let x=-3;x<=3;x++){c.beginPath();c.moveTo(X(x),0);c.lineTo(X(x),430);c.stroke()}
+ for(let y=-3;y<=3;y++){c.beginPath();c.moveTo(0,Y(y));c.lineTo(900,Y(y));c.stroke()}
+ c.strokeStyle="#00274c";c.lineWidth=2;c.beginPath();c.moveTo(0,Y(0));c.lineTo(900,Y(0));c.moveTo(X(0),0);c.lineTo(X(0),430);c.stroke();
+ plot(L[i].f,"#2f80ed",4);plot(P,"#ffcb05",4);
+ c.fillStyle="#111";c.font="18px system-ui";c.fillText("blue = function, yellow = your Taylor polynomial",25,30);
+}
+function plot(f,col,w){
+ c.strokeStyle=col;c.lineWidth=w;c.beginPath();let st=0;
+ for(let k=0;k<=500;k++){let x=-1.5+3*k/500,y=f(x);if(!isFinite(y)||Math.abs(y)>4){st=0;continue}if(!st){c.moveTo(X(x),Y(y));st=1}else c.lineTo(X(x),Y(y))}
+ c.stroke();
+}
+function check(){
+ let err=0;for(let k=0;k<=60;k++){let x=-1.2+2.4*k/60;err=Math.max(err,Math.abs(P(x)-L[i].f(x)))}
+ let exact=L[i].coef.reduce((s,a,j)=>s+Math.abs(a-coef[j]),0);
+ if(err<.04&&exact<.08){msg.textContent="Series tuned!";i=(i+1)%L.length;setTimeout(()=>{zero();msg.textContent=""},800)}
+ else msg.textContent=`Max error ${err.toFixed(3)}. Match value, slope, curvature, and higher rates at 0.`;
+}
+function zero(){coef=Array(6).fill(0);for(let j=0;j<6;j++){window["s"+j].value=0;window["v"+j].textContent="0"}draw()}
+zero();
+</script>
+  <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#e1e1e1"
+    }
+  </script>
+</body>
+</html>

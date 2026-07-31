@@ -1,0 +1,107 @@
+{% extends "puzzle/geo_constructions.html" %}
+
+{% block question_information %}
+<script>
+const QUESTION_INFORMATION = [
+    {
+    question: "Construct an equilateral triangle having a given segment as one side.",
+    initialImage: {
+        lines: [
+        { x1: 0.34, y1: 0.58, x2: 0.66, y2: 0.58 }
+        ],
+        circles: [],
+        points: []
+    },
+    errorMargin: 14,
+    evaluationFunction: function (ctx) {
+        const {
+        userShapes,
+        initialImage,
+        canvasWidth,
+        canvasHeight,
+        errorMargin,
+        helpers
+        } = ctx;
+
+        const resolved = helpers.resolveInitialImage(
+        initialImage,
+        canvasWidth,
+        canvasHeight
+        );
+
+        const givenSegment = resolved.lines[0];
+        const A = { x: givenSegment.x1, y: givenSegment.y1 };
+        const B = { x: givenSegment.x2, y: givenSegment.y2 };
+
+        const possibleVertices = helpers.equilateralVertices(A, B);
+
+        const blueLines = userShapes.filter(
+        shape => shape.type === "line" && shape.colorKey === "blue"
+        );
+
+        return possibleVertices.some(C => {
+        const hasSideAC = blueLines.some(line =>
+            helpers.lineCoversTwoPoints(line, A, C, errorMargin)
+        );
+
+        const hasSideBC = blueLines.some(line =>
+            helpers.lineCoversTwoPoints(line, B, C, errorMargin)
+        );
+
+        return hasSideAC && hasSideBC;
+        });
+    }
+    },
+    {
+    question: "Construct a segment congruent to a given segment and with a given point as one endpoint.",
+    initialImage: {
+        lines: [
+        { x1: 0.16, y1: 0.28, x2: 0.38, y2: 0.28 }
+        ],
+        circles: [],
+        points: [
+        { x: 0.46, y: 0.64 }
+        ]
+    },
+    errorMargin: 14,
+    evaluationFunction: function (ctx) {
+        const {
+        userShapes,
+        initialImage,
+        canvasWidth,
+        canvasHeight,
+        errorMargin,
+        helpers
+        } = ctx;
+
+        const resolved = helpers.resolveInitialImage(
+        initialImage,
+        canvasWidth,
+        canvasHeight
+        );
+
+        const givenSegment = resolved.lines[0];
+        const P = resolved.points[0];
+
+        const targetLength = helpers.distance(
+        { x: givenSegment.x1, y: givenSegment.y1 },
+        { x: givenSegment.x2, y: givenSegment.y2 }
+        );
+
+        const blueLines = userShapes.filter(
+        shape => shape.type === "line" && shape.colorKey === "blue"
+        );
+
+        return blueLines.some(line =>
+        helpers.segmentHasEndpointAndLength(
+            line,
+            P,
+            targetLength,
+            errorMargin
+        )
+        );
+    }
+    }
+];
+</script>
+{% endblock %}

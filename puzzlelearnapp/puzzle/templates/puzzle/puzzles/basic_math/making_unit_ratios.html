@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ puzzle_name }}</title>
+
+  <style>
+    :root {
+      --bar-height: 56px;
+      --bar-radius: 14px;
+      --blue: #1e88e5;
+      --orange: #f28c28;
+      --green: #22a65a;
+      --red: #d83a34;
+      --track: #e8e8e8;
+      --border: #cfcfcf;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f7f9fc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #222;
+    }
+
+    .activity {
+      width: min(900px, 94vw);
+      background: white;
+      border-radius: 22px;
+      padding: 32px;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.12);
+      position: relative;
+      overflow: hidden;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.5rem;
+      text-align: center;
+    }
+
+    .instructions {
+      text-align: center;
+      margin: 0 0 18px;
+      font-size: 1rem;
+      color: #444;
+    }
+
+    .timer {
+      text-align: center;
+      font-size: 1.4rem;
+      font-weight: bold;
+      margin-bottom: 24px;
+    }
+
+    .timer.warning {
+      color: var(--red);
+    }
+
+    .bars {
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+      margin-bottom: 42px;
+    }
+
+    .bar-wrapper {
+      width: 100%;
+    }
+
+    .bar {
+      width: 100%;
+      height: var(--bar-height);
+      background: var(--track);
+      border: 2px solid var(--border);
+      border-radius: var(--bar-radius);
+      position: relative;
+      overflow: hidden;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .fill {
+      height: 100%;
+      width: 0%;
+      position: absolute;
+      left: 0;
+      top: 0;
+      border-radius: calc(var(--bar-radius) - 2px) 0 0 calc(var(--bar-radius) - 2px);
+      min-width: 0;
+    }
+
+    .fill.blue {
+      background: var(--blue);
+    }
+
+    .fill.orange {
+      background: var(--orange);
+    }
+
+    .value-label {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-weight: bold;
+      font-size: 1.1rem;
+      pointer-events: none;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+      white-space: nowrap;
+    }
+
+    .handle {
+      position: absolute;
+      right: -10px;
+      top: 0;
+      width: 20px;
+      height: 100%;
+      cursor: ew-resize;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 3;
+    }
+
+    .handle::after {
+      content: "";
+      width: 5px;
+      height: 70%;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 999px;
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+    }
+
+    .progress-section {
+      margin-top: 12px;
+    }
+
+    .progress-track {
+      height: 34px;
+      width: 100%;
+      background: #eeeeee;
+      border: 2px solid var(--border);
+      border-radius: 999px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .zero-line {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      width: 3px;
+      height: 100%;
+      background: #8f8f8f;
+      transform: translateX(-50%);
+      z-index: 3;
+    }
+
+    .progress-fill {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      width: 0;
+      z-index: 2;
+    }
+
+    .progress-fill.positive {
+      left: 50%;
+      background: var(--green);
+      border-radius: 0 999px 999px 0;
+    }
+
+    .progress-fill.negative {
+      right: 50%;
+      background: var(--red);
+      border-radius: 999px 0 0 999px;
+    }
+
+    .progress-text {
+      text-align: center;
+      margin-top: 8px;
+      color: #555;
+      font-size: 0.95rem;
+    }
+
+    .overlay-result {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: min(28vw, 220px);
+      font-weight: bold;
+      background: rgba(255, 255, 255, 0.62);
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .overlay-result.show {
+      display: flex;
+      animation: pop 0.25s ease-out;
+    }
+
+    .overlay-result.success {
+      color: var(--green);
+    }
+
+    .overlay-result.failure {
+      color: var(--red);
+    }
+
+    @keyframes pop {
+      from {
+        transform: scale(0.8);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .complete-message {
+      display: none;
+      margin-top: 22px;
+      text-align: center;
+      font-size: 1.25rem;
+      color: var(--green);
+      font-weight: bold;
+    }
+
+    .complete-message.show {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="activity">
+    <h1>Unit Ratio Challenge</h1>
+    <p class="instructions">
+      Drag the orange bar to 1. Then adjust the blue bar so the blue-to-orange ratio is close to the original ratio.
+    </p>
+
+    <div id="timer" class="timer">8.0</div>
+
+    <section class="bars">
+      <div class="bar-wrapper">
+        <div id="blueBar" class="bar" aria-label="Blue bar">
+          <div id="blueFill" class="fill blue">
+            <span id="blueValueLabel" class="value-label">0.00</span>
+            <div class="handle" aria-hidden="true"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bar-wrapper">
+        <div id="orangeBar" class="bar" aria-label="Orange bar">
+          <div id="orangeFill" class="fill orange">
+            <span id="orangeValueLabel" class="value-label">0</span>
+            <div class="handle" aria-hidden="true"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="progress-section">
+      <div class="progress-track">
+        <div id="negativeProgress" class="progress-fill negative"></div>
+        <div id="positiveProgress" class="progress-fill positive"></div>
+        <div class="zero-line"></div>
+      </div>
+      <!-- <div class="progress-text">Progress: -10 to 10</div> -->
+    </section>
+
+    <div id="overlay" class="overlay-result">✓</div>
+    <div id="completeMessage" class="complete-message">Activity complete!</div>
+  </main>
+
+  <script>
+    /***********************
+     * Activity constants
+     ***********************/
+    const PERCENT_TOLERANCE = 10;
+    const TIMER_START_SECONDS = 8.0;
+    const BAR_MIN = 0;
+    const BAR_MAX = 20;
+    const PROGRESS_MIN = -8;
+    const PROGRESS_MAX = 8;
+
+    /***********************
+     * State
+     ***********************/
+    let originalOrange = 0;
+    let originalBlue = 0;
+    let targetRatio = 0;
+
+    let orangeValue = 0;
+    let blueValue = 0;
+
+    let progress = 0;
+
+    let timerRunning = false;
+    let timerRemaining = TIMER_START_SECONDS;
+    let timerInterval = null;
+    let problemLocked = false;
+
+    /***********************
+     * Elements
+     ***********************/
+    const blueBar = document.getElementById("blueBar");
+    const orangeBar = document.getElementById("orangeBar");
+
+    const blueFill = document.getElementById("blueFill");
+    const orangeFill = document.getElementById("orangeFill");
+
+    const blueValueLabel = document.getElementById("blueValueLabel");
+    const orangeValueLabel = document.getElementById("orangeValueLabel");
+
+    const timerEl = document.getElementById("timer");
+    const overlay = document.getElementById("overlay");
+
+    const negativeProgress = document.getElementById("negativeProgress");
+    const positiveProgress = document.getElementById("positiveProgress");
+    const completeMessage = document.getElementById("completeMessage");
+
+    /***********************
+     * Utility functions
+     ***********************/
+    function randomInteger(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function valueToPercent(value) {
+      return (value / BAR_MAX) * 100;
+    }
+
+    function getValueFromPointer(event, barElement) {
+      const rect = barElement.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const proportion = clamp(x / rect.width, 0, 1);
+      return proportion * BAR_MAX;
+    }
+
+    /***********************
+     * Rendering
+     ***********************/
+    function renderBars() {
+      blueFill.style.width = `${valueToPercent(blueValue)}%`;
+      orangeFill.style.width = `${valueToPercent(orangeValue)}%`;
+
+      blueValueLabel.textContent = blueValue.toFixed(2);
+      orangeValueLabel.textContent = String(Math.round(orangeValue));
+
+      // Keep labels readable when fill is tiny.
+      blueValueLabel.style.display = blueValue <= 0.05 ? "none" : "block";
+      orangeValueLabel.style.display = orangeValue <= 0.05 ? "none" : "block";
+    }
+
+    function renderTimer() {
+      timerEl.textContent = timerRemaining.toFixed(1);
+      timerEl.classList.toggle("warning", timerRunning && timerRemaining <= 1.2);
+    }
+
+    function renderProgress() {
+      const halfTrackPercent = 50;
+
+      if (progress > 0) {
+        positiveProgress.style.width = `${(progress / PROGRESS_MAX) * halfTrackPercent}%`;
+        negativeProgress.style.width = "0%";
+      } else if (progress < 0) {
+        positiveProgress.style.width = "0%";
+        negativeProgress.style.width = `${(Math.abs(progress) / Math.abs(PROGRESS_MIN)) * halfTrackPercent}%`;
+      } else {
+        positiveProgress.style.width = "0%";
+        negativeProgress.style.width = "0%";
+      }
+    }
+
+    /***********************
+     * Problem lifecycle
+     ***********************/
+    function newProblem() {
+      problemLocked = false;
+      timerRunning = false;
+      clearInterval(timerInterval);
+      timerInterval = null;
+
+      timerRemaining = TIMER_START_SECONDS;
+      renderTimer();
+
+      originalOrange = randomInteger(2, 19);
+      originalBlue = randomInteger(originalOrange, 20);
+
+      orangeValue = originalOrange;
+      blueValue = originalBlue;
+
+      targetRatio = originalBlue / originalOrange;
+
+      renderBars();
+    }
+
+    function startTimerIfNeeded() {
+      if (timerRunning || problemLocked) return;
+
+      timerRunning = true;
+      timerRemaining = TIMER_START_SECONDS;
+      renderTimer();
+
+      const startTime = performance.now();
+
+      timerInterval = setInterval(() => {
+        const elapsed = (performance.now() - startTime) / 1000;
+        timerRemaining = Math.max(0, TIMER_START_SECONDS - elapsed);
+        renderTimer();
+
+        if (timerRemaining <= 0) {
+          handleFailure();
+        }
+      }, 50);
+    }
+
+    function isCorrect() {
+      if (orangeValue !== 1) return false;
+
+      const currentRatio = blueValue / orangeValue;
+      const percentDifference = Math.abs(currentRatio - targetRatio) / targetRatio * 100;
+
+      return percentDifference <= PERCENT_TOLERANCE;
+    }
+
+    function checkSolution() {
+      if (problemLocked) return;
+
+      if (isCorrect()) {
+        handleSuccess();
+      }
+    }
+
+    function showOverlay(symbol, className) {
+      overlay.textContent = symbol;
+      overlay.className = `overlay-result show ${className}`;
+
+      setTimeout(() => {
+        overlay.className = "overlay-result";
+      }, 650);
+    }
+
+    function handleSuccess() {
+      if (problemLocked) return;
+      problemLocked = true;
+
+      clearInterval(timerInterval);
+      timerInterval = null;
+      timerRunning = false;
+
+      progress = clamp(progress + 1, PROGRESS_MIN, PROGRESS_MAX);
+      renderProgress();
+
+      showOverlay("✓", "success");
+
+      if (progress >= PROGRESS_MAX) {
+        setTimeout(() => {
+          activityComplete();
+        }, 700);
+      } else {
+        setTimeout(newProblem, 750);
+      }
+    }
+
+    function handleFailure() {
+      if (problemLocked) return;
+      problemLocked = true;
+
+      clearInterval(timerInterval);
+      timerInterval = null;
+      timerRunning = false;
+      timerRemaining = 0;
+      renderTimer();
+
+      progress = clamp(progress - 1, PROGRESS_MIN, PROGRESS_MAX);
+      renderProgress();
+
+      showOverlay("✕", "failure");
+
+      setTimeout(newProblem, 750);
+    }
+
+    /***********************
+     * Dragging
+     ***********************/
+    function enableDragging(barElement, setValueCallback) {
+      let dragging = false;
+
+      function move(event) {
+        if (!dragging || problemLocked) return;
+
+        event.preventDefault();
+
+        const rawValue = getValueFromPointer(event, barElement);
+        setValueCallback(rawValue);
+
+        renderBars();
+      }
+
+      function stopDrag(event) {
+        dragging = false;
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", stopDrag);
+        window.removeEventListener("pointercancel", stopDrag);
+
+        if (event?.type === "pointerup") {
+          checkSolution();
+        }
+      }
+
+      barElement.addEventListener("pointerdown", event => {
+        if (problemLocked) return;
+
+        dragging = true;
+        barElement.setPointerCapture?.(event.pointerId);
+
+        startTimerIfNeeded();
+
+        const rawValue = getValueFromPointer(event, barElement);
+        setValueCallback(rawValue);
+
+        renderBars();
+
+        window.addEventListener("pointermove", move);
+        window.addEventListener("pointerup", stopDrag);
+        window.addEventListener("pointercancel", stopDrag);
+      });
+    }
+
+    enableDragging(blueBar, rawValue => {
+      blueValue = clamp(rawValue, BAR_MIN, BAR_MAX);
+    });
+
+    enableDragging(orangeBar, rawValue => {
+      orangeValue = clamp(Math.round(rawValue), BAR_MIN, BAR_MAX);
+    });
+
+    /***********************
+     * Completion hook
+     ***********************/
+    function activityComplete() {
+      completeMessage.classList.add("show");
+      console.log("Activity complete!");
+    }
+
+    /***********************
+     * Initialize
+     ***********************/
+    renderProgress();
+    newProblem();
+
+  </script>
+<script src="/static/puzzle/js/activity.js"></script>
+<script>autoZoom();</script>
+</body>
+</html>

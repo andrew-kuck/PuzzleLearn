@@ -1,0 +1,949 @@
+create an activity using html, css, and javascript. show a scale on the screen. the scale depicts an algebra equation of the form a + bx = c + dx, where a, b, c, and d are all integers between 0 and 9 (inclusive). ensure that solving for x yields a single solution. on the scale, a and c are represented as a small squares and c small squares, respectively. bx is represented as b medium circles, each with an x in the middle; and dx is is represented as d medium circles, each with an x in the middle. the user can drag any of these objects to a trashcan, at which point they disappear (if the user releases anywhere else the object goes back to where is was). after an object is removed, the scale tilts to that side; at that point, the subsequent object the user can remove is the type of object on the other side that will balance the scale (a square if the user removed a square and a circle if the user removed a circle). after the user has balanced the scale by removing such an object, they can once again pick any object on either side to remove. there is a button to reset the scale to its original setting. at any time the user can answer the question by filling in an input displayed as x = [input]. if the input is correct, a green checkmark appears on the screen, a new problem is presented, and a progress bar is advanced one unit. if the input is not correct, a red x appears over the screen, the same problem remains, and the progress bar goes back one unit. the progress bar extends from -10 to 10 (without labels or tick marks except for a gray vertical line in the middle indicating 0). 0 displays as nothing, negative numbers display as red fill extending to the left of 0, and positive numbers display as green fill extending to the right of 0. progress cannot go below -10. when progress reaches 10 a function activityComplete() is called.
+
+keep everything the same, but after an incorrect submission keep the same problem on the screen. also, have the scale appear slightly higher in the box and have the trash slightly smaller, so that the scale and trash icon never intersect.
+
+have the vertical supporting line of the scale extend all the way to the base of the scale
+
+the lines the connect the hanging "baskets" to the horizontal scale bar should extend to the horizonal scale bar but not above it at all
+
+they are now too short and don't quite extend to the horizontal scale bar
+
+have it so that on each side of the equation, the x term can appear to either the right or the left of the plus sign (at random)
+
+have the vertical line supporting the scale extend closer to the top of the containing box
+
+Below is a complete single-file HTML activity. Save it as `index.html` and open it in a browser.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Balance the Equation</title>
+  <style>
+    :root {
+      --blue: #1f6feb;
+      --maize: #ffcb05;
+      --green: #22a06b;
+      --red: #d1242f;
+      --gray: #6e7781;
+      --light: #f6f8fa;
+      --dark: #24292f;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #f8fbff, #eef4ff);
+      color: var(--dark);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 24px;
+    }
+
+    .activity {
+      width: min(1000px, 100%);
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 16px 40px rgba(31, 35, 40, 0.15);
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      text-align: center;
+      font-size: clamp(1.6rem, 3vw, 2.3rem);
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--gray);
+      margin-bottom: 18px;
+    }
+
+    .equation {
+      text-align: center;
+      font-size: clamp(1.5rem, 4vw, 2.6rem);
+      font-weight: 800;
+      margin: 12px 0;
+    }
+
+    .instructions {
+      text-align: center;
+      min-height: 28px;
+      font-weight: 600;
+      color: #44546a;
+      margin-bottom: 8px;
+    }
+
+    .top-row {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    button {
+      border: none;
+      background: var(--blue);
+      color: white;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 10px 18px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      background: #1759c7;
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .scale-area {
+      position: relative;
+      height: 390px;
+      margin: 8px auto 20px;
+      max-width: 900px;
+      border-radius: 18px;
+      background:
+        radial-gradient(circle at center 78%, rgba(31, 111, 235, 0.08), transparent 32%),
+        #fbfdff;
+      border: 2px solid #d8e2f0;
+      overflow: hidden;
+    }
+
+    .scale-board {
+      position: absolute;
+      width: 82%;
+      height: 260px;
+      left: 9%;
+      top: 45px;
+      transform-origin: 50% 85px;
+      transition: transform 0.45s ease;
+    }
+
+    .scale-board.balanced {
+      transform: rotate(0deg);
+    }
+
+    .scale-board.tilt-left {
+      transform: rotate(-8deg);
+    }
+
+    .scale-board.tilt-right {
+      transform: rotate(8deg);
+    }
+
+    .arm {
+      position: absolute;
+      left: 4%;
+      top: 80px;
+      width: 92%;
+      height: 12px;
+      background: #3d4856;
+      border-radius: 999px;
+      box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
+    }
+
+    .center-post {
+      position: absolute;
+      left: 50%;
+      top: 132px;
+      width: 18px;
+      height: 180px;
+      transform: translateX(-50%);
+      background: #3d4856;
+      border-radius: 10px 10px 0 0;
+      z-index: 0;
+    }
+
+    .pivot {
+      position: absolute;
+      left: 50%;
+      top: 118px;
+      transform: translateX(-50%);
+      width: 72px;
+      height: 72px;
+      background: var(--maize);
+      border: 6px solid #3d4856;
+      border-radius: 50%;
+      z-index: 1;
+    }
+
+    .base {
+      position: absolute;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%);
+      width: 190px;
+      height: 28px;
+      background: #3d4856;
+      border-radius: 999px;
+    }
+
+    .pan {
+      position: absolute;
+      top: 108px;
+      width: 38%;
+      min-height: 150px;
+      padding: 18px 12px 12px;
+      border-top: 7px solid #53606f;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 0 0 24px 24px;
+      box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.08), 0 8px 20px rgba(31, 35, 40, 0.12);
+      display: flex;
+      align-content: flex-start;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .pan::before,
+    .pan::after {
+      content: "";
+      position: absolute;
+      top: -88px;
+      width: 4px;
+      height: 88px;
+      background: #53606f;
+      border-radius: 4px;
+    }
+
+    .pan::before {
+      left: 20%;
+      transform: rotate(12deg);
+      transform-origin: bottom;
+    }
+
+    .pan::after {
+      right: 20%;
+      transform: rotate(-12deg);
+      transform-origin: bottom;
+    }
+
+    .left-pan {
+      left: 0;
+    }
+
+    .right-pan {
+      right: 0;
+    }
+
+    .token {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      touch-action: none;
+      cursor: grab;
+      font-weight: 900;
+      transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .token:hover {
+      transform: scale(1.06);
+    }
+
+    .token:active {
+      cursor: grabbing;
+    }
+
+    .square {
+      width: 30px;
+      height: 30px;
+      background: #ffdf70;
+      border: 3px solid #b7791f;
+      border-radius: 6px;
+      box-shadow: 0 3px 0 rgba(183, 121, 31, 0.35);
+    }
+
+    .circle {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: #bde0ff;
+      border: 4px solid #1f6feb;
+      color: #0b3d91;
+      font-size: 1.45rem;
+      box-shadow: 0 4px 0 rgba(31, 111, 235, 0.25);
+    }
+
+    .drag-proxy {
+      position: fixed;
+      z-index: 1000;
+      pointer-events: none;
+      opacity: 0.9;
+      transform: scale(1.08);
+    }
+
+    .trash {
+      position: absolute;
+      right: 22px;
+      bottom: 22px;
+      width: 96px;
+      height: 106px;
+      border: 4px dashed #8c959f;
+      border-radius: 18px;
+      background: rgba(246, 248, 250, 0.92);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-weight: 800;
+      color: #57606a;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+    }
+
+    .trash .icon {
+      font-size: 2.2rem;
+      line-height: 1;
+    }
+
+    .trash.over {
+      background: #fff1f0;
+      border-color: var(--red);
+      transform: scale(1.04);
+    }
+
+    .trash.flash {
+      animation: shake 0.32s ease;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      75% { transform: translateX(6px); }
+    }
+
+    .answer-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 16px 0 22px;
+      font-size: 1.6rem;
+      font-weight: 800;
+    }
+
+    input {
+      width: 100px;
+      font-size: 1.4rem;
+      font-weight: 800;
+      padding: 8px 10px;
+      border: 3px solid #ccd6e0;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--blue);
+      box-shadow: 0 0 0 4px rgba(31, 111, 235, 0.15);
+    }
+
+    .progress-wrap {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .progress-shell {
+      position: relative;
+      height: 32px;
+      border-radius: 999px;
+      background: #eaeef2;
+      overflow: hidden;
+      border: 2px solid #ccd6e0;
+    }
+
+    .midline {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: #8c959f;
+      z-index: 3;
+      transform: translateX(-50%);
+    }
+
+    .fill {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+
+    .positive-fill {
+      left: 50%;
+      background: var(--green);
+      border-radius: 0 999px 999px 0;
+    }
+
+    .negative-fill {
+      right: 50%;
+      background: var(--red);
+      border-radius: 999px 0 0 999px;
+    }
+
+    .feedback {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(7rem, 20vw, 15rem);
+      font-weight: 900;
+      background: rgba(255, 255, 255, 0.58);
+      z-index: 2000;
+      pointer-events: none;
+    }
+
+    .feedback.show {
+      display: flex;
+      animation: pop 0.55s ease;
+    }
+
+    .feedback.correct {
+      color: var(--green);
+    }
+
+    .feedback.incorrect {
+      color: var(--red);
+    }
+
+    @keyframes pop {
+      0% {
+        opacity: 0;
+        transform: scale(0.7);
+      }
+      40% {
+        opacity: 1;
+        transform: scale(1.08);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .complete-message {
+      text-align: center;
+      margin-top: 12px;
+      font-size: 1.3rem;
+      font-weight: 900;
+      color: var(--green);
+      min-height: 32px;
+    }
+
+    @media (max-width: 700px) {
+      .scale-area {
+        height: 420px;
+      }
+
+      .scale-board {
+        width: 96%;
+        left: 2%;
+      }
+
+      .pan {
+        width: 43%;
+        gap: 7px;
+      }
+
+      .trash {
+        width: 82px;
+        height: 92px;
+        right: 12px;
+      }
+
+      .circle {
+        width: 46px;
+        height: 46px;
+      }
+
+      .square {
+        width: 27px;
+        height: 27px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="activity">
+    <h1>Balance the Equation</h1>
+    <div class="subtitle">
+      Remove matching objects from both sides, or solve for x directly.
+    </div>
+
+    <div class="equation" id="equationText" aria-live="polite"></div>
+
+    <div class="top-row">
+      <button id="resetBtn" type="button">Reset Scale</button>
+    </div>
+
+    <div class="instructions" id="instructions" aria-live="polite"></div>
+
+    <section class="scale-area" aria-label="Equation balance scale">
+      <div id="scaleBoard" class="scale-board balanced">
+        <div class="arm"></div>
+
+        <div id="leftPan" class="pan left-pan" aria-label="Left side of equation"></div>
+        <div id="rightPan" class="pan right-pan" aria-label="Right side of equation"></div>
+      </div>
+
+      <div class="center-post"></div>
+      <div class="pivot"></div>
+      <div class="base"></div>
+
+      <div id="trash" class="trash" aria-label="Trash can">
+        <div class="icon">🗑️</div>
+        <div>Trash</div>
+      </div>
+    </section>
+
+    <form id="answerForm" class="answer-row">
+      <label for="answerInput">x =</label>
+      <input id="answerInput" type="number" step="1" autocomplete="off" />
+      <button type="submit">Check</button>
+    </form>
+
+    <div class="progress-wrap" aria-label="Progress from negative ten to positive ten">
+      <div class="progress-shell">
+        <div id="negativeFill" class="fill negative-fill"></div>
+        <div id="positiveFill" class="fill positive-fill"></div>
+        <div class="midline" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <div id="completeMessage" class="complete-message"></div>
+
+    <div id="feedback" class="feedback" aria-live="assertive"></div>
+  </main>
+
+  <script>
+    /*
+      If your larger platform already defines activityComplete(),
+      this will not overwrite it.
+    */
+    if (typeof window.activityComplete !== "function") {
+      window.activityComplete = function () {
+        console.log("Activity complete!");
+      };
+    }
+
+    const equationText = document.getElementById("equationText");
+    const instructions = document.getElementById("instructions");
+    const scaleBoard = document.getElementById("scaleBoard");
+    const leftPan = document.getElementById("leftPan");
+    const rightPan = document.getElementById("rightPan");
+    const trash = document.getElementById("trash");
+    const resetBtn = document.getElementById("resetBtn");
+    const answerForm = document.getElementById("answerForm");
+    const answerInput = document.getElementById("answerInput");
+    const feedback = document.getElementById("feedback");
+    const positiveFill = document.getElementById("positiveFill");
+    const negativeFill = document.getElementById("negativeFill");
+    const completeMessage = document.getElementById("completeMessage");
+
+    let problem;
+    let originalTokens = [];
+    let tokens = [];
+    let pendingRemoval = null;
+    let progress = 0;
+    let completed = false;
+
+    let activeDrag = null;
+
+    function randInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function generateProblem() {
+      /*
+        Generates a + bx = c + dx with:
+        - a, b, c, d from 1 to 9, which is within 0 to 9 inclusive
+        - b !== d, so there is a single solution
+        - integer x solution
+      */
+      for (let attempt = 0; attempt < 3000; attempt++) {
+        const x = randInt(-5, 5);
+        const a = randInt(1, 9);
+        const b = randInt(1, 9);
+        const d = randInt(1, 9);
+
+        if (b === d) continue;
+
+        const c = a + (b - d) * x;
+
+        if (c >= 1 && c <= 9) {
+          return { a, b, c, d, x };
+        }
+      }
+
+      // Reliable fallback: 2 + 3x = 8 + 1x, x = 3
+      return { a: 2, b: 3, c: 8, d: 1, x: 3 };
+    }
+
+    function makeTokens(p) {
+      const list = [];
+      let id = 0;
+
+      for (let i = 0; i < p.a; i++) {
+        list.push({
+          id: `t${id++}`,
+          side: "left",
+          type: "square",
+          removed: false
+        });
+      }
+
+      for (let i = 0; i < p.b; i++) {
+        list.push({
+          id: `t${id++}`,
+          side: "left",
+          type: "circle",
+          removed: false
+        });
+      }
+
+      for (let i = 0; i < p.c; i++) {
+        list.push({
+          id: `t${id++}`,
+          side: "right",
+          type: "square",
+          removed: false
+        });
+      }
+
+      for (let i = 0; i < p.d; i++) {
+        list.push({
+          id: `t${id++}`,
+          side: "right",
+          type: "circle",
+          removed: false
+        });
+      }
+
+      return list;
+    }
+
+    function formatEquation(p) {
+      return `${p.a} + ${p.b}x = ${p.c} + ${p.d}x`;
+    }
+
+    function startNewProblem() {
+      problem = generateProblem();
+      originalTokens = makeTokens(problem);
+      tokens = originalTokens.map(t => ({ ...t }));
+      pendingRemoval = null;
+      completed = false;
+      completeMessage.textContent = "";
+      answerInput.value = "";
+      render();
+    }
+
+    function resetScale() {
+      tokens = originalTokens.map(t => ({ ...t }));
+      pendingRemoval = null;
+      answerInput.value = "";
+      render();
+    }
+
+    function render() {
+      equationText.textContent = formatEquation(problem);
+
+      leftPan.innerHTML = "";
+      rightPan.innerHTML = "";
+
+      for (const token of tokens) {
+        if (token.removed) continue;
+
+        const el = document.createElement("div");
+        el.className = `token ${token.type}`;
+        el.dataset.id = token.id;
+        el.setAttribute("role", "button");
+        el.setAttribute(
+          "aria-label",
+          `${token.type === "square" ? "constant square" : "x circle"} on the ${token.side} side`
+        );
+
+        if (token.type === "circle") {
+          el.textContent = "x";
+        }
+
+        if (token.side === "left") {
+          leftPan.appendChild(el);
+        } else {
+          rightPan.appendChild(el);
+        }
+      }
+
+      updateTilt();
+      updateInstructions();
+      updateProgressBar();
+    }
+
+    function updateTilt() {
+      scaleBoard.classList.remove("balanced", "tilt-left", "tilt-right");
+
+      if (!pendingRemoval) {
+        scaleBoard.classList.add("balanced");
+      } else {
+        /*
+          If one object was removed from the left, the right side is now heavier,
+          so the scale tips right, and vice versa.
+        */
+        const heavierSide = pendingRemoval.side === "left" ? "right" : "left";
+        scaleBoard.classList.add(heavierSide === "left" ? "tilt-left" : "tilt-right");
+      }
+    }
+
+    function updateInstructions() {
+      if (!pendingRemoval) {
+        instructions.textContent =
+          "Drag an object to the trash. To keep balance, remove the same kind from the other side next.";
+      } else {
+        const kind = pendingRemoval.type === "square" ? "square" : "x-circle";
+        const otherSide = pendingRemoval.side === "left" ? "right" : "left";
+        instructions.textContent =
+          `Now remove one ${kind} from the ${otherSide} side to balance the scale.`;
+      }
+    }
+
+    function updateProgressBar() {
+      const clamped = Math.max(-10, Math.min(10, progress));
+
+      if (clamped > 0) {
+        positiveFill.style.width = `${(clamped / 10) * 50}%`;
+        negativeFill.style.width = "0%";
+      } else if (clamped < 0) {
+        negativeFill.style.width = `${(Math.abs(clamped) / 10) * 50}%`;
+        positiveFill.style.width = "0%";
+      } else {
+        positiveFill.style.width = "0%";
+        negativeFill.style.width = "0%";
+      }
+    }
+
+    function visibleMatchingTokenExists(token) {
+      return tokens.some(t =>
+        !t.removed &&
+        t.side !== token.side &&
+        t.type === token.type
+      );
+    }
+
+    function attemptRemove(tokenId) {
+      if (completed) return false;
+
+      const token = tokens.find(t => t.id === tokenId);
+      if (!token || token.removed) return false;
+
+      if (!pendingRemoval) {
+        /*
+          Prevent dead-end moves: the first removal in a pair must have
+          a matching object available on the opposite side.
+        */
+        if (!visibleMatchingTokenExists(token)) {
+          showTrashError(
+            `There is no matching ${token.type === "square" ? "square" : "x-circle"} on the other side.`
+          );
+          return false;
+        }
+
+        token.removed = true;
+        pendingRemoval = {
+          side: token.side,
+          type: token.type
+        };
+        render();
+        return true;
+      }
+
+      const correctOtherSide = token.side !== pendingRemoval.side;
+      const correctType = token.type === pendingRemoval.type;
+
+      if (correctOtherSide && correctType) {
+        token.removed = true;
+        pendingRemoval = null;
+        render();
+        return true;
+      }
+
+      showTrashError("To balance the scale, remove the same kind of object from the other side.");
+      return false;
+    }
+
+    function showTrashError(message) {
+      instructions.textContent = message;
+      trash.classList.add("flash");
+      setTimeout(() => trash.classList.remove("flash"), 350);
+    }
+
+    function showFeedback(isCorrect) {
+      feedback.className = `feedback show ${isCorrect ? "correct" : "incorrect"}`;
+      feedback.textContent = isCorrect ? "✓" : "✕";
+
+      setTimeout(() => {
+        feedback.className = "feedback";
+        feedback.textContent = "";
+      }, 700);
+    }
+
+    function checkAnswer(event) {
+      event.preventDefault();
+
+      if (completed) return;
+
+      const userValue = Number(answerInput.value);
+
+      if (answerInput.value.trim() === "" || !Number.isFinite(userValue)) {
+        showTrashError("Enter a value for x first.");
+        answerInput.focus();
+        return;
+      }
+
+      const isCorrect = userValue === problem.x;
+
+      if (isCorrect) {
+        progress = Math.min(10, progress + 1);
+      } else {
+        progress = Math.max(-10, progress - 1);
+      }
+
+      updateProgressBar();
+      showFeedback(isCorrect);
+
+      if (progress >= 10) {
+        completed = true;
+        completeMessage.textContent = "Great work — activity complete!";
+        setTimeout(() => {
+          window.activityComplete();
+        }, 750);
+        return;
+      }
+
+      setTimeout(() => {
+        startNewProblem();
+        answerInput.focus();
+      }, 800);
+    }
+
+    function handlePointerDown(event) {
+      if (completed) return;
+
+      const tokenEl = event.target.closest(".token");
+      if (!tokenEl) return;
+
+      event.preventDefault();
+
+      const rect = tokenEl.getBoundingClientRect();
+      const proxy = tokenEl.cloneNode(true);
+      proxy.classList.add("drag-proxy");
+      proxy.style.width = `${rect.width}px`;
+      proxy.style.height = `${rect.height}px`;
+      proxy.style.left = `${rect.left}px`;
+      proxy.style.top = `${rect.top}px`;
+
+      document.body.appendChild(proxy);
+
+      tokenEl.style.opacity = "0.25";
+
+      activeDrag = {
+        id: tokenEl.dataset.id,
+        originalEl: tokenEl,
+        proxy,
+        offsetX: event.clientX - rect.left,
+        offsetY: event.clientY - rect.top
+      };
+
+      moveProxy(event.clientX, event.clientY);
+
+      document.addEventListener("pointermove", handlePointerMove);
+      document.addEventListener("pointerup", handlePointerUp);
+      document.addEventListener("pointercancel", handlePointerUp);
+    }
+
+    function moveProxy(clientX, clientY) {
+      if (!activeDrag) return;
+
+      activeDrag.proxy.style.left = `${clientX - activeDrag.offsetX}px`;
+      activeDrag.proxy.style.top = `${clientY - activeDrag.offsetY}px`;
+
+      const trashRect = trash.getBoundingClientRect();
+      const overTrash =
+        clientX >= trashRect.left &&
+        clientX <= trashRect.right &&
+        clientY >= trashRect.top &&
+        clientY <= trashRect.bottom;
+
+      trash.classList.toggle("over", overTrash);
+    }
+
+    function handlePointerMove(event) {
+      if (!activeDrag) return;
+      event.preventDefault();
+      moveProxy(event.clientX, event.clientY);
+    }
+
+    function handlePointerUp(event) {
+      if (!activeDrag) return;
+
+      const trashRect = trash.getBoundingClientRect();
+      const droppedOnTrash =
+        event.clientX >= trashRect.left &&
+        event.clientX <= trashRect.right &&
+        event.clientY >= trashRect.top &&
+        event.clientY <= trashRect.bottom;
+
+      trash.classList.remove("over");
+
+      const { id, originalEl, proxy } = activeDrag;
+
+      if (proxy.parentNode) {
+        proxy.parentNode.removeChild(proxy);
+      }
+
+      let removed = false;
+
+      if (droppedOnTrash) {
+        removed = attemptRemove(id);
+      }
+
+      if (!removed && originalEl && originalEl.isConnected) {
+        originalEl.style.opacity = "";
+      }
+
+      activeDrag = null;
+
+      document.removeEventListener("pointermove", handlePointerMove);
+      document.removeEventListener("pointerup", handlePointerUp);
+      document.removeEventListener("pointercancel", handlePointerUp);
+    }
+
+    document.querySelector(".scale-area").addEventListener("pointerdown", handlePointerDown);
+    resetBtn.addEventListener("click", resetScale);
+    answerForm.addEventListener("submit", checkAnswer);
+
+    startNewProblem();
+  </script>
+</body>
+</html>
+```

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Substitution Lock</title>
+<style>
+body{margin:0;background:#111827;color:white;font-family:system-ui;display:flex;justify-content:center}
+.app{max-width:900px;padding:20px}
+.box{background:white;color:#111;border-radius:18px;padding:25px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:14px 0}
+select,input,button{font-size:17px;border-radius:10px;padding:10px;border:1px solid #bbb}
+button{border:0;background:#ffcb05;color:#00274c;font-weight:800}
+.gear{font-size:70px;text-align:center}
+.pill{background:#243b55;color:white;border-radius:999px;padding:8px 13px}
+</style>
+</head>
+<body>
+<div class="app">
+<h1>Substitution Lock</h1>
+<div class="box">
+<div class="gear">⚙️ 🔒 ⚙️</div>
+<h2 id="q"></h2>
+<p>Choose the hidden inner function u, the outside antiderivative, and the constant multiplier.</p>
+<div class="row">
+<label>u = <select id="u"></select></label>
+<label>outside integral gives <select id="anti"></select></label>
+<label>multiplier <input id="k" size="6"></label>
+<button onclick="check()">Unlock</button>
+</div>
+<div id="msg" class="pill"></div>
+</div>
+</div>
+<script>
+const U=["x²+1","x²","3x-4","sin x","1+x³","ln x","4-x²"];
+const A=["sin(u)","-cos(u)","e^u","ln|u|","u⁴/4","2√u","tan⁻¹(u)"];
+u.innerHTML=U.map(x=>`<option>${x}</option>`).join("");
+anti.innerHTML=A.map(x=>`<option>${x}</option>`).join("");
+const L=[
+ {q:"∫ 2x cos(x²) dx",u:"x²",a:"sin(u)",k:1},
+ {q:"∫ 3e^(3x-4) dx",u:"3x-4",a:"e^u",k:1},
+ {q:"∫ 6x √(x²+1) dx",u:"x²+1",a:"2√u",k:3},
+ {q:"∫ 3x²(1+x³)³ dx",u:"1+x³",a:"u⁴/4",k:1},
+ {q:"∫ cos(x)/sin(x) dx",u:"sin x",a:"ln|u|",k:1},
+ {q:"∫ -2x/(4-x²) dx",u:"4-x²",a:"ln|u|",k:1},
+ {q:"∫ 1/(x(1+(ln x)²)) dx",u:"ln x",a:"tan⁻¹(u)",k:1}
+];
+let i=0;
+function load(){let o=L[i];q.textContent=`Level ${i+1}/${L.length}: ${o.q}`;u.value=U[0];anti.value=A[0];k.value="";msg.textContent=""}
+function check(){
+ let o=L[i],kv=parseFloat(k.value);
+ if(u.value==o.u&&anti.value==o.a&&Math.abs(kv-o.k)<.03){
+  msg.textContent="Unlocked: inner derivative matched.";
+  i=(i+1)%L.length;setTimeout(load,700);
+ }else msg.textContent="Still locked. Make du match the leftover factor.";
+}
+load();
+</script>
+  <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#e1e1e1"
+    }
+  </script>
+</body>
+</html>

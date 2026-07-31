@@ -1,0 +1,887 @@
+create an activity using html, css, and javascript. Build an activity with the following behavior and structure:
+1. Overall layout
+- Use a white card centered near the top of the page.
+- The card should have rounded corners, padding, and a subtle box shadow.
+- Use Arial or sans-serif font.
+- Use CSS custom properties for colors:
+  --blue: #2f65ff;
+  --green: #20b15a;
+  --red: #e63946;
+  --gray: #e8e8e8;
+  --dark: #222;
+- Include a progress bar at the top of the card that fills as the user answers correctly.
+- Include the heading “Evaluate the Expression”.
+- Include a mapping area showing variables such as “a = 3”, “b = 7”, etc.
+- The numeric values should appear as draggable blue chips.
+- Include an expression display area with variables that can be replaced by dropped numbers.
+- Include a “Reset Expression” button.
+- Include a text input with placeholder “Enter the integer value”.
+- Include a green “Submit” button.
+- Include the note:
+  “Drag a number onto a variable to reveal that spot. Click a revealed spot to turn it back into a variable.”
+2. Styling requirements
+- The progress bar container should be 18px high, gray, pill-shaped, and overflow hidden.
+- The progress bar should use a blue gradient from #2f65ff to #65b2ff and animate width changes.
+- Variable mapping items should be rounded light-blue boxes.
+- Draggable value chips should be blue, white text, bold, rounded, and use cursor: grab.
+- The expression box should have a dashed border, light background, rounded corners, and large responsive expression text.
+- Variable slots should initially be yellow with a yellow border.
+- When a dragged value is over a variable slot, make it light green, green-bordered, and slightly larger.
+- When filled, make the variable slot light blue, blue-bordered, and bold.
+- The overlay should cover the viewport and display a huge green check mark or red X for feedback.
+- Include a pop animation using @keyframes.
+3. JavaScript behavior
+Implement the entire activity in vanilla JavaScript.
+The activity should:
+- Randomly generate expressions using integers from 1 to 10.
+- Use up to four variable letters: a, b, c, and d.
+- Generate expressions containing 3 to 6 integer values.
+- Map equal numeric values to the same variable letter.
+- Use arithmetic operations +, -, *, and / internally, but display * as × and / as ÷.
+- Occasionally square subexpressions using a superscript 2.
+- Represent expressions internally as an AST with node types:
+  - number: { type: "number", value, id }
+  - binary: { type: "binary", op, left, right }
+  - square: { type: "square", child }
+4. Question generation rules
+- Keep retrying until the final answer is:
+  - finite
+  - an integer
+  - between -100 and 100 inclusive
+- Use a maximum of 5000 attempts.
+- If generation fails, fall back to a simple subtraction expression.
+- Avoid expressions with non-finite values or values with absolute value greater than 500 during construction.
+- Avoid division by zero.
+- Keep exponentiation occasional, with about a 16% chance to square a node.
+5. Drag-and-drop interaction
+- Render each number in the expression as a variable slot.
+- Each slot should show its variable letter initially.
+- Dragging a numeric chip onto a slot should replace the variable letter with the dropped number.
+- Clicking a filled slot should reset it back to the original variable letter.
+- Reset Expression should reset all filled slots back to their variable letters.
+6. Answer checking
+- The user types the final integer value of the expression into the input.
+- Pressing Submit or Enter checks the answer.
+- If correct:
+  - increment correctCount
+  - update the progress bar
+  - show a large green check mark overlay briefly
+  - load a new question after a short delay unless the user has completed the activity
+- If incorrect:
+  - show a large red X overlay briefly
+- The activity should require 10 correct answers.
+- Use constants:
+  const LETTERS = ["a", "b", "c", "d"];
+  const MAX_QUESTIONS = 10;
+7. Completion behavior
+- When the user reaches 10 correct answers, call:
+  activityComplete() after a short delay.
+8. Initialization
+- On page load:
+  - initialize progress to 0
+  - generate the first question
+  - focus the answer input
+
+Below is a complete single-file HTML activity using vanilla HTML, CSS, and JavaScript. You can save it as `evaluate-expression.html` and open it in a browser.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Evaluate the Expression</title>
+
+  <style>
+    :root {
+      --blue: #2f65ff;
+      --green: #20b15a;
+      --red: #e63946;
+      --gray: #e8e8e8;
+      --dark: #222;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(180deg, #f4f7ff, #eef2f7);
+      color: var(--dark);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 32px 16px;
+    }
+
+    .card {
+      width: min(760px, 100%);
+      background: white;
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+    }
+
+    .progress-wrap {
+      width: 100%;
+      height: 18px;
+      background: var(--gray);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #2f65ff, #65b2ff);
+      border-radius: 999px;
+      transition: width 0.45s ease;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      text-align: center;
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+    }
+
+    .status {
+      text-align: center;
+      font-weight: bold;
+      color: #555;
+      margin-bottom: 18px;
+    }
+
+    .mapping-area {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      margin: 18px 0;
+    }
+
+    .mapping-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #eaf2ff;
+      border: 1px solid #cfe0ff;
+      border-radius: 14px;
+      padding: 10px 12px;
+      font-size: 1.1rem;
+      font-weight: bold;
+    }
+
+    .value-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 42px;
+      padding: 8px 12px;
+      background: var(--blue);
+      color: white;
+      font-weight: bold;
+      border-radius: 999px;
+      cursor: grab;
+      user-select: none;
+      box-shadow: 0 3px 8px rgba(47, 101, 255, 0.25);
+    }
+
+    .value-chip:active {
+      cursor: grabbing;
+    }
+
+    .expression-box {
+      margin: 20px 0;
+      padding: 24px 16px;
+      border: 3px dashed #b6c4dc;
+      background: #fafcff;
+      border-radius: 16px;
+      text-align: center;
+      min-height: 110px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .expression {
+      font-size: clamp(1.7rem, 5vw, 3rem);
+      line-height: 1.55;
+      word-break: break-word;
+    }
+
+    .slot {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 44px;
+      min-height: 44px;
+      padding: 4px 10px;
+      margin: 2px;
+      background: #fff5a8;
+      border: 2px solid #f0cd2c;
+      border-radius: 12px;
+      font-weight: normal;
+      transition:
+        transform 0.18s ease,
+        background 0.18s ease,
+        border-color 0.18s ease;
+    }
+
+    .slot.drag-over {
+      background: #dff8e8;
+      border-color: var(--green);
+      transform: scale(1.1);
+    }
+
+    .slot.filled {
+      background: #e3efff;
+      border-color: var(--blue);
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    sup {
+      font-size: 0.55em;
+      vertical-align: super;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 13px 14px;
+      border: 2px solid #d5dce8;
+      border-radius: 12px;
+      font-size: 1.05rem;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(47, 101, 255, 0.15);
+    }
+
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 13px 18px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .submit-btn {
+      background: var(--green);
+      color: white;
+    }
+
+    .reset-btn {
+      display: block;
+      margin: 8px auto 0;
+      background: #f1f4f8;
+      color: var(--dark);
+      border: 1px solid #d6dee9;
+    }
+
+    .note {
+      margin-top: 16px;
+      color: #555;
+      font-size: 0.95rem;
+      text-align: center;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.58);
+      z-index: 999;
+      pointer-events: none;
+    }
+
+    .overlay.show {
+      display: flex;
+    }
+
+    .feedback-symbol {
+      font-size: clamp(7rem, 26vw, 16rem);
+      font-weight: 900;
+      line-height: 1;
+      animation: pop 0.42s ease;
+      text-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    }
+
+    .feedback-symbol.correct {
+      color: var(--green);
+    }
+
+    .feedback-symbol.incorrect {
+      color: var(--red);
+    }
+
+    @keyframes pop {
+      0% {
+        transform: scale(0.35);
+        opacity: 0;
+      }
+
+      65% {
+        transform: scale(1.18);
+        opacity: 1;
+      }
+
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .card {
+        padding: 18px;
+      }
+
+      .controls {
+        grid-template-columns: 1fr;
+      }
+
+      .submit-btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="card">
+    <div class="progress-wrap" aria-label="Progress">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <h1>Evaluate the Expression</h1>
+    <div class="status" id="statusText">Correct: 0 / 10</div>
+
+    <section class="mapping-area" id="mappingArea" aria-label="Variable mappings"></section>
+
+    <section class="expression-box" aria-label="Expression">
+      <div class="expression" id="expressionDisplay"></div>
+    </section>
+
+    <button class="reset-btn" id="resetBtn" type="button">Reset Expression</button>
+
+    <div class="controls">
+      <input
+        id="answerInput"
+        type="text"
+        inputmode="numeric"
+        placeholder="Enter the integer value"
+        aria-label="Enter the integer value"
+      />
+      <button class="submit-btn" id="submitBtn" type="button">Submit</button>
+    </div>
+
+    <p class="note">
+      Drag a number onto a variable to reveal that spot. Click a revealed spot to turn it back into a variable.
+    </p>
+  </main>
+
+  <div class="overlay" id="overlay" aria-hidden="true">
+    <div class="feedback-symbol" id="feedbackSymbol"></div>
+  </div>
+
+  <script>
+    const LETTERS = ["a", "b", "c", "d"];
+    const MAX_QUESTIONS = 10;
+
+    let correctCount = 0;
+    let currentQuestion = null;
+    let draggedValue = null;
+
+    const progressBar = document.getElementById("progressBar");
+    const statusText = document.getElementById("statusText");
+    const mappingArea = document.getElementById("mappingArea");
+    const expressionDisplay = document.getElementById("expressionDisplay");
+    const resetBtn = document.getElementById("resetBtn");
+    const answerInput = document.getElementById("answerInput");
+    const submitBtn = document.getElementById("submitBtn");
+    const overlay = document.getElementById("overlay");
+    const feedbackSymbol = document.getElementById("feedbackSymbol");
+
+    function activityComplete() {
+      alert("Activity complete! Great work.");
+    }
+
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function choice(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function isSafeValue(value) {
+      return Number.isFinite(value) && Math.abs(value) <= 500;
+    }
+
+    function evaluate(node) {
+      if (node.type === "number") {
+        return node.value;
+      }
+
+      if (node.type === "square") {
+        const childValue = evaluate(node.child);
+        const value = childValue * childValue;
+        return isSafeValue(value) ? value : Infinity;
+      }
+
+      if (node.type === "binary") {
+        const left = evaluate(node.left);
+        const right = evaluate(node.right);
+
+        if (!isSafeValue(left) || !isSafeValue(right)) {
+          return Infinity;
+        }
+
+        let value;
+
+        switch (node.op) {
+          case "+":
+            value = left + right;
+            break;
+          case "-":
+            value = left - right;
+            break;
+          case "*":
+            value = left * right;
+            break;
+          case "/":
+            if (right === 0) return Infinity;
+            value = left / right;
+            break;
+          default:
+            return Infinity;
+        }
+
+        return isSafeValue(value) ? value : Infinity;
+      }
+
+      return Infinity;
+    }
+
+    function maybeSquare(node) {
+      if (Math.random() < 0.16) {
+        const squared = {
+          type: "square",
+          child: node
+        };
+
+        if (isSafeValue(evaluate(squared))) {
+          return squared;
+        }
+      }
+
+      return node;
+    }
+
+    function makeNumberNode(value, id) {
+      return {
+        type: "number",
+        value,
+        id
+      };
+    }
+
+    function generateValues(count) {
+      const distinctCount = randomInt(1, Math.min(LETTERS.length, count));
+      const pool = [];
+
+      while (pool.length < distinctCount) {
+        const value = randomInt(1, 10);
+        if (!pool.includes(value)) {
+          pool.push(value);
+        }
+      }
+
+      const values = [];
+
+      for (let i = 0; i < count; i++) {
+        values.push(choice(pool));
+      }
+
+      return values;
+    }
+
+    function buildRandomAst(values) {
+      let idCounter = 0;
+
+      let nodes = values.map(value => {
+        const node = makeNumberNode(value, idCounter++);
+        return maybeSquare(node);
+      });
+
+      while (nodes.length > 1) {
+        const i = randomInt(0, nodes.length - 1);
+        let left = nodes.splice(i, 1)[0];
+
+        const j = randomInt(0, nodes.length - 1);
+        let right = nodes.splice(j, 1)[0];
+
+        left = maybeSquare(left);
+        right = maybeSquare(right);
+
+        const ops = ["+", "-", "*", "/"];
+        let op = choice(ops);
+
+        let binary = {
+          type: "binary",
+          op,
+          left,
+          right
+        };
+
+        let value = evaluate(binary);
+        let tries = 0;
+
+        while (!isSafeValue(value) && tries < 20) {
+          op = choice(ops);
+
+          binary = {
+            type: "binary",
+            op,
+            left,
+            right
+          };
+
+          value = evaluate(binary);
+          tries++;
+        }
+
+        if (!isSafeValue(value)) {
+          binary = {
+            type: "binary",
+            op: "+",
+            left,
+            right
+          };
+        }
+
+        nodes.push(maybeSquare(binary));
+      }
+
+      return nodes[0];
+    }
+
+    function collectNumberNodes(node, list = []) {
+      if (node.type === "number") {
+        list.push(node);
+      } else if (node.type === "square") {
+        collectNumberNodes(node.child, list);
+      } else if (node.type === "binary") {
+        collectNumberNodes(node.left, list);
+        collectNumberNodes(node.right, list);
+      }
+
+      return list;
+    }
+
+    function makeMappings(numberNodes) {
+      const valueToLetter = new Map();
+      const letterToValue = {};
+
+      for (const numberNode of numberNodes) {
+        if (!valueToLetter.has(numberNode.value)) {
+          const letter = LETTERS[valueToLetter.size];
+          valueToLetter.set(numberNode.value, letter);
+          letterToValue[letter] = numberNode.value;
+        }
+
+        numberNode.variable = valueToLetter.get(numberNode.value);
+      }
+
+      return {
+        valueToLetter,
+        letterToValue
+      };
+    }
+
+    function generateQuestion() {
+      for (let attempt = 0; attempt < 5000; attempt++) {
+        const count = randomInt(3, 6);
+        const values = generateValues(count);
+        const ast = buildRandomAst(values);
+        const answer = evaluate(ast);
+
+        if (
+          Number.isFinite(answer) &&
+          Number.isInteger(answer) &&
+          answer >= -100 &&
+          answer <= 100
+        ) {
+          const numberNodes = collectNumberNodes(ast);
+          const mappings = makeMappings(numberNodes);
+
+          return {
+            ast,
+            answer,
+            mappings
+          };
+        }
+      }
+
+      return fallbackQuestion();
+    }
+
+    function fallbackQuestion() {
+      const ast = {
+        type: "binary",
+        op: "-",
+        left: {
+          type: "binary",
+          op: "-",
+          left: makeNumberNode(8, 0),
+          right: makeNumberNode(3, 1)
+        },
+        right: makeNumberNode(2, 2)
+      };
+
+      const numberNodes = collectNumberNodes(ast);
+      const mappings = makeMappings(numberNodes);
+
+      return {
+        ast,
+        answer: evaluate(ast),
+        mappings
+      };
+    }
+
+    function renderMappingArea() {
+      mappingArea.innerHTML = "";
+
+      for (const letter of LETTERS) {
+        if (!(letter in currentQuestion.mappings.letterToValue)) continue;
+
+        const value = currentQuestion.mappings.letterToValue[letter];
+
+        const item = document.createElement("div");
+        item.className = "mapping-item";
+
+        const label = document.createElement("span");
+        label.textContent = `${letter} =`;
+
+        const chip = document.createElement("span");
+        chip.className = "value-chip";
+        chip.textContent = value;
+        chip.draggable = true;
+        chip.dataset.value = value;
+
+        chip.addEventListener("dragstart", event => {
+          draggedValue = chip.dataset.value;
+          event.dataTransfer.setData("text/plain", chip.dataset.value);
+          event.dataTransfer.effectAllowed = "copy";
+        });
+
+        chip.addEventListener("dragend", () => {
+          draggedValue = null;
+        });
+
+        item.appendChild(label);
+        item.appendChild(chip);
+        mappingArea.appendChild(item);
+      }
+    }
+
+    function renderAst(node) {
+      if (node.type === "number") {
+        const span = document.createElement("span");
+        span.className = "slot";
+        span.textContent = node.variable;
+        span.dataset.variable = node.variable;
+        span.dataset.value = node.value;
+        span.dataset.filled = "false";
+
+        span.addEventListener("dragover", event => {
+          event.preventDefault();
+          span.classList.add("drag-over");
+        });
+
+        span.addEventListener("dragleave", () => {
+          span.classList.remove("drag-over");
+        });
+
+        span.addEventListener("drop", event => {
+          event.preventDefault();
+
+          const value =
+            event.dataTransfer.getData("text/plain") ||
+            draggedValue ||
+            "";
+
+          span.classList.remove("drag-over");
+
+          if (value !== "") {
+            span.textContent = value;
+            span.dataset.filled = "true";
+            span.classList.add("filled");
+          }
+        });
+
+        span.addEventListener("click", () => {
+          if (span.dataset.filled === "true") {
+            span.textContent = span.dataset.variable;
+            span.dataset.filled = "false";
+            span.classList.remove("filled");
+          }
+        });
+
+        return span;
+      }
+
+      if (node.type === "square") {
+        const wrap = document.createElement("span");
+        wrap.appendChild(document.createTextNode("("));
+        wrap.appendChild(renderAst(node.child));
+        wrap.appendChild(document.createTextNode(")"));
+
+        const sup = document.createElement("sup");
+        sup.textContent = "2";
+        wrap.appendChild(sup);
+
+        return wrap;
+      }
+
+      if (node.type === "binary") {
+        const wrap = document.createElement("span");
+
+        const displayOp = node.op === "*"
+          ? " × "
+          : node.op === "/"
+            ? " ÷ "
+            : ` ${node.op} `;
+
+        wrap.appendChild(document.createTextNode("("));
+        wrap.appendChild(renderAst(node.left));
+        wrap.appendChild(document.createTextNode(displayOp));
+        wrap.appendChild(renderAst(node.right));
+        wrap.appendChild(document.createTextNode(")"));
+
+        return wrap;
+      }
+    }
+
+    function renderExpression() {
+      expressionDisplay.innerHTML = "";
+      expressionDisplay.appendChild(renderAst(currentQuestion.ast));
+    }
+
+    function updateProgress() {
+      const percent = (correctCount / MAX_QUESTIONS) * 100;
+      progressBar.style.width = `${percent}%`;
+      statusText.textContent = `Correct: ${correctCount} / ${MAX_QUESTIONS}`;
+    }
+
+    function resetExpression() {
+      const slots = expressionDisplay.querySelectorAll(".slot");
+
+      slots.forEach(slot => {
+        slot.textContent = slot.dataset.variable;
+        slot.dataset.filled = "false";
+        slot.classList.remove("filled", "drag-over");
+      });
+    }
+
+    function showFeedback(isCorrect) {
+      feedbackSymbol.textContent = isCorrect ? "✓" : "✕";
+      feedbackSymbol.className = `feedback-symbol ${isCorrect ? "correct" : "incorrect"}`;
+
+      overlay.classList.remove("show");
+
+      // Restart animation cleanly.
+      void overlay.offsetWidth;
+
+      overlay.classList.add("show");
+
+      setTimeout(() => {
+        overlay.classList.remove("show");
+      }, 700);
+    }
+
+    function loadNewQuestion() {
+      currentQuestion = generateQuestion();
+      renderMappingArea();
+      renderExpression();
+      answerInput.value = "";
+      answerInput.focus();
+    }
+
+    function checkAnswer() {
+      const raw = answerInput.value.trim();
+
+      if (raw === "") {
+        showFeedback(false);
+        return;
+      }
+
+      const userAnswer = Number(raw);
+      const isCorrect =
+        Number.isInteger(userAnswer) &&
+        userAnswer === currentQuestion.answer;
+
+      if (isCorrect) {
+        correctCount++;
+        updateProgress();
+        showFeedback(true);
+
+        if (correctCount >= MAX_QUESTIONS) {
+          setTimeout(() => {
+            activityComplete();
+          }, 850);
+        } else {
+          setTimeout(() => {
+            loadNewQuestion();
+          }, 850);
+        }
+      } else {
+        showFeedback(false);
+        answerInput.select();
+      }
+    }
+
+    resetBtn.addEventListener("click", resetExpression);
+    submitBtn.addEventListener("click", checkAnswer);
+
+    answerInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        checkAnswer();
+      }
+    });
+
+    window.addEventListener("load", () => {
+      correctCount = 0;
+      updateProgress();
+      loadNewQuestion();
+    });
+  </script>
+</body>
+</html>
+```
+

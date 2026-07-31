@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Tangent Launcher</title>
+<style>
+body{margin:0;background:#0b1320;color:white;font-family:system-ui;display:flex;justify-content:center}
+.app{max-width:900px;padding:20px}
+canvas{background:white;border-radius:14px;width:100%;max-width:850px}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:10px 0}
+button,input{font-size:17px;padding:10px;border:0;border-radius:10px}
+button{background:#ffcb05;color:#00274c;font-weight:800}
+.p{background:#243b55;border-radius:999px;padding:8px 13px}
+</style>
+</head>
+<body>
+<div class="app">
+<h1>Tangent Launcher</h1>
+<p>Rotate the laser so it is tangent to the curve at the launch point. Then fire.</p>
+<canvas id="cv" width="850" height="430"></canvas>
+<div class="row">
+<span id="lvl" class="p"></span>
+<label>slope <input id="m" type="range" min="-8" max="8" step=".01"></label>
+<button onclick="fire()">Fire</button>
+<span id="msg" class="p"></span>
+</div>
+</div>
+<script>
+const cv=document.getElementById("cv"),c=cv.getContext("2d"),X=x=>425+x*75,Y=y=>215-y*35;
+const L=[
+ {f:x=>x*x/2-2,df:x=>x,x:1,t:"f(x)=x²/2-2"},
+ {f:x=>Math.sin(x),df:x=>Math.cos(x),x:0,t:"f(x)=sin x"},
+ {f:x=>x*x*x/5-x,df:x=>3*x*x/5-1,x:-1,t:"f(x)=x³/5-x"},
+ {f:x=>Math.exp(x/2)-2,df:x=>.5*Math.exp(x/2),x:0,t:"f(x)=e^(x/2)-2"},
+ {f:x=>1/(x*x+1),df:x=>-2*x/((x*x+1)**2),x:1,t:"f(x)=1/(x²+1)"},
+ {f:x=>Math.log(x+4)-1,df:x=>1/(x+4),x:2,t:"f(x)=ln(x+4)-1"}
+];
+let i=0;
+function draw(){
+ let o=L[i],mm=+m.value,x0=o.x,y0=o.f(x0);
+ lvl.textContent=`Level ${i+1}/${L.length}: ${o.t}, at x=${x0}`;
+ c.clearRect(0,0,850,430);
+ c.strokeStyle="#ddd";for(let x=-5;x<=5;x++){c.beginPath();c.moveTo(X(x),0);c.lineTo(X(x),430);c.stroke()}
+ for(let y=-5;y<=5;y++){c.beginPath();c.moveTo(0,Y(y));c.lineTo(850,Y(y));c.stroke()}
+ c.strokeStyle="#00274c";c.lineWidth=2;c.beginPath();c.moveTo(0,Y(0));c.lineTo(850,Y(0));c.moveTo(X(0),0);c.lineTo(X(0),430);c.stroke();
+ c.strokeStyle="#2f80ed";c.lineWidth=4;c.beginPath();let st=0;
+ for(let k=0;k<=500;k++){let x=-5+10*k/500,y=o.f(x);if(!isFinite(y)||Math.abs(y)>8){st=0;continue}if(!st){c.moveTo(X(x),Y(y));st=1}else c.lineTo(X(x),Y(y))}
+ c.stroke();
+ c.strokeStyle="#ffcb05";c.lineWidth=4;c.beginPath();c.moveTo(X(-5),Y(y0+mm*(-5-x0)));c.lineTo(X(5),Y(y0+mm*(5-x0)));c.stroke();
+ c.fillStyle="#e84a5f";c.beginPath();c.arc(X(x0),Y(y0),9,0,7);c.fill();
+}
+function fire(){
+ let trueM=L[i].df(L[i].x),guess=+m.value;
+ if(Math.abs(trueM-guess)<.06){msg.textContent=`Hit! f′=${trueM.toFixed(3)}`;i=(i+1)%L.length;setTimeout(()=>{m.value=0;msg.textContent="";draw()},800)}
+ else msg.textContent=guess<trueM?"Too flat / low slope":"Too steep / high slope";
+}
+m.oninput=draw;m.value=0;draw();
+</script>
+  <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#e1e1e1"
+    }
+  </script>
+</body>
+</html>

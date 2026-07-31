@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>{{ puzzle_name }}</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #222;
+      padding: 16px;
+    }
+
+    #topPanel {
+      width: 780px;
+      display: grid;
+      grid-template-columns: 1fr 220px 160px;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    #coordinateBox,
+    #progressBox,
+    #buttonBox {
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 10px 12px;
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+    }
+
+    #coordinateBox {
+      font-size: 15px;
+      line-height: 1.4;
+      flex-wrap: wrap;
+    }
+
+    #progressBox {
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    #progressOuter {
+      width: 100%;
+      height: 22px;
+      background: #ddd;
+      border-radius: 20px;
+      overflow: hidden;
+    }
+
+    #progressInner {
+      height: 100%;
+      width: 0%;
+      background: #2da44e;
+      transition: width 0.4s ease;
+    }
+
+    #buttonBox {
+      justify-content: center;
+    }
+
+    button {
+      padding: 9px 12px;
+      border: none;
+      border-radius: 6px;
+      background: #1f6feb;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1558bd;
+    }
+
+    #planeWrapper {
+      position: relative;
+      background: white;
+      border: 2px solid #222;
+      border-radius: 8px;
+      padding: 8px;
+    }
+
+    svg {
+      display: block;
+      user-select: none;
+      touch-action: none;
+      background: white;
+    }
+
+    .grid-line {
+      stroke: #d9d9d9;
+      stroke-width: 1;
+    }
+
+    .axis {
+      stroke: black;
+      stroke-width: 2.5;
+      stroke-linecap: round;
+    }
+
+    .user-point {
+      fill: #0066ff;
+      stroke: white;
+      stroke-width: 2;
+      cursor: pointer;
+    }
+
+    .user-line {
+      stroke: #0066ff;
+      stroke-width: 4;
+      stroke-linecap: round;
+      transition: stroke 150ms ease, opacity 150ms ease;
+    }
+
+    .user-line.invalid {
+      stroke: #d83a34;
+      opacity: 0.85;
+    }
+
+    .preview-line {
+      stroke: #0066ff;
+      stroke-width: 3;
+      stroke-dasharray: 7 5;
+      stroke-linecap: round;
+      pointer-events: none;
+    }
+
+    .solution-fill {
+      fill: rgba(0, 102, 255, 0.35);
+      stroke: #0066ff;
+      stroke-width: 4;
+    }
+
+    .axis-label {
+      font-size: 11px;
+      fill: #333;
+      pointer-events: none;
+    }
+
+    #checkOverlay {
+      position: absolute;
+      inset: 0;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.55);
+      font-size: 160px;
+      color: #2da44e;
+      font-weight: bold;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="topPanel">
+    <div id="coordinateBox"></div>
+
+    <div id="progressBox">
+      <div id="progressOuter" aria-label="Progress">
+        <div id="progressInner"></div>
+      </div>
+    </div>
+
+    <div id="buttonBox">
+      <button id="resetButton">Reset Problem</button>
+    </div>
+  </div>
+
+  <div id="planeWrapper">
+    <svg
+      id="plane"
+      width="700"
+      height="700"
+      aria-label="Coordinate plane from negative fifteen to positive fifteen"
+    ></svg>
+    <div id="checkOverlay">✓</div>
+  </div>
+
+  <script>
+    function activityComplete() {
+      console.log("Activity complete!");
+      alert("Activity complete! Great work.");
+    }
+
+    const problems = [
+      {
+        name: "House",
+        vertices: [
+          [-8, -6], [8, -6], [8, 4], [0, 11], [-8, 4]
+        ]
+      },
+      {
+        name: "Kite",
+        vertices: [
+          [0, 13], [7, 2], [0, -12], [-7, 2]
+        ]
+      },
+      {
+        name: "Envelope",
+        vertices: [
+          [-10, -6], [10, -6], [10, 6], [0, 0], [-10, 6]
+        ]
+      },
+      {
+        name: "Boat Sail",
+        vertices: [
+          [-9, -8], [11, -8], [-3, 11]
+        ]
+      },
+      {
+        name: "Arrow",
+        vertices: [
+          [-11, -4], [2, -4], [2, -9], [12, 0], [2, 9], [2, 4], [-11, 4]
+        ]
+      },
+      {
+        name: "Crown",
+        vertices: [
+          [-11, -7], [11, -7], [9, 6], [4, 0], [0, 9], [-4, 0], [-9, 6]
+        ]
+      },
+      {
+        name: "Shield",
+        vertices: [
+          [-8, 9], [8, 9], [8, 0], [0, -12], [-8, 0]
+        ]
+      },
+      {
+        name: "Gem",
+        vertices: [
+          [-10, 3], [-5, 10], [5, 10], [10, 3], [0, -11]
+        ]
+      },
+      {
+        name: "Simple Fish",
+        vertices: [
+          [-11, 0], [-4, 7], [6, 7], [12, 0], [6, -7], [-4, -7]
+        ]
+      },
+      {
+        name: "Mountain",
+        vertices: [
+          [-13, -9], [-5, 4], [0, -2], [6, 10], [13, -9]
+        ]
+      }
+    ];
+
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    shuffleArray(problems);
+
+    const svg = document.getElementById("plane");
+    const checkOverlay = document.getElementById("checkOverlay");
+    const coordinateBox = document.getElementById("coordinateBox");
+    const progressInner = document.getElementById("progressInner");
+    const resetButton = document.getElementById("resetButton");
+
+    const SVG_SIZE = 700;
+
+    /*
+      Reduced from 52 to 26.
+
+      The grid lines still run from -15 to 15.
+      The smaller blank margin keeps labels and edge points visible
+      without creating as much empty space.
+    */
+    const PADDING = 26;
+
+    const MIN = -15;
+    const MAX = 15;
+    const RANGE = MAX - MIN;
+
+    const GRID_SIZE = SVG_SIZE - 2 * PADDING;
+    const STEP = GRID_SIZE / RANGE;
+
+    const POINT_RADIUS = 7;
+    const AXIS_ARROW_EXTENSION = 12;
+
+    let currentProblemIndex = 0;
+    let solvedCount = 0;
+
+    let userPoints = new Set();
+    let userLines = new Set();
+
+    let isDragging = false;
+    let dragStartPoint = null;
+    let pointerMoved = false;
+    let previewLine = null;
+    let locked = false;
+
+    const defs = createSvgElement("defs");
+    svg.appendChild(defs);
+
+    createArrowMarker();
+
+    const gridGroup = createSvgElement("g");
+    const fillGroup = createSvgElement("g");
+    const lineGroup = createSvgElement("g");
+    const pointGroup = createSvgElement("g");
+    const previewGroup = createSvgElement("g");
+
+    svg.appendChild(gridGroup);
+    svg.appendChild(fillGroup);
+    svg.appendChild(lineGroup);
+    svg.appendChild(pointGroup);
+    svg.appendChild(previewGroup);
+
+    drawGrid();
+    loadProblem(0);
+
+    svg.addEventListener("pointerdown", handlePointerDown);
+    svg.addEventListener("pointermove", handlePointerMove);
+    svg.addEventListener("pointerup", handlePointerUp);
+    svg.addEventListener("pointercancel", cancelDrag);
+    resetButton.addEventListener("click", resetCurrentProblem);
+
+    function createArrowMarker() {
+      const marker = createSvgElement("marker");
+      marker.setAttribute("id", "axisArrow");
+      marker.setAttribute("markerWidth", "8");
+      marker.setAttribute("markerHeight", "8");
+      marker.setAttribute("refX", "4");
+      marker.setAttribute("refY", "4");
+      marker.setAttribute("orient", "auto-start-reverse");
+      marker.setAttribute("markerUnits", "strokeWidth");
+
+      const path = createSvgElement("path");
+      path.setAttribute("d", "M 0 0 L 8 4 L 0 8 z");
+      path.setAttribute("fill", "black");
+
+      marker.appendChild(path);
+      defs.appendChild(marker);
+    }
+
+    function handlePointerDown(event) {
+      if (locked) return;
+
+      const coord = getNearestGridCoordinate(event);
+      if (!coord) return;
+
+      const key = pointKey(coord.x, coord.y);
+
+      pointerMoved = false;
+
+      if (userPoints.has(key)) {
+        isDragging = true;
+        dragStartPoint = coord;
+        createPreviewLine(coord, coord);
+        svg.setPointerCapture(event.pointerId);
+      }
+    }
+
+    function handlePointerMove(event) {
+      if (locked || !isDragging || !dragStartPoint) return;
+
+      const svgPoint = getSvgPoint(event);
+      const start = toSvgCoords(dragStartPoint.x, dragStartPoint.y);
+
+      const dx = svgPoint.x - start.x;
+      const dy = svgPoint.y - start.y;
+
+      if (Math.sqrt(dx * dx + dy * dy) > 5) {
+        pointerMoved = true;
+      }
+
+      updatePreviewLine(svgPoint.x, svgPoint.y);
+    }
+
+    function handlePointerUp(event) {
+      if (locked) return;
+
+      const releaseCoord = getNearestGridCoordinate(event);
+
+      if (isDragging && dragStartPoint) {
+        removePreviewLine();
+
+        const startKey = pointKey(dragStartPoint.x, dragStartPoint.y);
+
+        if (!pointerMoved) {
+          removePointAndConnectedLines(startKey);
+        } else if (releaseCoord) {
+          const endKey = pointKey(releaseCoord.x, releaseCoord.y);
+
+          if (
+            endKey !== startKey &&
+            userPoints.has(startKey) &&
+            userPoints.has(endKey)
+          ) {
+            addLine(startKey, endKey);
+          }
+        }
+
+        isDragging = false;
+        dragStartPoint = null;
+        pointerMoved = false;
+        checkSolution();
+        return;
+      }
+
+      if (releaseCoord) {
+        const key = pointKey(releaseCoord.x, releaseCoord.y);
+
+        if (!userPoints.has(key)) {
+          addPoint(releaseCoord.x, releaseCoord.y);
+        }
+      }
+
+      checkSolution();
+    }
+
+    function cancelDrag() {
+      removePreviewLine();
+      isDragging = false;
+      dragStartPoint = null;
+      pointerMoved = false;
+    }
+
+    function addPoint(x, y) {
+      const key = pointKey(x, y);
+      userPoints.add(key);
+      renderPoints();
+    }
+
+    function removePointAndConnectedLines(pointKeyValue) {
+      userPoints.delete(pointKeyValue);
+
+      for (const lineKey of Array.from(userLines)) {
+        const [a, b] = lineKey.split("|");
+        if (a === pointKeyValue || b === pointKeyValue) {
+          userLines.delete(lineKey);
+        }
+      }
+
+      renderLines();
+      renderPoints();
+    }
+
+    function addLine(keyA, keyB) {
+      const normalized = normalizeLineKey(keyA, keyB);
+      userLines.add(normalized);
+      renderLines();
+    }
+
+    function checkSolution() {
+      if (locked) return;
+
+      const problem = problems[currentProblemIndex];
+
+      const expectedPointKeys = new Set(
+        problem.vertices.map(([x, y]) => pointKey(x, y))
+      );
+
+      const expectedLineKeys = getExpectedLineKeys(problem.vertices);
+
+      const hasAllExpectedPoints =
+        userPoints.size === expectedPointKeys.size &&
+        [...expectedPointKeys].every(key => userPoints.has(key));
+
+      const hasAllExpectedLines =
+        userLines.size === expectedLineKeys.size &&
+        [...expectedLineKeys].every(key => userLines.has(key));
+
+      if (hasAllExpectedPoints && hasAllExpectedLines) {
+        solveProblem();
+        return;
+      }
+
+      if (hasAllExpectedPoints && userLines.size > 0 && allPointsHaveTwoOrMoreLines()) {
+        flashInvalidLines();
+      }
+    }
+
+    function allPointsHaveTwoOrMoreLines() {
+      if (userPoints.size === 0) return false;
+
+      const degree = new Map();
+
+      for (const lineKey of userLines) {
+        const [a, b] = lineKey.split("|");
+        degree.set(a, (degree.get(a) || 0) + 1);
+        degree.set(b, (degree.get(b) || 0) + 1);
+      }
+
+      for (const pointKeyValue of userPoints) {
+        if ((degree.get(pointKeyValue) || 0) < 2) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    function flashInvalidLines() {
+      const lines = lineGroup.querySelectorAll(".user-line");
+      if (!lines.length) return;
+
+      lines.forEach(line => line.classList.add("invalid"));
+
+      setTimeout(() => {
+        userLines.clear();
+        renderLines();
+      }, 500);
+    }
+
+    function getExpectedLineKeys(vertices) {
+      const keys = new Set();
+
+      for (let i = 0; i < vertices.length; i++) {
+        const current = vertices[i];
+        const next = vertices[(i + 1) % vertices.length];
+
+        const keyA = pointKey(current[0], current[1]);
+        const keyB = pointKey(next[0], next[1]);
+
+        keys.add(normalizeLineKey(keyA, keyB));
+      }
+
+      return keys;
+    }
+
+    async function solveProblem() {
+      locked = true;
+
+      showSolvedFill();
+
+      await wait(2000);
+
+      checkOverlay.style.display = "flex";
+
+      await wait(900);
+
+      solvedCount++;
+      updateProgress();
+
+      if (solvedCount >= 10) {
+        activityComplete();
+        return;
+      }
+
+      currentProblemIndex++;
+      checkOverlay.style.display = "none";
+      loadProblem(currentProblemIndex);
+      locked = false;
+    }
+
+    function drawGrid() {
+      gridGroup.innerHTML = "";
+
+      const gridStart = PADDING;
+      const gridEnd = SVG_SIZE - PADDING;
+
+      for (let i = MIN; i <= MAX; i++) {
+        if (i !== 0) {
+          const xPos = toSvgCoords(i, 0).x;
+          const yPos = toSvgCoords(0, i).y;
+
+          const vertical = createSvgElement("line");
+          vertical.setAttribute("x1", xPos);
+          vertical.setAttribute("y1", gridStart);
+          vertical.setAttribute("x2", xPos);
+          vertical.setAttribute("y2", gridEnd);
+          vertical.setAttribute("class", "grid-line");
+          gridGroup.appendChild(vertical);
+
+          const horizontal = createSvgElement("line");
+          horizontal.setAttribute("x1", gridStart);
+          horizontal.setAttribute("y1", yPos);
+          horizontal.setAttribute("x2", gridEnd);
+          horizontal.setAttribute("y2", yPos);
+          horizontal.setAttribute("class", "grid-line");
+          gridGroup.appendChild(horizontal);
+        }
+      }
+
+      drawAxesWithArrows();
+      drawAxisLabels();
+    }
+
+    function drawAxesWithArrows() {
+      const origin = toSvgCoords(0, 0);
+
+      const xAxis = createSvgElement("line");
+      xAxis.setAttribute("x1", PADDING - AXIS_ARROW_EXTENSION);
+      xAxis.setAttribute("y1", origin.y);
+      xAxis.setAttribute("x2", SVG_SIZE - PADDING + AXIS_ARROW_EXTENSION);
+      xAxis.setAttribute("y2", origin.y);
+      xAxis.setAttribute("class", "axis");
+      xAxis.setAttribute("marker-start", "url(#axisArrow)");
+      xAxis.setAttribute("marker-end", "url(#axisArrow)");
+      gridGroup.appendChild(xAxis);
+
+      const yAxis = createSvgElement("line");
+      yAxis.setAttribute("x1", origin.x);
+      yAxis.setAttribute("y1", SVG_SIZE - PADDING + AXIS_ARROW_EXTENSION);
+      yAxis.setAttribute("x2", origin.x);
+      yAxis.setAttribute("y2", PADDING - AXIS_ARROW_EXTENSION);
+      yAxis.setAttribute("class", "axis");
+      yAxis.setAttribute("marker-start", "url(#axisArrow)");
+      yAxis.setAttribute("marker-end", "url(#axisArrow)");
+      gridGroup.appendChild(yAxis);
+    }
+
+    function drawAxisLabels() {
+      const origin = toSvgCoords(0, 0);
+
+      for (let i = MIN; i <= MAX; i++) {
+        if (i === 0) continue;
+
+        const xLabelPos = toSvgCoords(i, 0);
+
+        const xLabel = createSvgElement("text");
+        xLabel.textContent = i;
+        xLabel.setAttribute("x", xLabelPos.x);
+        xLabel.setAttribute("y", origin.y + 16);
+        xLabel.setAttribute("text-anchor", "middle");
+        xLabel.setAttribute("class", "axis-label");
+        gridGroup.appendChild(xLabel);
+
+        const yLabelPos = toSvgCoords(0, i);
+
+        const yLabel = createSvgElement("text");
+        yLabel.textContent = i;
+        yLabel.setAttribute("x", origin.x + 6);
+        yLabel.setAttribute("y", yLabelPos.y + 4);
+        yLabel.setAttribute("class", "axis-label");
+        gridGroup.appendChild(yLabel);
+      }
+
+      const originLabel = createSvgElement("text");
+      originLabel.textContent = "0";
+      originLabel.setAttribute("x", origin.x + 6);
+      originLabel.setAttribute("y", origin.y + 16);
+      originLabel.setAttribute("class", "axis-label");
+      gridGroup.appendChild(originLabel);
+    }
+
+    function renderPoints() {
+      pointGroup.innerHTML = "";
+
+      for (const key of userPoints) {
+        const { x, y } = parsePointKey(key);
+        const svgCoord = toSvgCoords(x, y);
+
+        const circle = createSvgElement("circle");
+        circle.setAttribute("cx", svgCoord.x);
+        circle.setAttribute("cy", svgCoord.y);
+        circle.setAttribute("r", POINT_RADIUS);
+        circle.setAttribute("class", "user-point");
+        circle.setAttribute("data-key", key);
+
+        pointGroup.appendChild(circle);
+      }
+    }
+
+    function renderLines() {
+      lineGroup.innerHTML = "";
+
+      for (const lineKey of userLines) {
+        const [keyA, keyB] = lineKey.split("|");
+        const a = parsePointKey(keyA);
+        const b = parsePointKey(keyB);
+
+        const aSvg = toSvgCoords(a.x, a.y);
+        const bSvg = toSvgCoords(b.x, b.y);
+
+        const line = createSvgElement("line");
+        line.setAttribute("x1", aSvg.x);
+        line.setAttribute("y1", aSvg.y);
+        line.setAttribute("x2", bSvg.x);
+        line.setAttribute("y2", bSvg.y);
+        line.setAttribute("class", "user-line");
+
+        lineGroup.appendChild(line);
+      }
+    }
+
+    function showSolvedFill() {
+      fillGroup.innerHTML = "";
+
+      const problem = problems[currentProblemIndex];
+
+      const pointsString = problem.vertices
+        .map(([x, y]) => {
+          const p = toSvgCoords(x, y);
+          return `${p.x},${p.y}`;
+        })
+        .join(" ");
+
+      const polygon = createSvgElement("polygon");
+      polygon.setAttribute("points", pointsString);
+      polygon.setAttribute("class", "solution-fill");
+
+      fillGroup.appendChild(polygon);
+    }
+
+    function createPreviewLine(startCoord, endCoord) {
+      removePreviewLine();
+
+      const start = toSvgCoords(startCoord.x, startCoord.y);
+      const end = toSvgCoords(endCoord.x, endCoord.y);
+
+      previewLine = createSvgElement("line");
+      previewLine.setAttribute("x1", start.x);
+      previewLine.setAttribute("y1", start.y);
+      previewLine.setAttribute("x2", end.x);
+      previewLine.setAttribute("y2", end.y);
+      previewLine.setAttribute("class", "preview-line");
+
+      previewGroup.appendChild(previewLine);
+    }
+
+    function updatePreviewLine(x, y) {
+      if (!previewLine) return;
+
+      previewLine.setAttribute("x2", x);
+      previewLine.setAttribute("y2", y);
+    }
+
+    function removePreviewLine() {
+      if (previewLine) {
+        previewLine.remove();
+        previewLine = null;
+      }
+    }
+
+    function loadProblem(index) {
+      userPoints.clear();
+      userLines.clear();
+
+      fillGroup.innerHTML = "";
+      lineGroup.innerHTML = "";
+      pointGroup.innerHTML = "";
+      previewGroup.innerHTML = "";
+
+      const problem = problems[index];
+
+      coordinateBox.innerHTML = `
+        Plot the points and connect the dots: <br>
+        <strong>${problem.vertices.map(([x, y]) => `(${x}, ${y})`).join(", ")}</strong>
+      `;
+    }
+
+    function resetCurrentProblem() {
+      if (locked) return;
+
+      userPoints.clear();
+      userLines.clear();
+
+      fillGroup.innerHTML = "";
+      lineGroup.innerHTML = "";
+      pointGroup.innerHTML = "";
+      previewGroup.innerHTML = "";
+    }
+
+    function updateProgress() {
+      const percent = (solvedCount / 10) * 100;
+      progressInner.style.width = `${percent}%`;
+    }
+
+    function toSvgCoords(x, y) {
+      return {
+        x: PADDING + (x - MIN) * STEP,
+        y: PADDING + (MAX - y) * STEP
+      };
+    }
+
+    function fromSvgCoords(svgX, svgY) {
+      return {
+        x: (svgX - PADDING) / STEP + MIN,
+        y: MAX - (svgY - PADDING) / STEP
+      };
+    }
+
+    function getSvgPoint(event) {
+      const rect = svg.getBoundingClientRect();
+
+      return {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top
+      };
+    }
+
+    function getNearestGridCoordinate(event) {
+      const svgPoint = getSvgPoint(event);
+      const mathPoint = fromSvgCoords(svgPoint.x, svgPoint.y);
+
+      const roundedX = Math.round(mathPoint.x);
+      const roundedY = Math.round(mathPoint.y);
+
+      if (
+        roundedX < MIN ||
+        roundedX > MAX ||
+        roundedY < MIN ||
+        roundedY > MAX
+      ) {
+        return null;
+      }
+
+      const snappedSvg = toSvgCoords(roundedX, roundedY);
+      const dx = svgPoint.x - snappedSvg.x;
+      const dy = svgPoint.y - snappedSvg.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance > 11) return null;
+
+      return {
+        x: roundedX,
+        y: roundedY
+      };
+    }
+
+    function pointKey(x, y) {
+      return `${x},${y}`;
+    }
+
+    function parsePointKey(key) {
+      const [x, y] = key.split(",").map(Number);
+      return { x, y };
+    }
+
+    function normalizeLineKey(keyA, keyB) {
+      return [keyA, keyB].sort().join("|");
+    }
+
+    function createSvgElement(tag) {
+      return document.createElementNS("http://www.w3.org/2000/svg", tag);
+    }
+
+    function wait(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+  </script>
+<script src="/static/puzzle/js/activity.js"></script>
+<!-- <script>autoZoom();</script> -->
+</body>
+</html>

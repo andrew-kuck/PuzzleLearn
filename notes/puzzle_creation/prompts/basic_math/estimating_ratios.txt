@@ -1,0 +1,520 @@
+create an activity using html, css, and javascript. show a bar with some percent colored red and some percent colored blue, at random. the percentage of blue should be between 10 and 90. there is an input for the user to guess the ratio of blue to red, entered as in the form b:r. when the user submits their guess, proceed as follows. if the entered ratio b:r is greater than the actual ratio: sequentially superimpose b congruent rectangles over the blue area such that the entire blue area is filled; then sequentially superimpose r rectangles of the same size over the red area, which will leave some amount of red area uncovered; take the percent that is uncovered (out of the entire bar) and add this to an accumulating error count. if the entered ratio b:r is less than the actual ratio: sequentially superimpose r congruent rectangles over the red area such that the entire red area is filled; then sequentially superimpose b rectangles of the same size over the blue area, which will leave some amount of blue area uncovered; take the percent that is uncovered (out of the entire bar) and add this to an accumulating error count. the user may only submit one guess for a question, after which they should be able to see their error for the question and their accumulated error. they can then click a button to be presented with a new question. After they have completed 10 questions, a function activityComplete() is called.
+
+Below is a complete single-file HTML activity. Save it as `index.html` and open it in a browser.
+
+It randomly generates a blue/red bar, lets the user guess the ratio as `b:r`, animates the rectangle-overlay comparison, tracks question error and accumulated error, and calls `activityComplete()` after 10 questions.
+
+made significant logic style tweaks to page
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blue to Red Ratio Activity</title>
+
+  <style>
+    :root {
+      --blue: #2563eb;
+      --red: #dc2626;
+      --overlay: rgba(255, 255, 255, 0.55);
+      --overlay-border: rgba(0, 0, 0, 0.75);
+      --uncovered: rgba(255, 255, 0, 0.55);
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      max-width: 850px;
+      margin: 40px auto;
+      padding: 20px;
+      line-height: 1.5;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+
+    h1 {
+      margin-bottom: 0.25rem;
+    }
+
+    .instructions {
+      margin-bottom: 1.5rem;
+      color: #334155;
+    }
+
+    .card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    }
+
+    .top-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+
+    .bar-wrapper {
+      margin: 24px 0;
+    }
+
+    .bar {
+      position: relative;
+      width: 100%;
+      height: 90px;
+      border: 3px solid #0f172a;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #e5e7eb;
+    }
+
+    .blue-area,
+    .red-area {
+      position: absolute;
+      top: 0;
+      height: 100%;
+    }
+
+    .blue-area {
+      left: 0;
+      background: var(--blue);
+    }
+
+    .red-area {
+      right: 0;
+      background: var(--red);
+    }
+
+    .overlay-rect {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      background: var(--overlay);
+      border: 2px solid var(--overlay-border);
+      box-sizing: border-box;
+      opacity: 0;
+      transform: scaleY(0.8);
+      transition: opacity 180ms ease, transform 180ms ease;
+      z-index: 3;
+    }
+
+    .overlay-rect.show {
+      opacity: 1;
+      transform: scaleY(1);
+    }
+
+    .uncovered-marker {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      background: var(--uncovered);
+      outline: 3px dashed #111827;
+      outline-offset: -5px;
+      z-index: 4;
+      opacity: 0;
+      transition: opacity 300ms ease;
+    }
+
+    .uncovered-marker.show {
+      opacity: 1;
+    }
+
+    form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: end;
+      margin-top: 1rem;
+    }
+
+    label {
+      font-weight: 600;
+    }
+
+    input {
+      font: inherit;
+      padding: 10px 12px;
+      border: 1px solid #94a3b8;
+      border-radius: 8px;
+      width: 150px;
+    }
+
+    button {
+      font: inherit;
+      font-weight: 700;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #0f172a;
+      color: white;
+    }
+
+    button:hover:not(:disabled) {
+      background: #1e293b;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .secondary {
+      background: #2563eb;
+      margin-top: 16px;
+    }
+
+    .secondary:hover:not(:disabled) {
+      background: #1d4ed8;
+    }
+
+    .feedback {
+      margin-top: 20px;
+      padding: 16px;
+      border-radius: 10px;
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      min-height: 1.5rem;
+    }
+
+    .error {
+      color: #b91c1c;
+      font-weight: 700;
+    }
+
+    .success {
+      color: #047857;
+      font-weight: 700;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .small {
+      font-size: 0.925rem;
+      color: #475569;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Blue-to-Red Ratio Activity</h1>
+
+  <p class="instructions">
+    Estimate the ratio of the blue part to the red part. Enter your guess in the form
+    <strong>b:r</strong>, such as <strong>3:2</strong> or <strong>5:7</strong>.
+  </p>
+
+  <div class="card">
+    <div class="top-row">
+      <div id="questionCounter">Question 1 of 10</div>
+      <div id="accumulatedError">Accumulated error: 0.00%</div>
+    </div>
+
+    <div class="bar-wrapper">
+      <div id="bar" class="bar" aria-label="A bar divided into blue and red portions">
+        <div id="blueArea" class="blue-area"></div>
+        <div id="redArea" class="red-area"></div>
+      </div>
+    </div>
+
+    <form id="guessForm">
+      <div>
+        <label for="ratioInput">Your guess, blue:red</label><br />
+        <input
+          id="ratioInput"
+          type="text"
+          placeholder="b:r"
+          autocomplete="off"
+          required
+          aria-describedby="ratioHelp"
+        />
+        <div id="ratioHelp" class="small">Use positive whole numbers, like 4:3.</div>
+      </div>
+
+      <button id="submitBtn" type="submit">Submit Guess</button>
+    </form>
+
+    <button id="nextBtn" class="secondary hidden" type="button">Next Question</button>
+
+    <div id="feedback" class="feedback" aria-live="polite">
+      Make your estimate, then submit one guess.
+    </div>
+  </div>
+
+  <script>
+    const TOTAL_QUESTIONS = 10;
+
+    let questionNumber = 1;
+    let accumulatedError = 0;
+
+    let bluePercent = 0;
+    let redPercent = 0;
+
+    let guessSubmitted = false;
+
+    const bar = document.getElementById("bar");
+    const blueArea = document.getElementById("blueArea");
+    const redArea = document.getElementById("redArea");
+
+    const questionCounter = document.getElementById("questionCounter");
+    const accumulatedErrorDisplay = document.getElementById("accumulatedError");
+    const feedback = document.getElementById("feedback");
+
+    const guessForm = document.getElementById("guessForm");
+    const ratioInput = document.getElementById("ratioInput");
+    const submitBtn = document.getElementById("submitBtn");
+    const nextBtn = document.getElementById("nextBtn");
+
+    // Default completion function.
+    // Replace this with your LMS/platform completion code if needed.
+    window.activityComplete = window.activityComplete || function () {
+      feedback.innerHTML += `
+        <p class="success">
+          Activity complete! Final accumulated error:
+          ${accumulatedError.toFixed(2)}%.
+        </p>
+      `;
+      console.log("activityComplete() called");
+    };
+
+    function startQuestion() {
+      guessSubmitted = false;
+
+      clearOverlays();
+
+      bluePercent = randomInteger(10, 90);
+      redPercent = 100 - bluePercent;
+
+      blueArea.style.width = bluePercent + "%";
+      redArea.style.width = redPercent + "%";
+
+      questionCounter.textContent = `Question ${questionNumber} of ${TOTAL_QUESTIONS}`;
+      accumulatedErrorDisplay.textContent =
+        `Accumulated error: ${accumulatedError.toFixed(2)}%`;
+
+      ratioInput.value = "";
+      ratioInput.disabled = false;
+      submitBtn.disabled = false;
+      nextBtn.classList.add("hidden");
+
+      feedback.textContent = "Make your estimate, then submit one guess.";
+      ratioInput.focus();
+    }
+
+    function clearOverlays() {
+      document
+        .querySelectorAll(".overlay-rect, .uncovered-marker")
+        .forEach(el => el.remove());
+    }
+
+    function randomInteger(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function parseRatio(value) {
+      const trimmed = value.trim();
+      const match = trimmed.match(/^(\d+)\s*:\s*(\d+)$/);
+
+      if (!match) return null;
+
+      const b = Number(match[1]);
+      const r = Number(match[2]);
+
+      if (!Number.isInteger(b) || !Number.isInteger(r) || b <= 0 || r <= 0) {
+        return null;
+      }
+
+      return { b, r };
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function addOverlayRect(leftPercent, widthPercent) {
+      const rect = document.createElement("div");
+      rect.className = "overlay-rect";
+      rect.style.left = leftPercent + "%";
+      rect.style.width = widthPercent + "%";
+      bar.appendChild(rect);
+
+      requestAnimationFrame(() => {
+        rect.classList.add("show");
+      });
+    }
+
+    function addUncoveredMarker(leftPercent, widthPercent) {
+      if (widthPercent <= 0.0001) return;
+
+      const marker = document.createElement("div");
+      marker.className = "uncovered-marker";
+      marker.style.left = leftPercent + "%";
+      marker.style.width = widthPercent + "%";
+      bar.appendChild(marker);
+
+      requestAnimationFrame(() => {
+        marker.classList.add("show");
+      });
+    }
+
+    async function animateRectangles(count, startLeft, rectWidth, delay) {
+      for (let i = 0; i < count; i++) {
+        addOverlayRect(startLeft + i * rectWidth, rectWidth);
+        await sleep(delay);
+      }
+    }
+
+    async function handleGuess(b, r) {
+      clearOverlays();
+
+      /*
+        Compare guessed ratio b:r with actual ratio bluePercent:redPercent.
+
+        b:r > blue:red  iff  b / r > bluePercent / redPercent
+                         iff  b * redPercent > r * bluePercent
+      */
+      const comparison = b * redPercent - r * bluePercent;
+
+      let questionError = 0;
+      let explanation = "";
+
+      const totalRects = b + r;
+      const delay = Math.max(35, Math.min(180, 2200 / totalRects));
+
+      if (comparison > 0) {
+        // Guess ratio is greater than the actual ratio.
+        // First, fill blue with b congruent rectangles.
+        const rectWidth = bluePercent / b;
+
+        await animateRectangles(b, 0, rectWidth, delay);
+
+        // Then place r rectangles of the same size over red.
+        await animateRectangles(r, bluePercent, rectWidth, delay);
+
+        const redCovered = r * rectWidth;
+        questionError = Math.max(0, redPercent - redCovered);
+
+        const uncoveredLeft = bluePercent + redCovered;
+        addUncoveredMarker(uncoveredLeft, questionError);
+
+        explanation = `
+          Your guessed ratio <strong>${b}:${r}</strong> is
+          <strong>greater</strong> than the actual blue:red ratio.
+          The blue area was divided into ${b} congruent rectangles.
+          Then ${r} same-size rectangles were placed over the red area,
+          leaving <span class="error">${questionError.toFixed(2)}%</span>
+          of the whole bar uncovered.
+        `;
+      } else if (comparison < 0) {
+        // Guess ratio is less than the actual ratio.
+        // First, fill red with r congruent rectangles.
+        const rectWidth = redPercent / r;
+
+        await animateRectangles(r, bluePercent, rectWidth, delay);
+
+        // Then place b rectangles of the same size over blue.
+        await animateRectangles(b, 0, rectWidth, delay);
+
+        const blueCovered = b * rectWidth;
+        questionError = Math.max(0, bluePercent - blueCovered);
+
+        const uncoveredLeft = blueCovered;
+        addUncoveredMarker(uncoveredLeft, questionError);
+
+        explanation = `
+          Your guessed ratio <strong>${b}:${r}</strong> is
+          <strong>less</strong> than the actual blue:red ratio.
+          The red area was divided into ${r} congruent rectangles.
+          Then ${b} same-size rectangles were placed over the blue area,
+          leaving <span class="error">${questionError.toFixed(2)}%</span>
+          of the whole bar uncovered.
+        `;
+      } else {
+        // Exact ratio.
+        const rectWidth = bluePercent / b;
+
+        await animateRectangles(b, 0, rectWidth, delay);
+        await animateRectangles(r, bluePercent, rectWidth, delay);
+
+        questionError = 0;
+
+        explanation = `
+          <span class="success">Exact!</span>
+          Your guessed ratio <strong>${b}:${r}</strong> matches the actual
+          blue:red ratio. No area is left uncovered, so your error is
+          <strong>0.00%</strong>.
+        `;
+      }
+
+      accumulatedError += questionError;
+
+      feedback.innerHTML = `
+        ${explanation}
+        <p>
+          Question error:
+          <strong>${questionError.toFixed(2)}%</strong>
+        </p>
+        <p>
+          Accumulated error:
+          <strong>${accumulatedError.toFixed(2)}%</strong>
+        </p>
+      `;
+
+      accumulatedErrorDisplay.textContent =
+        `Accumulated error: ${accumulatedError.toFixed(2)}%`;
+
+      if (questionNumber >= TOTAL_QUESTIONS) {
+        nextBtn.classList.add("hidden");
+        submitBtn.disabled = true;
+        ratioInput.disabled = true;
+        activityComplete();
+      } else {
+        nextBtn.classList.remove("hidden");
+      }
+    }
+
+    guessForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+
+      if (guessSubmitted) return;
+
+      const parsed = parseRatio(ratioInput.value);
+
+      if (!parsed) {
+        feedback.innerHTML = `
+          <span class="error">
+            Please enter a valid ratio using positive whole numbers, like 3:2.
+          </span>
+        `;
+        return;
+      }
+
+      guessSubmitted = true;
+      ratioInput.disabled = true;
+      submitBtn.disabled = true;
+      nextBtn.classList.add("hidden");
+
+      feedback.textContent = "Animating your comparison...";
+
+      await handleGuess(parsed.b, parsed.r);
+    });
+
+    nextBtn.addEventListener("click", function () {
+      if (questionNumber < TOTAL_QUESTIONS) {
+        questionNumber++;
+        startQuestion();
+      }
+    });
+
+    startQuestion();
+  </script>
+</body>
+</html>
+```

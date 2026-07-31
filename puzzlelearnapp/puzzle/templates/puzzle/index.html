@@ -1,0 +1,15 @@
+{% extends "puzzle/base.html" %}
+{% load static %}
+{% block custom_head %}
+<link rel="stylesheet" href="{% static 'puzzle/css/index.css' %}">
+{% endblock %}
+
+{% block content %}
+
+{{ display_list }}
+
+{% endblock %}
+
+{% block custom_js %}
+<script src="{% static 'puzzle/js/index.js' %}"></script>
+{% endblock %}

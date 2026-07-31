@@ -1,0 +1,471 @@
+create an activity using html, css, and javascript. show two ratios on the screen, one to the left and one to the right. each ratio a:b should consist of two random integers a and b such that both a and b are between 1 and 50 inclusive. the two ratios cannot be equivalent to each other. the user must click on the ratio that is bigger. after the user clicks on a ratio, the integer b of the clicked ratio incrememtally counts down to 1, and with each increment the value a changes so that the ratio retains its value. at each change a is displayed to 2 decimal points of precision. after the clicked ratio counts down to a unit ratio in this way, the ratio that was not clicked on counts down to a unit ratio in the same way. after both ratios have been reduced to unit ratios, the value a of each ratio is highlighted blue, then after a pause the value a of the larger ratio is highlighted green and the value a of the smaller ratio is highlighted red. then after another pause the entire larger ratio is highlighted green. if this is the ratio the user clicked on, a green checkmark appears on the screen, a new problem is presented, and a progress bar is advanced one unit. if the larger ratio is not the ratio the user clicked on, a red x appears over the screen, a new problem is presented, and the progress bar goes back one unit. the progress bar extends from -10 to 10 (without labels or tick marks except for a gray vertical line in the middle indicating 0). 0 displays as nothing, negative numbers display as red fill extending to the left of 0, and positive numbers display as green fill extending to the right of 0. progress cannot go below -10. when progress reaches 10 a function activityComplete() is called.
+
+Below is a complete single-file HTML/CSS/JavaScript activity. Save it as `ratio-activity.html` and open it in a browser.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compare Ratios Activity</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: #f5f7fb;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #222;
+    }
+
+    .activity {
+      width: min(900px, 92vw);
+      background: white;
+      border-radius: 18px;
+      padding: 32px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+      text-align: center;
+      position: relative;
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 1.8rem;
+    }
+
+    .instructions {
+      font-size: 1rem;
+      margin-bottom: 28px;
+      color: #444;
+    }
+
+    .ratios {
+      display: flex;
+      gap: 32px;
+      justify-content: space-between;
+      align-items: stretch;
+      margin-bottom: 34px;
+    }
+
+    .ratio-card {
+      flex: 1;
+      border: 3px solid #d7dce8;
+      border-radius: 16px;
+      padding: 38px 20px;
+      background: #ffffff;
+      cursor: pointer;
+      transition:
+        transform 0.15s ease,
+        border-color 0.15s ease,
+        background-color 0.15s ease,
+        box-shadow 0.15s ease;
+      user-select: none;
+    }
+
+    .ratio-card:hover:not(.disabled) {
+      transform: translateY(-3px);
+      border-color: #6b8cff;
+      box-shadow: 0 8px 20px rgba(69, 104, 255, 0.18);
+    }
+
+    .ratio-card.disabled {
+      cursor: default;
+      pointer-events: none;
+    }
+
+    .ratio-card.whole-green {
+      border-color: #21a366;
+      background: #e9f8f0;
+      box-shadow: 0 0 0 5px rgba(33, 163, 102, 0.16);
+    }
+
+    .ratio {
+      font-size: clamp(2.5rem, 7vw, 5rem);
+      font-weight: 700;
+      line-height: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.12em;
+    }
+
+    .a-value,
+    .b-value {
+      display: inline-block;
+      min-width: 1.2em;
+      padding: 0.08em 0.12em;
+      border-radius: 10px;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    .colon {
+      padding-bottom: 0.08em;
+    }
+
+    .highlight-blue {
+      background: #d9ecff;
+      color: #0057b8;
+    }
+
+    .highlight-green {
+      background: #dff5e8;
+      color: #14894f;
+    }
+
+    .highlight-red {
+      background: #ffe2e2;
+      color: #c62828;
+    }
+
+    .progress-wrap {
+      width: 100%;
+      max-width: 620px;
+      margin: 0 auto;
+      height: 28px;
+      position: relative;
+      background: #edf0f5;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid #d4d9e3;
+    }
+
+    .progress-fill {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      width: 0;
+      transition: width 0.35s ease, left 0.35s ease;
+    }
+
+    .progress-fill.positive {
+      left: 50%;
+      background: #21a366;
+    }
+
+    .progress-fill.negative {
+      right: 50%;
+      background: #d93025;
+    }
+
+    .zero-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 3px;
+      background: #888;
+      transform: translateX(-50%);
+      z-index: 2;
+    }
+
+    .overlay-mark {
+      position: fixed;
+      inset: 0;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      font-size: min(35vw, 260px);
+      font-weight: 900;
+      z-index: 20;
+      pointer-events: none;
+      background: rgba(255, 255, 255, 0.25);
+      animation: pop 0.35s ease;
+    }
+
+    .overlay-mark.show {
+      display: flex;
+    }
+
+    .overlay-mark.correct {
+      color: #21a366;
+    }
+
+    .overlay-mark.incorrect {
+      color: #d93025;
+    }
+
+    @keyframes pop {
+      0% {
+        transform: scale(0.65);
+        opacity: 0;
+      }
+      70% {
+        transform: scale(1.08);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    @media (max-width: 650px) {
+      .ratios {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="activity">
+    <h1>Which ratio is bigger?</h1>
+    <p class="instructions">Click the larger ratio.</p>
+
+    <section class="ratios" aria-label="Ratio choices">
+      <button class="ratio-card" id="leftCard" type="button" aria-label="Left ratio">
+        <div class="ratio">
+          <span class="a-value" id="leftA"></span>
+          <span class="colon">:</span>
+          <span class="b-value" id="leftB"></span>
+        </div>
+      </button>
+
+      <button class="ratio-card" id="rightCard" type="button" aria-label="Right ratio">
+        <div class="ratio">
+          <span class="a-value" id="rightA"></span>
+          <span class="colon">:</span>
+          <span class="b-value" id="rightB"></span>
+        </div>
+      </button>
+    </section>
+
+    <div class="progress-wrap" aria-label="Progress from negative ten to positive ten">
+      <div class="progress-fill negative" id="negativeFill"></div>
+      <div class="progress-fill positive" id="positiveFill"></div>
+      <div class="zero-line"></div>
+    </div>
+  </main>
+
+  <div class="overlay-mark" id="overlayMark"></div>
+
+  <script>
+    const leftCard = document.getElementById("leftCard");
+    const rightCard = document.getElementById("rightCard");
+
+    const leftA = document.getElementById("leftA");
+    const leftB = document.getElementById("leftB");
+    const rightA = document.getElementById("rightA");
+    const rightB = document.getElementById("rightB");
+
+    const positiveFill = document.getElementById("positiveFill");
+    const negativeFill = document.getElementById("negativeFill");
+    const overlayMark = document.getElementById("overlayMark");
+
+    let currentProblem = null;
+    let progress = 0;
+    let locked = false;
+
+    const STEP_DELAY = 300;
+    const PAUSE_AFTER_UNIT = 600;
+    const PAUSE_AFTER_BLUE = 800;
+    const PAUSE_AFTER_COLOR_VALUES = 900;
+    const FEEDBACK_PAUSE = 900;
+
+    function activityComplete() {
+      alert("Activity complete! Great work.");
+    }
+
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function makeRandomRatio() {
+      return {
+        originalA: randomInt(1, 50),
+        originalB: randomInt(1, 50)
+      };
+    }
+
+    function ratioValue(ratio) {
+      return ratio.originalA / ratio.originalB;
+    }
+
+    function generateProblem() {
+      let left;
+      let right;
+
+      do {
+        left = makeRandomRatio();
+        right = makeRandomRatio();
+      } while (left.originalA * right.originalB === right.originalA * left.originalB);
+
+      const leftValue = ratioValue(left);
+      const rightValue = ratioValue(right);
+
+      return {
+        left,
+        right,
+        largerSide: leftValue > rightValue ? "left" : "right"
+      };
+    }
+
+    function clearHighlights() {
+      [leftCard, rightCard].forEach(card => {
+        card.classList.remove("whole-green");
+      });
+
+      [leftA, rightA].forEach(el => {
+        el.classList.remove("highlight-blue", "highlight-green", "highlight-red");
+      });
+    }
+
+    function displayInitialProblem() {
+      locked = false;
+      clearHighlights();
+
+      currentProblem = generateProblem();
+
+      leftA.textContent = currentProblem.left.originalA;
+      leftB.textContent = currentProblem.left.originalB;
+
+      rightA.textContent = currentProblem.right.originalA;
+      rightB.textContent = currentProblem.right.originalB;
+
+      leftCard.classList.remove("disabled");
+      rightCard.classList.remove("disabled");
+
+      leftCard.setAttribute(
+        "aria-label",
+        `Left ratio ${currentProblem.left.originalA} to ${currentProblem.left.originalB}`
+      );
+
+      rightCard.setAttribute(
+        "aria-label",
+        `Right ratio ${currentProblem.right.originalA} to ${currentProblem.right.originalB}`
+      );
+    }
+
+    function updateProgressBar() {
+      const halfBarPercent = 50;
+
+      if (progress > 0) {
+        positiveFill.style.width = `${(progress / 10) * halfBarPercent}%`;
+        negativeFill.style.width = "0";
+      } else if (progress < 0) {
+        negativeFill.style.width = `${(Math.abs(progress) / 10) * halfBarPercent}%`;
+        positiveFill.style.width = "0";
+      } else {
+        positiveFill.style.width = "0";
+        negativeFill.style.width = "0";
+      }
+    }
+
+    async function countDownToUnit(side) {
+      const ratio = currentProblem[side];
+      const value = ratioValue(ratio);
+
+      const aEl = side === "left" ? leftA : rightA;
+      const bEl = side === "left" ? leftB : rightB;
+
+      for (let b = ratio.originalB; b >= 1; b--) {
+        const adjustedA = value * b;
+
+        aEl.textContent = adjustedA.toFixed(2);
+        bEl.textContent = b;
+
+        await sleep(STEP_DELAY);
+      }
+    }
+
+    async function handleChoice(chosenSide) {
+      if (locked) return;
+      locked = true;
+
+      leftCard.classList.add("disabled");
+      rightCard.classList.add("disabled");
+
+      const otherSide = chosenSide === "left" ? "right" : "left";
+
+      await countDownToUnit(chosenSide);
+      await sleep(PAUSE_AFTER_UNIT);
+
+      await countDownToUnit(otherSide);
+      await sleep(PAUSE_AFTER_UNIT);
+
+      await revealAnswer(chosenSide);
+    }
+
+    async function revealAnswer(chosenSide) {
+      const largerSide = currentProblem.largerSide;
+      const smallerSide = largerSide === "left" ? "right" : "left";
+
+      const largerA = largerSide === "left" ? leftA : rightA;
+      const smallerA = smallerSide === "left" ? leftA : rightA;
+
+      const largerCard = largerSide === "left" ? leftCard : rightCard;
+
+      leftA.classList.add("highlight-blue");
+      rightA.classList.add("highlight-blue");
+
+      await sleep(PAUSE_AFTER_BLUE);
+
+      leftA.classList.remove("highlight-blue");
+      rightA.classList.remove("highlight-blue");
+
+      largerA.classList.add("highlight-green");
+      smallerA.classList.add("highlight-red");
+
+      await sleep(PAUSE_AFTER_COLOR_VALUES);
+
+      largerCard.classList.add("whole-green");
+
+      await sleep(PAUSE_AFTER_COLOR_VALUES);
+
+      const correct = chosenSide === largerSide;
+
+      if (correct) {
+        progress = Math.min(10, progress + 1);
+        showOverlay("✓", true);
+      } else {
+        progress = Math.max(-10, progress - 1);
+        showOverlay("✕", false);
+      }
+
+      updateProgressBar();
+
+      await sleep(FEEDBACK_PAUSE);
+      hideOverlay();
+
+      if (progress >= 10) {
+        activityComplete();
+      } else {
+        displayInitialProblem();
+      }
+    }
+
+    function showOverlay(symbol, correct) {
+      overlayMark.textContent = symbol;
+      overlayMark.classList.remove("correct", "incorrect", "show");
+
+      void overlayMark.offsetWidth;
+
+      overlayMark.classList.add(correct ? "correct" : "incorrect");
+      overlayMark.classList.add("show");
+    }
+
+    function hideOverlay() {
+      overlayMark.classList.remove("show", "correct", "incorrect");
+      overlayMark.textContent = "";
+    }
+
+    leftCard.addEventListener("click", () => handleChoice("left"));
+    rightCard.addEventListener("click", () => handleChoice("right"));
+
+    updateProgressBar();
+    displayInitialProblem();
+  </script>
+</body>
+</html>
+```

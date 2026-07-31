@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Substitution Lockbox: Undoing the Chain Rule</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel-2: #1f2937;
+      --text: #f8fafc;
+      --muted: #cbd5e1;
+      --blue: #3b82f6;
+      --blue-2: #60a5fa;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #facc15;
+      --purple: #a78bfa;
+      --border: #334155;
+      --shadow: rgba(0, 0, 0, 0.35);
+      --um-blue: #00274c;
+      --um-maize: #ffcb05;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(96, 165, 250, 0.18), transparent 35%),
+        radial-gradient(circle at bottom right, rgba(250, 204, 21, 0.10), transparent 30%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 28px 20px 16px;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 4vw, 3rem);
+      letter-spacing: -0.04em;
+    }
+
+    .subtitle {
+      max-width: 780px;
+      margin: 10px auto 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .app {
+      width: min(1180px, calc(100% - 28px));
+      margin: 0 auto 36px;
+    }
+
+    .stage-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin: 18px 0;
+    }
+
+    .stage-tab {
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 9px 13px;
+      cursor: pointer;
+      transition: 0.18s ease;
+      font-weight: 650;
+    }
+
+    .stage-tab:hover {
+      border-color: var(--blue-2);
+      transform: translateY(-1px);
+    }
+
+    .stage-tab.active {
+      background: linear-gradient(135deg, var(--um-blue), #17446f);
+      border-color: var(--um-maize);
+      box-shadow: 0 0 0 2px rgba(255, 203, 5, 0.15);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 18px;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(31, 41, 55, 0.96), rgba(17, 24, 39, 0.96));
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: 0 20px 45px var(--shadow);
+      padding: 20px;
+    }
+
+    .section-title {
+      margin: 0 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.1rem;
+      color: #e2e8f0;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--blue-2);
+      border: 1px solid rgba(96, 165, 250, 0.35);
+      font-weight: 800;
+    }
+
+    .integral-display {
+      background: #020617;
+      border: 1px solid #1e293b;
+      border-radius: 18px;
+      padding: 22px 18px;
+      text-align: center;
+      font-size: clamp(1.7rem, 4vw, 2.7rem);
+      margin-bottom: 18px;
+      min-height: 92px;
+      display: grid;
+      place-items: center;
+      box-shadow: inset 0 0 30px rgba(59, 130, 246, 0.08);
+    }
+
+    .gearbox {
+      position: relative;
+      background:
+        linear-gradient(135deg, rgba(59, 130, 246, 0.08), transparent),
+        rgba(2, 6, 23, 0.58);
+      border: 1px dashed #475569;
+      border-radius: 18px;
+      padding: 16px;
+      min-height: 270px;
+      overflow: hidden;
+    }
+
+    .gearbox::before,
+    .gearbox::after {
+      content: "⚙";
+      position: absolute;
+      color: rgba(148, 163, 184, 0.09);
+      font-size: 9rem;
+      line-height: 1;
+      pointer-events: none;
+    }
+
+    .gearbox::before {
+      right: -18px;
+      top: -22px;
+    }
+
+    .gearbox::after {
+      left: -25px;
+      bottom: -35px;
+      transform: rotate(22deg);
+    }
+
+    .tree-label {
+      color: var(--muted);
+      font-size: 0.92rem;
+      margin-bottom: 10px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .candidate {
+      --depth: 0;
+      position: relative;
+      z-index: 1;
+      width: calc(100% - calc(var(--depth) * 18px));
+      margin-left: calc(var(--depth) * 18px);
+      margin-bottom: 10px;
+      padding: 12px 14px;
+      border-radius: 15px;
+      border: 1px solid #475569;
+      background: rgba(15, 23, 42, 0.88);
+      color: var(--text);
+      cursor: pointer;
+      text-align: left;
+      transition: 0.18s ease;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .candidate:hover {
+      transform: translateX(3px);
+      border-color: var(--blue-2);
+      background: rgba(30, 41, 59, 0.95);
+    }
+
+    .candidate.selected {
+      border-color: var(--yellow);
+      box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.14);
+    }
+
+    .candidate.correct {
+      border-color: var(--green);
+      background: rgba(34, 197, 94, 0.12);
+    }
+
+    .candidate.wrong {
+      border-color: var(--red);
+      background: rgba(239, 68, 68, 0.12);
+    }
+
+    .gear-icon {
+      display: grid;
+      place-items: center;
+      width: 31px;
+      height: 31px;
+      border-radius: 999px;
+      background: rgba(96, 165, 250, 0.12);
+      color: var(--blue-2);
+    }
+
+    .candidate strong {
+      font-size: 1.15rem;
+    }
+
+    .candidate small {
+      color: var(--muted);
+      display: block;
+      margin-top: 3px;
+    }
+
+    .lockbox {
+      margin-top: 16px;
+      background: linear-gradient(180deg, #334155, #0f172a);
+      border: 2px solid #64748b;
+      border-radius: 20px;
+      padding: 18px;
+      position: relative;
+    }
+
+    .lockbox-top {
+      width: 110px;
+      height: 58px;
+      border: 10px solid #64748b;
+      border-bottom: 0;
+      border-radius: 60px 60px 0 0;
+      margin: -8px auto 8px;
+      opacity: 0.9;
+    }
+
+    .tumblers {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .tumbler {
+      background: #020617;
+      border: 2px solid #475569;
+      border-radius: 16px;
+      min-height: 96px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 12px;
+      transition: 0.2s ease;
+    }
+
+    .tumbler.open {
+      border-color: var(--green);
+      background: rgba(34, 197, 94, 0.12);
+    }
+
+    .tumbler .big {
+      font-size: 2rem;
+      font-weight: 900;
+      display: block;
+    }
+
+    .tumbler .small {
+      color: var(--muted);
+      font-size: 0.84rem;
+      margin-top: 4px;
+    }
+
+    .jam {
+      animation: jam 0.34s ease-in-out 0s 2;
+      border-color: var(--red) !important;
+    }
+
+    @keyframes jam {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-7px) rotate(-1deg); }
+      40% { transform: translateX(7px) rotate(1deg); }
+      60% { transform: translateX(-5px); }
+      80% { transform: translateX(5px); }
+    }
+
+    .phase-panel {
+      margin-bottom: 16px;
+      padding: 15px;
+      background: rgba(2, 6, 23, 0.52);
+      border: 1px solid #334155;
+      border-radius: 18px;
+    }
+
+    .phase-panel h3 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+      color: #e2e8f0;
+    }
+
+    .choices {
+      display: grid;
+      gap: 9px;
+    }
+
+    .choice {
+      border: 1px solid #475569;
+      border-radius: 14px;
+      padding: 12px 13px;
+      background: rgba(15, 23, 42, 0.86);
+      color: var(--text);
+      cursor: pointer;
+      text-align: left;
+      font-size: 1rem;
+      transition: 0.17s ease;
+    }
+
+    .choice:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: var(--blue-2);
+      background: rgba(30, 41, 59, 0.96);
+    }
+
+    .choice:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .choice.correct {
+      border-color: var(--green);
+      background: rgba(34, 197, 94, 0.12);
+    }
+
+    .choice.wrong {
+      border-color: var(--red);
+      background: rgba(239, 68, 68, 0.12);
+    }
+
+    .simplified {
+      display: none;
+      padding: 14px;
+      border-radius: 16px;
+      background: rgba(34, 197, 94, 0.11);
+      border: 1px solid rgba(34, 197, 94, 0.35);
+      margin-bottom: 16px;
+    }
+
+    .simplified.visible {
+      display: block;
+    }
+
+    .mathline {
+      font-size: 1.35rem;
+      margin-top: 6px;
+    }
+
+    .status {
+      margin-top: 14px;
+      padding: 13px 14px;
+      border-radius: 15px;
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      line-height: 1.45;
+      min-height: 52px;
+    }
+
+    .status.good {
+      border-color: rgba(34, 197, 94, 0.45);
+      background: rgba(34, 197, 94, 0.10);
+    }
+
+    .status.bad {
+      border-color: rgba(239, 68, 68, 0.45);
+      background: rgba(239, 68, 68, 0.10);
+    }
+
+    .status.info {
+      border-color: rgba(96, 165, 250, 0.45);
+      background: rgba(59, 130, 246, 0.10);
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .btn {
+      border: 1px solid #475569;
+      background: #0f172a;
+      color: var(--text);
+      border-radius: 999px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: 0.17s ease;
+    }
+
+    .btn:hover {
+      border-color: var(--blue-2);
+      transform: translateY(-1px);
+    }
+
+    .btn.primary {
+      background: linear-gradient(135deg, var(--um-blue), #155487);
+      border-color: var(--blue-2);
+    }
+
+    .btn.maize {
+      color: #111827;
+      background: var(--um-maize);
+      border-color: #ffe066;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .mini-note {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+
+    code {
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 1px 5px;
+    }
+
+    .completion {
+      border: 1px solid rgba(250, 204, 21, 0.6);
+      background: rgba(250, 204, 21, 0.11);
+      border-radius: 18px;
+      padding: 15px;
+      margin-top: 16px;
+    }
+
+    .completion strong {
+      color: var(--um-maize);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Substitution Lockbox</h1>
+    <p class="subtitle">
+      Undo the chain rule by choosing the inner gear <strong>u</strong>, matching the leftover factor to <strong>du</strong>,
+      simplifying, integrating, and substituting back.
+    </p>
+  </header>
+
+  <main class="app">
+    <div id="stageTabs" class="stage-tabs"></div>
+
+    <div class="layout">
+      <section class="card">
+        <h2 class="section-title"><span class="badge">1</span> Locked mechanism</h2>
+
+        <div id="integralDisplay" class="integral-display"></div>
+
+        <div class="gearbox">
+          <div class="tree-label">
+            Click the subexpression that should become <code>u</code>.
+            Deeper gears are more “inside” the composite expression.
+          </div>
+          <div id="candidateList"></div>
+        </div>
+
+        <div class="lockbox" aria-live="polite">
+          <div class="lockbox-top"></div>
+          <div class="tumblers">
+            <div id="tumblerU" class="tumbler">
+              <div>
+                <span class="big">u</span>
+                <span class="small">inner gear</span>
+              </div>
+            </div>
+            <div id="tumblerDU" class="tumbler">
+              <div>
+                <span class="big">du</span>
+                <span class="small">matching factor</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="status" class="status info"></div>
+
+        <div class="controls">
+          <button id="hintBtn" class="btn">Hint</button>
+          <button id="resetBtn" class="btn">Reset stage</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="section-title"><span class="badge">2</span> Transformation steps</h2>
+
+        <div id="duPanel" class="phase-panel hidden">
+          <h3>Phase 2: Match the derivative</h3>
+          <p class="mini-note">
+            Choose the leftover factor that matches <code>du</code>. A constant multiple is allowed:
+            for example, if <code>du = 2x dx</code>, then <code>x dx = ½ du</code>.
+          </p>
+          <div id="duChoices" class="choices"></div>
+        </div>
+
+        <div id="simplifiedPanel" class="simplified">
+          <strong>Phase 3 unlocked: simplified integral</strong>
+          <div id="simplifiedLine" class="mathline"></div>
+          <p id="scaleExplanation" class="mini-note"></p>
+        </div>
+
+        <div id="antiPanel" class="phase-panel hidden">
+          <h3>Phase 4a: Integrate in terms of u</h3>
+          <div id="antiChoices" class="choices"></div>
+        </div>
+
+        <div id="backPanel" class="phase-panel hidden">
+          <h3>Phase 4b: Substitute back</h3>
+          <p class="mini-note">
+            Pick the final antiderivative. The app checks it by differentiating numerically at several test points.
+          </p>
+          <div id="finalChoices" class="choices"></div>
+        </div>
+
+        <div id="completion" class="completion hidden"></div>
+
+        <div class="controls">
+          <button id="nextBtn" class="btn primary hidden">Next stage</button>
+          <button id="restartBtn" class="btn maize hidden">Play all again</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const stages = [
+      {
+        title: "Stage 1",
+        subtitle: "Exact match",
+        integral: "∫ 2x(x² + 1)<sup>4</sup> dx",
+        correctU: "inner",
+        uText: "x² + 1",
+        candidates: [
+          { id: "whole", label: "2x(x² + 1)<sup>4</sup>", note: "whole integrand", depth: 0 },
+          { id: "outer", label: "(x² + 1)<sup>4</sup>", note: "outer power structure", depth: 1 },
+          { id: "inner", label: "x² + 1", note: "input to the fourth power", depth: 2 },
+          { id: "x2", label: "x²", note: "only part of the input", depth: 3 }
+        ],
+        duChoices: [
+          { id: "2xdx", label: "2x dx", correct: true, explanation: "Yes. If u = x² + 1, then du = 2x dx.", scale: "1" },
+          { id: "xdx", label: "x dx", correct: false, explanation: "Close, but this stage has the full 2x dx available." },
+          { id: "dx", label: "dx", correct: false, explanation: "dx alone misses the derivative factor 2x." },
+          { id: "power", label: "4(x² + 1)³ dx", correct: false, explanation: "That differentiates the outer power, not the chosen inner function." }
+        ],
+        simplified: "∫ u<sup>4</sup> du",
+        scaleExplanation: "The leftover factor exactly equals du, so no constant adjustment is needed.",
+        antiChoices: [
+          { id: "a1", label: "u<sup>5</sup>/5 + C", correct: true },
+          { id: "a2", label: "4u<sup>3</sup> + C", correct: false },
+          { id: "a3", label: "u<sup>4</sup>/4 + C", correct: false }
+        ],
+        finalChoices: [
+          { label: "(x² + 1)<sup>5</sup>/5 + C", F: x => Math.pow(x*x + 1, 5) / 5 },
+          { label: "(x² + 1)<sup>4</sup>/4 + C", F: x => Math.pow(x*x + 1, 4) / 4 },
+          { label: "2x(x² + 1)<sup>5</sup>/5 + C", F: x => 2*x*Math.pow(x*x + 1, 5) / 5 }
+        ],
+        integrand: x => 2*x*Math.pow(x*x + 1, 4),
+        hint: "Look for a function placed inside another operation. Here, something is being raised to the 4th power."
+      },
+      {
+        title: "Stage 2",
+        subtitle: "Constant adjustment",
+        integral: "∫ x(x² + 1)<sup>4</sup> dx",
+        correctU: "inner",
+        uText: "x² + 1",
+        candidates: [
+          { id: "whole", label: "x(x² + 1)<sup>4</sup>", note: "whole integrand", depth: 0 },
+          { id: "outer", label: "(x² + 1)<sup>4</sup>", note: "outer power structure", depth: 1 },
+          { id: "inner", label: "x² + 1", note: "input to the fourth power", depth: 2 },
+          { id: "x", label: "x", note: "leftover factor", depth: 1 }
+        ],
+        duChoices: [
+          { id: "xdx", label: "x dx = ½ du", correct: true, explanation: "Correct. du = 2x dx, so x dx is half of du.", scale: "1/2" },
+          { id: "2xdx", label: "2x dx", correct: false, explanation: "That is du, but the actual leftover factor is only x dx. A ½ adjustment is needed." },
+          { id: "dx", label: "dx", correct: false, explanation: "dx alone misses the x factor." },
+          { id: "four", label: "4(x² + 1)³ dx", correct: false, explanation: "That differentiates the outer expression, not u." }
+        ],
+        simplified: "½ ∫ u<sup>4</sup> du",
+        scaleExplanation: "Because du = 2x dx, the leftover x dx becomes ½ du.",
+        antiChoices: [
+          { id: "a1", label: "u<sup>5</sup>/10 + C", correct: true },
+          { id: "a2", label: "u<sup>5</sup>/5 + C", correct: false },
+          { id: "a3", label: "½u<sup>4</sup> + C", correct: false }
+        ],
+        finalChoices: [
+          { label: "(x² + 1)<sup>5</sup>/10 + C", F: x => Math.pow(x*x + 1, 5) / 10 },
+          { label: "(x² + 1)<sup>5</sup>/5 + C", F: x => Math.pow(x*x + 1, 5) / 5 },
+          { label: "x(x² + 1)<sup>5</sup>/10 + C", F: x => x*Math.pow(x*x + 1, 5) / 10 }
+        ],
+        integrand: x => x*Math.pow(x*x + 1, 4),
+        hint: "The derivative of x² + 1 is 2x. You only have x, so the lock needs a constant adjustment."
+      },
+      {
+        title: "Stage 3",
+        subtitle: "Trigonometric composition",
+        integral: "∫ cos(3x) dx",
+        correctU: "inner",
+        uText: "3x",
+        candidates: [
+          { id: "whole", label: "cos(3x)", note: "whole integrand without dx", depth: 0 },
+          { id: "cos", label: "cos(□)", note: "outer trig function", depth: 1 },
+          { id: "inner", label: "3x", note: "input to cosine", depth: 2 },
+          { id: "x", label: "x", note: "part of the input", depth: 3 }
+        ],
+        duChoices: [
+          { id: "dx", label: "dx = ⅓ du", correct: true, explanation: "Correct. If u = 3x, du = 3 dx, so dx = ⅓ du.", scale: "1/3" },
+          { id: "3dx", label: "3 dx", correct: false, explanation: "That is du, but the leftover factor is dx. Use dx = ⅓ du." },
+          { id: "sin", label: "−sin(3x) dx", correct: false, explanation: "That is the derivative of cos(3x), not the derivative of u = 3x." }
+        ],
+        simplified: "⅓ ∫ cos(u) du",
+        scaleExplanation: "Since du = 3 dx, replace dx with ⅓ du.",
+        antiChoices: [
+          { id: "a1", label: "⅓ sin(u) + C", correct: true },
+          { id: "a2", label: "sin(u) + C", correct: false },
+          { id: "a3", label: "−⅓ sin(u) + C", correct: false }
+        ],
+        finalChoices: [
+          { label: "⅓ sin(3x) + C", F: x => Math.sin(3*x) / 3 },
+          { label: "sin(3x) + C", F: x => Math.sin(3*x) },
+          { label: "−⅓ sin(3x) + C", F: x => -Math.sin(3*x) / 3 }
+        ],
+        integrand: x => Math.cos(3*x),
+        hint: "For trig substitutions, the inner input of the trig function is often the best u."
+      },
+      {
+        title: "Stage 4",
+        subtitle: "Exponential composition",
+        integral: "∫ e<sup>5x − 1</sup> dx",
+        correctU: "inner",
+        uText: "5x − 1",
+        candidates: [
+          { id: "whole", label: "e<sup>5x − 1</sup>", note: "whole exponential expression", depth: 0 },
+          { id: "outer", label: "e<sup>□</sup>", note: "outer exponential function", depth: 1 },
+          { id: "inner", label: "5x − 1", note: "exponent/input", depth: 2 },
+          { id: "x", label: "x", note: "part of the exponent", depth: 3 }
+        ],
+        duChoices: [
+          { id: "dx", label: "dx = ⅕ du", correct: true, explanation: "Correct. If u = 5x − 1, du = 5 dx, so dx = ⅕ du.", scale: "1/5" },
+          { id: "5dx", label: "5 dx", correct: false, explanation: "That is du, but the leftover factor is dx. Use dx = ⅕ du." },
+          { id: "exp", label: "e<sup>5x − 1</sup> dx", correct: false, explanation: "That is the integrand, not du." }
+        ],
+        simplified: "⅕ ∫ e<sup>u</sup> du",
+        scaleExplanation: "The derivative of 5x − 1 is 5, so dx contributes a factor of ⅕.",
+        antiChoices: [
+          { id: "a1", label: "⅕e<sup>u</sup> + C", correct: true },
+          { id: "a2", label: "e<sup>u</sup> + C", correct: false },
+          { id: "a3", label: "5e<sup>u</sup> + C", correct: false }
+        ],
+        finalChoices: [
+          { label: "⅕e<sup>5x − 1</sup> + C", F: x => Math.exp(5*x - 1) / 5 },
+          { label: "e<sup>5x − 1</sup> + C", F: x => Math.exp(5*x - 1) },
+          { label: "5e<sup>5x − 1</sup> + C", F: x => 5*Math.exp(5*x - 1) }
+        ],
+        integrand: x => Math.exp(5*x - 1),
+        testPoints: [-0.6, -0.1, 0.2, 0.5, 0.9],
+        hint: "In e to a complicated exponent, the exponent itself is usually the inner function."
+      },
+      {
+        title: "Stage 5",
+        subtitle: "Hard mixed expression",
+        integral: "∫ 2x/(x² + 1) dx",
+        correctU: "denom",
+        uText: "x² + 1",
+        candidates: [
+          { id: "whole", label: "2x/(x² + 1)", note: "whole integrand without dx", depth: 0 },
+          { id: "quotient", label: "□ / (x² + 1)", note: "quotient structure", depth: 1 },
+          { id: "numer", label: "2x", note: "numerator / derivative-looking factor", depth: 2 },
+          { id: "denom", label: "x² + 1", note: "denominator/input to reciprocal", depth: 2 },
+          { id: "x2", label: "x²", note: "part of denominator", depth: 3 }
+        ],
+        duChoices: [
+          { id: "2xdx", label: "2x dx", correct: true, explanation: "Correct. If u = x² + 1, then du = 2x dx.", scale: "1" },
+          { id: "xdx", label: "x dx", correct: false, explanation: "That would be half of du, but the full 2x dx is present." },
+          { id: "reciprocal", label: "1/(x² + 1) dx", correct: false, explanation: "That is the outside reciprocal part, which becomes 1/u." },
+          { id: "dx", label: "dx", correct: false, explanation: "dx alone misses the derivative factor 2x." }
+        ],
+        simplified: "∫ 1/u du",
+        scaleExplanation: "The denominator becomes u and the numerator with dx becomes du.",
+        antiChoices: [
+          { id: "a1", label: "ln|u| + C", correct: true },
+          { id: "a2", label: "1/u² + C", correct: false },
+          { id: "a3", label: "u²/2 + C", correct: false }
+        ],
+        finalChoices: [
+          { label: "ln|x² + 1| + C", F: x => Math.log(Math.abs(x*x + 1)) },
+          { label: "1/(x² + 1) + C", F: x => 1/(x*x + 1) },
+          { label: "ln|2x| + C", F: x => Math.log(Math.abs(2*x)) }
+        ],
+        integrand: x => 2*x/(x*x + 1),
+        testPoints: [-2, -1.1, -0.4, 0.7, 1.6],
+        hint: "Try making the denominator u. Its derivative appears in the numerator."
+      }
+    ];
+
+    const $ = selector => document.querySelector(selector);
+
+    let stageIndex = 0;
+    let state = {};
+
+    function freshState() {
+      state = {
+        selectedU: null,
+        selectedDU: null,
+        selectedAnti: null,
+        selectedFinal: null,
+        uOK: false,
+        duOK: false,
+        antiOK: false,
+        finalOK: false,
+        feedback: "Choose the inner expression that should become u.",
+        feedbackType: "info"
+      };
+    }
+
+    function render() {
+      const stage = stages[stageIndex];
+
+      renderStageTabs();
+
+      $("#integralDisplay").innerHTML = stage.integral;
+
+      $("#candidateList").innerHTML = stage.candidates.map(candidate => {
+        let cls = "candidate";
+        if (state.selectedU === candidate.id) cls += " selected";
+        if (state.uOK && candidate.id === stage.correctU) cls += " correct";
+        if (state.selectedU === candidate.id && !state.uOK) cls += " wrong";
+
+        return `
+          <button class="${cls}" style="--depth:${candidate.depth || 0}" onclick="selectU('${candidate.id}')">
+            <span class="gear-icon">⚙</span>
+            <span>
+              <strong>${candidate.label}</strong>
+              <small>${candidate.note}</small>
+            </span>
+          </button>
+        `;
+      }).join("");
+
+      $("#tumblerU").className = "tumbler" + (state.uOK ? " open" : "");
+      $("#tumblerDU").className = "tumbler" + (state.duOK ? " open" : "");
+      $("#tumblerU").innerHTML = `
+        <div>
+          <span class="big">${state.uOK ? "✓ u" : "u"}</span>
+          <span class="small">${state.uOK ? stage.uText : "inner gear"}</span>
+        </div>
+      `;
+      $("#tumblerDU").innerHTML = `
+        <div>
+          <span class="big">${state.duOK ? "✓ du" : "du"}</span>
+          <span class="small">${state.duOK ? "matched factor" : "matching factor"}</span>
+        </div>
+      `;
+
+      renderDUPanel(stage);
+      renderSimplifiedPanel(stage);
+      renderAntiPanel(stage);
+      renderBackPanel(stage);
+      renderCompletion(stage);
+
+      const status = $("#status");
+      status.className = "status " + state.feedbackType;
+      status.innerHTML = state.feedback;
+
+      $("#nextBtn").classList.toggle("hidden", !state.finalOK || stageIndex === stages.length - 1);
+      $("#restartBtn").classList.toggle("hidden", !state.finalOK || stageIndex !== stages.length - 1);
+    }
+
+    function renderStageTabs() {
+      $("#stageTabs").innerHTML = stages.map((stage, i) => `
+        <button class="stage-tab ${i === stageIndex ? "active" : ""}" onclick="goToStage(${i})">
+          ${stage.title}: ${stage.subtitle}
+        </button>
+      `).join("");
+    }
+
+    function renderDUPanel(stage) {
+      const panel = $("#duPanel");
+      panel.classList.toggle("hidden", !state.uOK);
+
+      $("#duChoices").innerHTML = stage.duChoices.map(choice => {
+        let cls = "choice";
+        if (state.selectedDU === choice.id && choice.correct) cls += " correct";
+        if (state.selectedDU === choice.id && !choice.correct) cls += " wrong";
+
+        return `
+          <button class="${cls}" onclick="selectDU('${choice.id}')" ${state.duOK ? "disabled" : ""}>
+            ${choice.label}
+          </button>
+        `;
+      }).join("");
+    }
+
+    function renderSimplifiedPanel(stage) {
+      const panel = $("#simplifiedPanel");
+      panel.classList.toggle("visible", state.duOK);
+      $("#simplifiedLine").innerHTML = stage.simplified;
+      $("#scaleExplanation").innerHTML = stage.scaleExplanation;
+    }
+
+    function renderAntiPanel(stage) {
+      const panel = $("#antiPanel");
+      panel.classList.toggle("hidden", !state.duOK);
+
+      $("#antiChoices").innerHTML = stage.antiChoices.map(choice => {
+        let cls = "choice";
+        if (state.selectedAnti === choice.id && choice.correct) cls += " correct";
+        if (state.selectedAnti === choice.id && !choice.correct) cls += " wrong";
+
+        return `
+          <button class="${cls}" onclick="selectAnti('${choice.id}')" ${state.antiOK ? "disabled" : ""}>
+            ${choice.label}
+          </button>
+        `;
+      }).join("");
+    }
+
+    function renderBackPanel(stage) {
+      const panel = $("#backPanel");
+      panel.classList.toggle("hidden", !state.antiOK);
+
+      $("#finalChoices").innerHTML = stage.finalChoices.map((choice, index) => {
+        let cls = "choice";
+        if (state.selectedFinal === index && state.finalOK) cls += " correct";
+        if (state.selectedFinal === index && !state.finalOK) cls += " wrong";
+
+        return `
+          <button class="${cls}" onclick="selectFinal(${index})" ${state.finalOK ? "disabled" : ""}>
+            ${choice.label}
+          </button>
+        `;
+      }).join("");
+    }
+
+    function renderCompletion(stage) {
+      const box = $("#completion");
+      box.classList.toggle("hidden", !state.finalOK);
+
+      if (state.finalOK) {
+        box.innerHTML = `
+          <strong>Lockbox opened!</strong>
+          <p>
+            You identified <code>u = ${stage.uText}</code>, matched the derivative factor,
+            simplified the integral, integrated, and substituted back.
+          </p>
+        `;
+      }
+    }
+
+    function selectU(id) {
+      const stage = stages[stageIndex];
+      state.selectedU = id;
+
+      if (id === stage.correctU) {
+        state.uOK = true;
+        state.feedbackType = "good";
+        state.feedback = `
+          Nice. <code>u = ${stage.uText}</code> is the inner gear.
+          Now match the derivative factor to <code>du</code>.
+        `;
+      } else {
+        state.uOK = false;
+        state.duOK = false;
+        state.antiOK = false;
+        state.finalOK = false;
+        state.feedbackType = "bad";
+
+        const chosen = stage.candidates.find(c => c.id === id);
+        state.feedback = `
+          Jammed! <strong>${chosen.label}</strong> is not the best inner function for this lock.
+          Choose the expression that sits inside the outer operation and makes the rest of the integral become its derivative.
+        `;
+        render();
+        triggerJam("u");
+        return;
+      }
+
+      render();
+    }
+
+    function selectDU(id) {
+      const stage = stages[stageIndex];
+      const choice = stage.duChoices.find(c => c.id === id);
+      state.selectedDU = id;
+
+      if (choice.correct) {
+        state.duOK = true;
+        state.feedbackType = "good";
+        state.feedback = `
+          ${choice.explanation}
+          The second tumbler opens, and the integral simplifies.
+        `;
+      } else {
+        state.duOK = false;
+        state.antiOK = false;
+        state.finalOK = false;
+        state.feedbackType = "bad";
+        state.feedback = `Jammed! ${choice.explanation}`;
+        render();
+        triggerJam("du");
+        return;
+      }
+
+      render();
+    }
+
+    function selectAnti(id) {
+      const stage = stages[stageIndex];
+      const choice = stage.antiChoices.find(c => c.id === id);
+      state.selectedAnti = id;
+
+      if (choice.correct) {
+        state.antiOK = true;
+        state.feedbackType = "good";
+        state.feedback = "Good integration in terms of u. Now substitute the original expression back in.";
+      } else {
+        state.antiOK = false;
+        state.finalOK = false;
+        state.feedbackType = "bad";
+        state.feedback = "Not quite. Differentiate your chosen antiderivative with respect to u and see if it returns the simplified integrand.";
+      }
+
+      render();
+    }
+
+    function selectFinal(index) {
+      const stage = stages[stageIndex];
+      const choice = stage.finalChoices[index];
+
+      state.selectedFinal = index;
+
+      const passes = numericalDerivativeCheck(choice.F, stage.integrand, stage.testPoints);
+
+      if (passes) {
+        state.finalOK = true;
+        state.feedbackType = "good";
+        state.feedback = `
+          Correct. A numerical derivative check confirms that your final answer differentiates back to
+          <code>${stripTags(stage.integral)}</code>.
+        `;
+      } else {
+        state.finalOK = false;
+        state.feedbackType = "bad";
+        state.feedback = `
+          Jammed at the final latch. When differentiated, that expression does not match the original integrand.
+          Check the constant multiplier from <code>du</code> and make sure you substituted back correctly.
+        `;
+      }
+
+      render();
+      if (!passes) triggerJam("du");
+    }
+
+    function numericalDerivativeCheck(F, integrand, points) {
+      const xs = points || [-2, -1, -0.25, 0.75, 1.5];
+      const h = 1e-5;
+
+      for (const x of xs) {
+        const y1 = F(x + h);
+        const y0 = F(x - h);
+        const numericalDerivative = (y1 - y0) / (2 * h);
+        const target = integrand(x);
+
+        if (!Number.isFinite(numericalDerivative) || !Number.isFinite(target)) {
+          return false;
+        }
+
+        const tolerance = 1e-3 * (1 + Math.abs(target));
+        if (Math.abs(numericalDerivative - target) > tolerance) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    function triggerJam(which) {
+      const tumbler = which === "u" ? $("#tumblerU") : $("#tumblerDU");
+      tumbler.classList.add("jam");
+      setTimeout(() => tumbler.classList.remove("jam"), 800);
+    }
+
+    function stripTags(html) {
+      const temp = document.createElement("div");
+      temp.innerHTML = html;
+      return temp.textContent || temp.innerText || "";
+    }
+
+    function goToStage(index) {
+      stageIndex = index;
+      freshState();
+      render();
+    }
+
+    function nextStage() {
+      if (stageIndex < stages.length - 1) {
+        stageIndex++;
+        freshState();
+        render();
+      }
+    }
+
+    $("#hintBtn").addEventListener("click", () => {
+      const stage = stages[stageIndex];
+      state.feedbackType = "info";
+      state.feedback = `<strong>Hint:</strong> ${stage.hint}`;
+      render();
+    });
+
+    $("#resetBtn").addEventListener("click", () => {
+      freshState();
+      render();
+    });
+
+    $("#nextBtn").addEventListener("click", nextStage);
+
+    $("#restartBtn").addEventListener("click", () => {
+      stageIndex = 0;
+      freshState();
+      render();
+    });
+
+    freshState();
+    render();
+  </script>
+    <script id="_metadata" type="application/json">
+    {
+      "summary": "",
+      "card_background_color": "#f6f6f6"
+    }
+  </script>
+</body>
+</html>
