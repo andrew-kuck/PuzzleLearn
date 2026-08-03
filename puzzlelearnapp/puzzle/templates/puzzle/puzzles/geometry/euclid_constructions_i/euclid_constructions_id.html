@@ -1,0 +1,82 @@
+{% extends "puzzle/puzzles/geometry/euclid_constructions_i/euclid_constructions_i.html" %}
+
+{% block question_information %}
+<script>
+const QUESTION_INFORMATION = [
+  {
+    id: "perpendicular_from_external_point",
+    question:
+      `Given point C off <span class="geo-line">AB</span>, construct the perpendicular to <span class="geo-line">AB</span> through C.`,
+    initialImage: {
+      points: [
+        { name: "A", x: 0.24, y: 0.66 },
+        { name: "B", x: 0.78, y: 0.66 },
+        { name: "C", x: 0.50, y: 0.34 }
+      ],
+      lines: [
+        {
+          kind: "line",
+          name: "AB",
+          x1: 0.18,
+          y1: 0.66,
+          x2: 0.84,
+          y2: 0.66
+        }
+      ],
+      circles: [],
+      polygons: []
+    },
+    evaluationFunction: evaluatePerpendicularFromExternalPoint,
+    errorMargin: DEFAULT_ERROR_MARGIN
+  },
+
+  {
+    id: "triangle_from_three_segments",
+    question:
+      `Construct △XYZ such that <span class="geo-seg">XY</span> ≅ <span class="geo-seg">AB</span>, <span class="geo-seg">YZ</span> ≅ <span class="geo-seg">CD</span>, and <span class="geo-seg">ZX</span> ≅ <span class="geo-seg">EF</span>.`,
+    initialImage: {
+      points: [
+        { name: "A", x: 0.12, y: 0.24 },
+        { name: "B", x: 0.34, y: 0.24 },
+
+        { name: "C", x: 0.12, y: 0.38 },
+        { name: "D", x: 0.42, y: 0.38 },
+
+        { name: "E", x: 0.12, y: 0.52 },
+        { name: "F", x: 0.30, y: 0.52 }
+      ],
+      lines: [
+        {
+          kind: "segment",
+          name: "AB",
+          x1: 0.12,
+          y1: 0.24,
+          x2: 0.34,
+          y2: 0.24
+        },
+        {
+          kind: "segment",
+          name: "CD",
+          x1: 0.12,
+          y1: 0.38,
+          x2: 0.42,
+          y2: 0.38
+        },
+        {
+          kind: "segment",
+          name: "EF",
+          x1: 0.12,
+          y1: 0.52,
+          x2: 0.30,
+          y2: 0.52
+        }
+      ],
+      circles: [],
+      polygons: []
+    },
+    evaluationFunction: evaluateTriangleFromThreeSegments,
+    errorMargin: DEFAULT_ERROR_MARGIN
+  },
+];
+</script>
+{% endblock %}

@@ -4,8 +4,6 @@ Decrease waittime for globe locate, before drawing from the cache
 
 Do basic testing of the new geo constructions activity
 
-Have way to click back to the homepage from the subject page or maybe from any page
-
 Have a button on activity cards that describes the rationale for the activity
 
 Improve the UI

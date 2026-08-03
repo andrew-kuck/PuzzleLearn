@@ -14,6 +14,7 @@ def index(request):
     display_list = clean_display_list(copy.deepcopy(puzzle_list))
     return render(request, 'puzzle/index.html', {'display_list': display_list})
 
+
 def page(request, url_path):
     url_args = url_path.lower().strip('/').split('/')
     display_list = copy.deepcopy(puzzle_list)
@@ -27,7 +28,10 @@ def page(request, url_path):
                     break
                 elif item['type'] == 'file':
                     html_file_path = f"puzzle/puzzles/{url_path.strip('/')}.html"
-                    return render(request, html_file_path, {})
+                    template_dict = {'puzzle_name': item['display_name']}
+                    if item.get('template_dict_function'):
+                        template_dict = template_dict | item['template_dict_function']()
+                    return render(request, html_file_path, template_dict)
         if not valid_url:
             raise Http404("We could not find that page.")
     display_list = clean_display_list(display_list)

@@ -1,0 +1,60 @@
+{% extends "puzzle/puzzles/geometry/euclid_constructions_i/euclid_constructions_i.html" %}
+
+{% block question_information %}
+<script>
+const QUESTION_INFORMATION = [
+  {
+    id: "equilateral_triangle_on_given_segment",
+    question:
+      `Construct an equilateral triangle having a given segment as one side.`,
+    initialImage: {
+      points: [
+        { name: "A", x: 0.34, y: 0.58 },
+        { name: "B", x: 0.66, y: 0.58 }
+      ],
+      lines: [
+        {
+          kind: "segment",
+          name: "AB",
+          x1: 0.34,
+          y1: 0.58,
+          x2: 0.66,
+          y2: 0.58
+        }
+      ],
+      circles: [],
+      polygons: []
+    },
+    evaluationFunction: evaluateEquilateralTriangleOnGivenSegment,
+    errorMargin: DEFAULT_ERROR_MARGIN
+  },
+
+  {
+    id: "congruent_segment_from_given_point",
+    question:
+      `Construct a segment congruent to a given segment and with a given point as one endpoint.`,
+    initialImage: {
+      points: [
+        { name: "C", x: 0.16, y: 0.28 },
+        { name: "D", x: 0.38, y: 0.28 },
+        { name: "A", x: 0.46, y: 0.64 }
+      ],
+      lines: [
+        {
+          kind: "segment",
+          name: "CD",
+          x1: 0.16,
+          y1: 0.28,
+          x2: 0.38,
+          y2: 0.28
+        }
+      ],
+      circles: [],
+      polygons: []
+    },
+    evaluationFunction: evaluateCongruentSegmentFromGivenPoint,
+    errorMargin: DEFAULT_ERROR_MARGIN
+  },
+];
+</script>
+{% endblock %}

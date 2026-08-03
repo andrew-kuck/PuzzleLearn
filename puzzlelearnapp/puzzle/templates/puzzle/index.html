@@ -6,7 +6,32 @@
 
 {% block content %}
 
-{{ display_list }}
+<h3 id="nav-page-title"><a href="/" class="plain-link">PuzzleLearn</a></h3>
+
+<div id="nav-page-container">
+
+{% for item in display_list %}
+
+    {% if item.type == 'static_question_collection' %}
+    <a href="https://openmath.pythonanywhere.com/puzzle" target="_blank" class="card-link">
+        <div class="card" style="background-color: #e9eff0;">
+            Static Question Collection
+        </div>
+    </a>
+    {% endif %}
+
+    {% if item.type == 'folder' %}
+    <a href="{{ item.name }}/" class="card-link">
+        <div class="card">{{item.display_name}}</div>
+    </a>
+    {% elif item.type == 'file' %}
+    <a href="{{ item.name }}/" class="card-link">
+        <div class="card">{{item.display_name}}</div>
+    </a>
+    {% endif %}
+
+{% endfor %}
+</div>
 
 {% endblock %}
 

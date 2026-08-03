@@ -1,0 +1,78 @@
+{% extends "puzzle/puzzles/geometry/euclid_constructions_i/euclid_constructions_i.html" %}
+
+{% block question_information %}
+<script>
+const QUESTION_INFORMATION = [
+  {
+    id: "copy_segment_onto_ray",
+    question:
+      `Given <span class="geo-ray">AB</span> and <span class="geo-seg">CD</span>, construct point E on <span class="geo-ray">AB</span> such that <span class="geo-seg">AE</span> ≅ <span class="geo-seg">CD</span>.`,
+    initialImage: {
+      points: [
+        { name: "A", x: 0.18, y: 0.62 },
+        { name: "B", x: 0.52, y: 0.62 },
+        { name: "C", x: 0.18, y: 0.28 },
+        { name: "D", x: 0.38, y: 0.28 }
+      ],
+      lines: [
+        {
+          kind: "ray",
+          name: "AB",
+          x1: 0.18,
+          y1: 0.62,
+          x2: 0.52,
+          y2: 0.62
+        },
+        {
+          kind: "segment",
+          name: "CD",
+          x1: 0.18,
+          y1: 0.28,
+          x2: 0.38,
+          y2: 0.28
+        }
+      ],
+      circles: [],
+      polygons: []
+    },
+    evaluationFunction: evaluateCopySegmentOntoRay,
+    errorMargin: DEFAULT_ERROR_MARGIN
+  },
+
+  {
+    id: "angle_bisector",
+    question:
+      `Construct the angle bisector of ∠ABC.`,
+    initialImage: {
+      points: [
+        { name: "A", x: 0.30, y: 0.34 },
+        { name: "B", x: 0.48, y: 0.62 },
+        { name: "C", x: 0.72, y: 0.40 }
+      ],
+      lines: [
+        {
+          kind: "ray",
+          name: "BA",
+          x1: 0.48,
+          y1: 0.62,
+          x2: 0.30,
+          y2: 0.34
+        },
+        {
+          kind: "ray",
+          name: "BC",
+          x1: 0.48,
+          y1: 0.62,
+          x2: 0.72,
+          y2: 0.40
+        }
+      ],
+      circles: [],
+      polygons: []
+    },
+    evaluationFunction: evaluateAngleBisector,
+    errorMargin: DEFAULT_ERROR_MARGIN
+  },
+];
+</script>
+{% endblock %}

@@ -1,0 +1,29 @@
+#nav-page-container {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+#nav-page-title {
+    text-align: center;
+    margin: 10px;
+}
+
+.card {
+    width: 150px;
+    height: 50px;
+    border: 1px solid gray;
+    border-radius: 3px;
+    padding: 8px;
+    justify-content: center;
+    align-items: center;
+    display: flex;
+    text-align: center;
+}
+
+.card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block; /* Ensures the anchor fills the space */
+}

@@ -1,0 +1,7 @@
+.plain-link, 
+.plain-link:visited, 
+.plain-link:hover, 
+.plain-link:active {
+  color: inherit;            /* Matches the color of the surrounding text */
+  text-decoration: none;     /* Removes the default underline */
+}

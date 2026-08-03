@@ -1,0 +1,80 @@
+{% extends "puzzle/puzzles/geometry/euclid_constructions_i/euclid_constructions_i.html" %}
+
+{% block question_information %}
+<script>
+const QUESTION_INFORMATION = [
+  {
+    id: "copy_angle_to_line",
+    question:
+      `Given <span class="geo-line">AB</span> and ∠CDE, construct point F such that ∠FAB ≅ ∠CDE.`,
+    initialImage: {
+      points: [
+        { name: "A", x: 0.28, y: 0.68 },
+        { name: "B", x: 0.72, y: 0.68 },
+
+        { name: "C", x: 0.20, y: 0.30 },
+        { name: "D", x: 0.36, y: 0.46 },
+        { name: "E", x: 0.58, y: 0.34 }
+      ],
+      lines: [
+        {
+          kind: "line",
+          name: "AB",
+          x1: 0.18,
+          y1: 0.68,
+          x2: 0.82,
+          y2: 0.68
+        },
+        {
+          kind: "ray",
+          name: "DC",
+          x1: 0.36,
+          y1: 0.46,
+          x2: 0.20,
+          y2: 0.30
+        },
+        {
+          kind: "ray",
+          name: "DE",
+          x1: 0.36,
+          y1: 0.46,
+          x2: 0.58,
+          y2: 0.34
+        }
+      ],
+      circles: [],
+      polygons: []
+    },
+    evaluationFunction: evaluateCopyAngleToLine,
+    errorMargin: DEFAULT_ERROR_MARGIN
+  },
+
+  {
+    id: "parallel_through_point",
+    question:
+      `Through point C, construct the parallel to <span class="geo-line">AB</span>.`,
+    initialImage: {
+      points: [
+        { name: "A", x: 0.24, y: 0.64 },
+        { name: "B", x: 0.74, y: 0.54 },
+        { name: "C", x: 0.46, y: 0.34 }
+      ],
+      lines: [
+        {
+          kind: "line",
+          name: "AB",
+          x1: 0.18,
+          y1: 0.65,
+          x2: 0.82,
+          y2: 0.52
+        }
+      ],
+      circles: [],
+      polygons: []
+    },
+    evaluationFunction: evaluateParallelThroughPoint,
+    errorMargin: DEFAULT_ERROR_MARGIN
+  },
+];
+</script>
+{% endblock %}

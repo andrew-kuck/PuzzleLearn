@@ -1,3 +1,8 @@
+Test out Khanmigo
+
+Make catalog of all math websites on the internet
+Have nested documentation for subsets of the site, down to individual questions
+
 Other systems for reading a text, with having blanks or embedding questions, or having words scroll in continous stream, etc
 Set this up for uploading and maybe temporarily saving a text
 
@@ -12,7 +17,7 @@ Add calculus activities, using downloaded textbook as inspiration
 
 Test that the activity F and F Prime can actually be completed in a reasonable amount of time
 For the F and F Prime activity, have piecewise functions for at least some of the problems
-Have part 2 and part 3 of derivative drive (copy the code and then alter with github copilot
+Have part 2 and part 3 of derivative drive (copy the code and then alter with github copilot)
 	part 2: no track to stay on, but the slope is plotted on a separate graph as the car is being directed; then the actual derivative is plotted and the error determined for that question
 	part 3: user graphs the derivative of the given function, and that is used to control the movements of a dot, which must stay within the track (track as in part 1)
 
