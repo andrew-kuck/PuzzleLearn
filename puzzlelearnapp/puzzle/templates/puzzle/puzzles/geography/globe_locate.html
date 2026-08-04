@@ -235,6 +235,8 @@
   <!-- Leaflet -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+  <script src="/static/puzzle/js/activity.js"></script>
+
   <script>
     
     /********************************************************************
@@ -464,14 +466,13 @@
     }
 
     async function postPickerData(pickerData) {
-      const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
       try {
         const response = await fetch("{% url 'get_geo_data' %}", {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json', // Tells server we are sending JSON
             'Accept': 'application/json',        // Tells server we want JSON back
-            'X-CSRFToken': csrfToken
+            "X-CSRFToken": getCookie("csrftoken")
           },
           body: JSON.stringify(pickerData)      // Convert JS object to JSON string
         });
@@ -1166,6 +1167,5 @@
         .replaceAll("'", "&#039;");
     }
   </script>
-<script src="/static/puzzle/js/activity.js"></script>
 </body>
 </html>

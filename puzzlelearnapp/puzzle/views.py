@@ -3,7 +3,7 @@ from django.views.decorators.http import require_GET, require_POST
 import json
 from .view_functions.geography import get_random_city_with_address, get_random_city_with_address_filtered, get_random_city_with_address_major_cities
 from .view_functions.puzzle_list import puzzle_list
-from.view_functions.utils import clean_display_list
+from .view_functions.utils import clean_display_list
 from django.http import HttpResponse, JsonResponse, Http404
 from urllib.parse import urlparse
 import requests

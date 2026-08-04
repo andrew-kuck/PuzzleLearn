@@ -11,4 +11,7 @@ DEBUG = False
 
 ALLOWED_HOSTS = ['puzzlelearn.fly.dev']
 
-CSRF_TRUSTED_ORIGINS = ['https://puzzlelearn.fly.dev/']
+CSRF_TRUSTED_ORIGINS = ['https://puzzlelearn.fly.dev']
+
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True

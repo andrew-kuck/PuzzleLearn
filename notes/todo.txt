@@ -1,3 +1,5 @@
+Error with globe locate json js error, only in production
+
 Ray notation does not display correctly for geo construction activity
 
 Decrease waittime for globe locate, before drawing from the cache

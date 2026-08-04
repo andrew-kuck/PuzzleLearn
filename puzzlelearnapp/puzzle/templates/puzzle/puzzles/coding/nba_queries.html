@@ -9,6 +9,8 @@
   <!-- AlaSQL lets us run SQL in the browser -->
   <script src="https://cdn.jsdelivr.net/npm/alasql@4/dist/alasql.min.js"></script>
 
+  <script src="/static/puzzle/js/activity.js"></script>
+
   <style>
     :root {
       --bg: #f5f7fb;
@@ -753,6 +755,7 @@
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          'Accept': 'application/json',
           "X-CSRFToken": getCookie("csrftoken")
         },
         body: JSON.stringify({
@@ -1076,26 +1079,7 @@
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
     }
-
-    function getCookie(name) {
-      const cookies = document.cookie ? document.cookie.split(";") : [];
-
-      for (const cookie of cookies) {
-        const trimmed = cookie.trim();
-
-        if (trimmed.startsWith(name + "=")) {
-          return decodeURIComponent(trimmed.substring(name.length + 1));
-        }
-      }
-
-      return "";
-    }
+    
   </script>
-  <script id="_metadata" type="application/json">
-    {
-      "summary": ""
-    }
-  </script>
-<script src="/static/puzzle/js/activity.js"></script>
 </body>
 </html>
