@@ -8,25 +8,35 @@
 
 <h3 id="nav-page-title"><a href="/" class="plain-link">PuzzleLearn</a></h3>
 
-<div id="nav-page-container">
-
+<div class="card-grid">
 {% for item in display_list %}
 
     {% if item.type == 'static_question_collection' %}
     <a href="https://openmath.pythonanywhere.com/puzzle" target="_blank" class="card-link">
-        <div class="card" style="background-color: #e9eff0;">
-            Static Question Collection
+        <div class="card">
+            <div class="title">Static Question Collection</div>
+            <div class="folder-meta">A curated set of puzzles and activities for classroom.</div>
         </div>
     </a>
     {% endif %}
 
     {% if item.type == 'folder' %}
     <a href="{{ item.name }}/" class="card-link">
-        <div class="card">{{item.display_name}}</div>
+        <div class="card">
+            <div>
+                <div class="title">{{ item.display_name }}</div>
+                <div class="folder-meta">{{ item.description|default:"A collection of puzzles and exercises." }}</div>
+            </div>
+        </div>
     </a>
     {% elif item.type == 'file' %}
     <a href="{{ item.name }}/" class="card-link">
-        <div class="card">{{item.display_name}}</div>
+        <div class="card">
+            <img class="thumb" src="{{ item.picture_path }}" alt="{{ item.display_name }} preview">
+            <div class="file-footer">
+                <div class="title">{{ item.display_name }}</div>
+            </div>
+        </div>
     </a>
     {% endif %}
 

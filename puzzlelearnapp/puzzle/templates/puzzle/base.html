@@ -9,7 +9,9 @@
     {% block custom_head %}{% endblock %}
 </head>
 <body>
-    {% block content %}{% endblock %}
+    <main class="app-content">
+        {% block content %}{% endblock %}
+    </main>
     <script src="{% static 'puzzle/js/base.js' %}"></script>
     {% block custom_js %}{% endblock %}
 </body>

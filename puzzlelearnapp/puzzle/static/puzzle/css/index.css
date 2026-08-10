@@ -1,29 +1,48 @@
-#nav-page-container {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 15px;
-}
+/* Layout */
+/* #nav-page-container { display:flex; justify-content:center; } */
 
-#nav-page-title {
-    text-align: center;
-    margin: 10px;
-}
+#nav-page-title { text-align:center; margin:6px 0 18px 0; color: var(--text); }
 
+.card-grid{ display:flex; flex-wrap:wrap; gap:18px; justify-content:center; }
+
+.card-link, .card-link:visited, .card-link:hover, .card-link:active{ display:block; color:inherit; text-decoration:none; }
+.card-link *{ text-decoration:none; }
+
+/* Card base */
 .card {
-    width: 150px;
-    height: 50px;
-    border: 1px solid gray;
-    border-radius: 3px;
-    padding: 8px;
-    justify-content: center;
-    align-items: center;
-    display: flex;
-    text-align: center;
+    width:240px;
+    min-height:100px;
+    border-radius:12px;
+    padding:12px;
+    box-sizing:border-box;
+    background: var(--card-bg);
+    border: 1px solid rgba(15,23,35,0.06);
+    box-shadow: 0 6px 18px rgba(15,23,35,0.06);
+    display:flex;
+    flex-direction:column;
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
 }
 
-.card-link {
-    text-decoration: none;
-    color: inherit;
-    display: block; /* Ensures the anchor fills the space */
+.card:hover{ transform: translateY(-6px); box-shadow: 0 14px 30px rgba(15,23,35,0.08); border-color: rgba(14,165,164,0.12); }
+
+/* Title */
+.card .title{ font-weight:600; font-size:1.05rem; color: var(--text); margin-left: 10px;}
+
+/* Folder-specific area */
+.card .folder-meta{ font-size:0.88rem; color: var(--muted); background: #fbfdff; padding:10px; border-radius:8px; }
+
+/* File-specific with thumbnail */
+.card .thumb{
+    width:100%;
+    height:96px;
+    object-fit:cover;
+    border-radius:8px;
+    margin-bottom:8px;
+    background: linear-gradient(90deg, rgba(14,165,164,0.06), rgba(96,165,250,0.03));
 }
+
+.card .file-footer{ display:flex; justify-content:space-between; align-items:center; }
+
+@media (max-width:700px){ .card{ width:46%; min-height:120px } }
+
+@media (max-width:420px){ .card{ width:100%; } }
