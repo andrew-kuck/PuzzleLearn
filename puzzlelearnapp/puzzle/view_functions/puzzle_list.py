@@ -67,13 +67,13 @@ puzzle_list = [
         'puzzle_list': [
             {'type': 'file', 'name': 'rectilineal_area', 'display_name': 'Rectilineal Area'},
             {'type': 'folder', 'name': 'euclid_constructions_i', 'display_name': 'Euclid Constructions I', 'puzzle_list': [
-                {'type': 'file', 'name': 'euclid_constructions_ia', 'display_name': 'Euclid Constructions I (Part A)'},
-                {'type': 'file', 'name': 'euclid_constructions_ib', 'display_name': 'Euclid Constructions I (Part B)'},
-                {'type': 'file', 'name': 'euclid_constructions_ic', 'display_name': 'Euclid Constructions I (Part C)'},
-                {'type': 'file', 'name': 'euclid_constructions_id', 'display_name': 'Euclid Constructions I (Part D)'},
-                {'type': 'file', 'name': 'euclid_constructions_ie', 'display_name': 'Euclid Constructions I (Part E)'},
-                {'type': 'file', 'name': 'euclid_constructions_if', 'display_name': 'Euclid Constructions I (Part F)'},
-                {'type': 'file', 'name': 'euclid_constructions_ig', 'display_name': 'Euclid Constructions I (Part G)'},
+                {'type': 'file', 'name': 'euclid_constructions_ia', 'display_name': 'Euclid Constructions I (Part A)', 'image_name': 'euclid'},
+                {'type': 'file', 'name': 'euclid_constructions_ib', 'display_name': 'Euclid Constructions I (Part B)', 'image_name': 'euclid'},
+                {'type': 'file', 'name': 'euclid_constructions_ic', 'display_name': 'Euclid Constructions I (Part C)', 'image_name': 'euclid'},
+                {'type': 'file', 'name': 'euclid_constructions_id', 'display_name': 'Euclid Constructions I (Part D)', 'image_name': 'euclid'},
+                {'type': 'file', 'name': 'euclid_constructions_ie', 'display_name': 'Euclid Constructions I (Part E)', 'image_name': 'euclid'},
+                {'type': 'file', 'name': 'euclid_constructions_if', 'display_name': 'Euclid Constructions I (Part F)', 'image_name': 'euclid'},
+                {'type': 'file', 'name': 'euclid_constructions_ig', 'display_name': 'Euclid Constructions I (Part G)', 'image_name': 'euclid'},
             ]},
         ]
     },
@@ -95,8 +95,8 @@ puzzle_list = [
             {'type': 'file', 'name': 'triangle_sums_(easy)', 'display_name': 'Triangle Sums (easy)'},
             {'type': 'file', 'name': 'triangle_sums_(difficult)', 'display_name': 'Triangle Sums (difficult)'},
             {'type': 'file', 'name': 'what_comes_next', 'display_name': 'What Comes Next?'},
-            {'type': 'file', 'name': 'pi_challenge', 'display_name': 'Pi Challenge'},
-            {'type': 'file', 'name': 'expert_pi_challenge', 'display_name': 'Expert Pi Challenge'},
+            {'type': 'file', 'name': 'pi_challenge', 'display_name': 'Pi Challenge', 'image_name': 'pi'},
+            {'type': 'file', 'name': 'expert_pi_challenge', 'display_name': 'Expert Pi Challenge', 'image_name': 'pi'},
         ]
     },
 

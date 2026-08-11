@@ -32,7 +32,15 @@
     {% elif item.type == 'file' %}
     <a href="{{ item.name }}/" class="card-link">
         <div class="card">
-            <img class="thumb" src="{{ item.picture_path }}" alt="{{ item.display_name }} preview">
+            {% if item.image_name %}
+                {% with 'puzzle/images/puzzle_summary_images/'|add:item.image_name|add:'.png' as full_path %}
+                    <img class="thumb" src="{% static full_path %}" alt="{{ item.display_name }} preview">
+                {% endwith %}
+            {% else %}
+                {% with 'puzzle/images/puzzle_summary_images/'|add:item.name|add:'.png' as full_path %}
+                    <img class="thumb" src="{% static full_path %}" alt="{{ item.display_name }} preview">
+                {% endwith %}
+            {% endif %}
             <div class="file-footer">
                 <div class="title">{{ item.display_name }}</div>
             </div>
