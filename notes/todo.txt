@@ -1,5 +1,7 @@
 Ray notation does not display correctly for geo construction activity
 
+Need to have point and line annotations on geo construction initial images
+
 Decrease waittime for globe locate, before drawing from the cache
 
 Do basic testing of the new geo constructions activity
