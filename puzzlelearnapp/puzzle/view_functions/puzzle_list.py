@@ -2,10 +2,10 @@ from .utils import get_geo_meta
 
 puzzle_list = [
 
-    {
-        'type': 'static_question_collection',
-        'name': ''
-    },
+    # {
+    #     'type': 'static_question_collection',
+    #     'name': ''
+    # },
 
     {
         'type': 'folder',
