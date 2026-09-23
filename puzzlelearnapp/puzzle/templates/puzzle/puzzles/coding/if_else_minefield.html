@@ -1,0 +1,1671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ puzzle_name }}</title>
+
+  <style>
+    :root {
+      --cell-size: clamp(42px, 7vw, 68px);
+      --panel: #ffffff;
+      --ink: #162033;
+      --muted: #60708a;
+      --border: #c8d1df;
+      --blue: #1769e0;
+      --green: #18794e;
+      --red: #c62828;
+      --line-height: 28px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, #edf6ff, transparent 35rem),
+        #f4f7fb;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+    }
+
+    button,
+    textarea {
+      font: inherit;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 24px 0 40px;
+    }
+
+    header {
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(1.7rem, 4vw, 2.5rem);
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .progress-shell {
+      margin-top: 18px;
+    }
+
+    .progress-labels {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .progress-track {
+      height: 16px;
+      overflow: hidden;
+      border: 1px solid #9eabc0;
+      border-radius: 999px;
+      background: #dce3ed;
+    }
+
+    .progress-fill {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #20a464, #58cf81);
+      transition: width 400ms ease;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(320px, auto) minmax(360px, 1fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .panel {
+      padding: 20px;
+      border: 1px solid #d9e0ea;
+      border-radius: 18px;
+      background: var(--panel);
+      box-shadow: 0 12px 30px rgb(26 47 79 / 8%);
+    }
+
+    .board-wrap {
+      position: relative;
+      display: grid;
+      justify-items: center;
+    }
+
+    #grid {
+      display: grid;
+      gap: 4px;
+      padding: 5px;
+      border: 3px solid #26354d;
+      border-radius: 10px;
+      background: #26354d;
+      user-select: none;
+    }
+
+    .cell {
+      position: relative;
+      width: var(--cell-size);
+      height: var(--cell-size);
+      display: grid;
+      place-items: center;
+      border: 1px solid rgb(0 0 0 / 24%);
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .cell.start::after {
+      content: "START";
+      position: absolute;
+      left: 3px;
+      bottom: 2px;
+      padding: 1px 3px;
+      border-radius: 3px;
+      color: white;
+      background: rgb(0 0 0 / 58%);
+      font-size: 0.48rem;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+    }
+
+    .bomb {
+      font-size: calc(var(--cell-size) * 0.48);
+      filter: drop-shadow(0 1px 1px rgb(255 255 255 / 65%));
+    }
+
+    .star {
+      color: #ffdc31;
+      font-size: calc(var(--cell-size) * 0.57);
+      line-height: 1;
+      text-shadow:
+        -1px -1px 0 #573d00,
+        1px -1px 0 #573d00,
+        -1px 1px 0 #573d00,
+        1px 1px 0 #573d00;
+    }
+
+    .token {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 3;
+        width: 52%;
+        height: 52%;
+        display: grid;
+        place-items: center;
+        font-size: calc(var(--cell-size) * 0.48);
+        font-weight: 900;
+    }
+
+    .token.exploding {
+      background: #e1261c;
+      animation: shake 360ms linear;
+    }
+
+    @keyframes shake {
+      0%, 100% { translate: 0; rotate: 0deg; }
+      20% { translate: -8px 2px; rotate: -10deg; }
+      40% { translate: 8px -2px; rotate: 10deg; }
+      60% { translate: -6px -1px; rotate: -7deg; }
+      80% { translate: 6px 1px; rotate: 7deg; }
+    }
+
+    .legend {
+      width: 100%;
+      margin-top: 16px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .legend strong {
+      color: var(--ink);
+    }
+
+    .legend-colors {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 9px;
+    }
+
+    .color-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      border: 1px solid #d1d8e3;
+      border-radius: 999px;
+      background: white;
+      font-size: 0.8rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .swatch {
+      width: 14px;
+      height: 14px;
+      border: 1px solid rgb(0 0 0 / 25%);
+      border-radius: 50%;
+    }
+
+    .loop-label {
+      margin-bottom: 0;
+      padding: 10px 14px;
+      border: 1px solid #b8c4d5;
+      border-bottom: 0;
+      border-radius: 9px 9px 0 0;
+      color: #eaf3ff;
+      background: #26354d;
+      font: 700 0.92rem/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas,
+        monospace;
+    }
+
+    .editor-shell {
+      position: relative;
+      min-height: 336px;
+      overflow: hidden;
+      border: 1px solid #b8c4d5;
+      border-radius: 0 0 9px 9px;
+      background: #fbfcfe;
+    }
+
+    #highlights,
+    #codeEditor {
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      padding: 14px;
+      border: 0;
+      font: 15px/var(--line-height) ui-monospace, SFMono-Regular, Menlo,
+        Consolas, monospace;
+      tab-size: 2;
+      white-space: pre;
+    }
+
+    #highlights {
+      z-index: 1;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    #codeEditor {
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      resize: none;
+      outline: none;
+      overflow: auto;
+      color: #172236;
+      caret-color: #172236;
+      background: transparent;
+    }
+
+    #codeEditor:disabled {
+      color: #172236;
+      -webkit-text-fill-color: #172236;
+      opacity: 1;
+    }
+
+    .highlight-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: var(--line-height);
+      border-left: 5px solid transparent;
+      background: transparent;
+    }
+
+    .highlight-line.current {
+      border-left-color: #216fdb;
+      background: rgb(73 144 237 / 22%);
+    }
+
+    .highlight-line.matched {
+      border-left-color: #13844f;
+      background: rgb(36 186 104 / 31%);
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .button {
+      min-width: 100px;
+      padding: 10px 16px;
+      border: 0;
+      border-radius: 8px;
+      color: white;
+      background: var(--blue);
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    .button:hover:not(:disabled) {
+      filter: brightness(0.93);
+    }
+
+    .button.secondary {
+      color: #23314a;
+      border: 1px solid #b9c3d2;
+      background: #edf1f6;
+    }
+
+    .button:disabled {
+      cursor: not-allowed;
+      opacity: 0.52;
+    }
+
+    #status {
+      min-height: 48px;
+      margin-top: 14px;
+      padding: 10px 12px;
+      border-left: 4px solid #6c7d96;
+      border-radius: 5px;
+      background: #eef2f7;
+      line-height: 1.45;
+    }
+
+    #status.error {
+      border-left-color: var(--red);
+      color: #8f1c1c;
+      background: #fff0f0;
+    }
+
+    #status.success {
+      border-left-color: var(--green);
+      color: #11643d;
+      background: #edfff5;
+    }
+
+    details {
+      margin-top: 16px;
+      color: var(--muted);
+    }
+
+    details code {
+      color: #23314a;
+    }
+
+    .overlay {
+      position: fixed;
+      z-index: 20;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      color: white;
+      background: rgb(8 25 46 / 72%);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 180ms ease;
+    }
+
+    .overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .overlay-card {
+      padding: 32px 42px;
+      border-radius: 20px;
+      color: #123824;
+      background: white;
+      box-shadow: 0 20px 70px rgb(0 0 0 / 35%);
+      text-align: center;
+    }
+
+    .overlay-card h2 {
+      margin: 0;
+      font-size: clamp(2rem, 7vw, 4rem);
+    }
+
+    .overlay-card p {
+      margin: 8px 0 0;
+      color: #456150;
+    }
+
+    @media (max-width: 820px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+
+      .board-wrap {
+        overflow-x: auto;
+      }
+
+      .panel {
+        padding: 15px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .token,
+      .progress-fill,
+      .overlay {
+        transition: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+    <header>
+      <!-- <h1>Color Logic Grid</h1>
+      <p class="subtitle">
+        Write one conditional chain that guides the token to the star.
+      </p> -->
+
+      <div
+        class="progress-shell"
+        role="progressbar"
+        aria-label="Activity progress"
+        aria-valuemin="0"
+        aria-valuemax="5"
+        aria-valuenow="0"
+      >
+        <div class="progress-labels">
+          <span>Progress</span>
+          <span id="progressText">0 / 5</span>
+        </div>
+        <div class="progress-track">
+          <div id="progressFill" class="progress-fill"></div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel" aria-labelledby="boardHeading">
+        <!-- <h2 id="boardHeading">Grid</h2> -->
+
+        <div class="board-wrap">
+          <div id="grid" aria-label="Game grid"></div>
+        </div>
+
+        <div class="legend" style="display: none;">
+          <strong>Available color strings</strong>
+          <div id="colorLegend" class="legend-colors"></div>
+          <p>
+            The bomb locations are visible for planning. Crossing a bomb ends
+            the current run and returns the token to START.
+          </p>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="codeHeading">
+        <!-- <h2 id="codeHeading">Your code</h2> -->
+
+        <div class="loop-label">
+          while (!success &amp;&amp; !exploded)
+        </div>
+
+        <div class="editor-shell">
+          <div id="highlights" aria-hidden="true"></div>
+          <textarea
+            id="codeEditor"
+            aria-label="Conditional JavaScript code"
+            spellcheck="false"
+            wrap="off"
+          >if (squareColor === "blue") {
+  moveRight(1);
+} else if (squareColorUp !== null) {
+  moveUp(4);
+} else {
+  moveLeft(2);
+}</textarea>
+        </div>
+
+        <div class="controls">
+          <button id="goButton" class="button" type="button">Go</button>
+          <button id="stopButton" class="button secondary" type="button" disabled>
+            Stop
+          </button>
+          <button id="newButton" class="button secondary" type="button">
+            New problem
+          </button>
+        </div>
+
+        <div id="status" role="status" aria-live="polite">
+          Edit the code, then select Go.
+        </div>
+
+        <details style="display: none;">
+          <summary>Rules and syntax</summary>
+          <ul>
+            <li>Use one <code>if</code>, optional <code>else if</code>s, and an optional <code>else</code>.</li>
+            <li>Each branch must contain exactly one move call.</li>
+            <li>Supported moves are <code>moveLeft</code>, <code>moveRight</code>, <code>moveUp</code>, and <code>moveDown</code>.</li>
+            <li>Distances must be positive whole numbers.</li>
+            <li>Conditions may use the five square-color variables, color strings, <code>null</code>, <code>&amp;&amp;</code>, <code>||</code>, <code>!</code>, and comparison operators.</li>
+            <li>The code is parsed without using <code>eval()</code>.</li>
+          </ul>
+        </details>
+      </section>
+    </main>
+  </div>
+
+  <div id="successOverlay" class="overlay" role="dialog" aria-modal="true">
+    <div class="overlay-card">
+      <h2>Great Job!</h2>
+      <p id="successMessage">Loading the next problem…</p>
+    </div>
+  </div>
+
+  <script>
+    "use strict";
+
+    /* =========================================================
+       ACTIVITY CONSTANTS
+       Change these values to configure the activity.
+       ========================================================= */
+    const ROWS = 6;        // m
+    const COLS = 7;        // n
+    const BOMB_COUNT = 10;  // b
+    const COLOR_COUNT = 4; // c
+
+    const REQUIRED_SUCCESSES = 5;
+    const STEP_DELAY_MS = 1000;
+    const MOVE_DELAY_MS = 270;
+    const NEW_PROBLEM_DELAY_MS = 1200;
+    const MAX_LOOP_ITERATIONS = 250;
+
+    const COLOR_PALETTE = [
+      { name: "red",    value: "#ef6b67" },
+      { name: "blue",   value: "#62a9ed" },
+      { name: "green",  value: "#70c88a" },
+      { name: "yellow", value: "#f2d25f" },
+      { name: "purple", value: "#a987df" },
+      { name: "orange", value: "#f4a65d" },
+      { name: "pink",   value: "#ec8db8" },
+      { name: "teal",   value: "#54c3bd" }
+    ];
+
+    if (COLOR_COUNT < 1 || COLOR_COUNT > COLOR_PALETTE.length) {
+      throw new Error(
+        `COLOR_COUNT must be between 1 and ${COLOR_PALETTE.length}.`
+      );
+    }
+
+    if (ROWS < 2 || COLS < 2) {
+      throw new Error("ROWS and COLS must each be at least 2.");
+    }
+
+    if (BOMB_COUNT < 0 || BOMB_COUNT > ROWS * COLS - 2) {
+      throw new Error(
+        "BOMB_COUNT must leave room for both the start and target squares."
+      );
+    }
+
+    const activeColors = COLOR_PALETTE.slice(0, COLOR_COUNT);
+    const colorNames = new Set(activeColors.map(color => color.name));
+
+    const gridElement = document.querySelector("#grid");
+    const editor = document.querySelector("#codeEditor");
+    const highlights = document.querySelector("#highlights");
+    const goButton = document.querySelector("#goButton");
+    const stopButton = document.querySelector("#stopButton");
+    const newButton = document.querySelector("#newButton");
+    const statusElement = document.querySelector("#status");
+    const progressFill = document.querySelector("#progressFill");
+    const progressText = document.querySelector("#progressText");
+    const progressShell = document.querySelector(".progress-shell");
+    const colorLegend = document.querySelector("#colorLegend");
+    const successOverlay = document.querySelector("#successOverlay");
+    const successMessage = document.querySelector("#successMessage");
+
+    const startPosition = { row: ROWS - 1, col: 0 };
+    const targetPosition = { row: 0, col: COLS - 1 };
+
+    let board = [];
+    let bombs = new Set();
+    let token = { ...startPosition };
+    let cellElements = [];
+    let running = false;
+    let cancelled = false;
+    let success = false;
+    let exploded = false;
+    let successes = 0;
+    let executionLine = null;
+    let matchedLines = new Set();
+
+    function positionKey(row, col) {
+      return `${row},${col}`;
+    }
+
+    function randomItem(items) {
+      return items[Math.floor(Math.random() * items.length)];
+    }
+
+    function hasSafePath(candidateBombs) {
+    const queue = [{ ...startPosition }];
+    const visited = new Set([
+        positionKey(startPosition.row, startPosition.col)
+    ]);
+
+    const directions = [
+        { row: -1, col: 0 },
+        { row: 1, col: 0 },
+        { row: 0, col: -1 },
+        { row: 0, col: 1 }
+    ];
+
+    while (queue.length > 0) {
+        const current = queue.shift();
+
+        if (
+        current.row === targetPosition.row &&
+        current.col === targetPosition.col
+        ) {
+        return true;
+        }
+
+        for (const direction of directions) {
+        const nextRow = current.row + direction.row;
+        const nextCol = current.col + direction.col;
+        const key = positionKey(nextRow, nextCol);
+
+        if (
+            nextRow >= 0 &&
+            nextRow < ROWS &&
+            nextCol >= 0 &&
+            nextCol < COLS &&
+            !candidateBombs.has(key) &&
+            !visited.has(key)
+        ) {
+            visited.add(key);
+            queue.push({ row: nextRow, col: nextCol });
+        }
+        }
+    }
+
+    return false;
+    }
+
+    function generateReachableBombLayout() {
+    const availableSquares = [];
+
+    for (let row = 0; row < ROWS; row++) {
+        for (let col = 0; col < COLS; col++) {
+        const isStart =
+            row === startPosition.row && col === startPosition.col;
+        const isTarget =
+            row === targetPosition.row && col === targetPosition.col;
+
+        if (!isStart && !isTarget) {
+            availableSquares.push(positionKey(row, col));
+        }
+        }
+    }
+
+    /*
+    * Repeatedly try random layouts until one has a safe path.
+    * The attempt limit prevents an infinite loop when the chosen
+    * configuration makes a random valid layout difficult to find.
+    */
+    const MAX_LAYOUT_ATTEMPTS = 5000;
+
+    for (let attempt = 0; attempt < MAX_LAYOUT_ATTEMPTS; attempt++) {
+        shuffle(availableSquares);
+
+        const candidateBombs = new Set(
+        availableSquares.slice(0, BOMB_COUNT)
+        );
+
+        if (hasSafePath(candidateBombs)) {
+        return candidateBombs;
+        }
+    }
+
+    /*
+    * Guaranteed fallback: reserve one simple path going upward
+    * from START and then right to the target.
+    */
+    const reservedPath = new Set();
+
+    for (let row = startPosition.row; row >= targetPosition.row; row--) {
+        reservedPath.add(positionKey(row, startPosition.col));
+    }
+
+    for (let col = startPosition.col; col <= targetPosition.col; col++) {
+        reservedPath.add(positionKey(targetPosition.row, col));
+    }
+
+    const fallbackCandidates = availableSquares.filter(
+        key => !reservedPath.has(key)
+    );
+
+    if (BOMB_COUNT > fallbackCandidates.length) {
+        throw new Error(
+        "BOMB_COUNT is too high to guarantee a bomb-free path. " +
+        `Use no more than ${fallbackCandidates.length} bombs with this grid.`
+        );
+    }
+
+    shuffle(fallbackCandidates);
+    return new Set(fallbackCandidates.slice(0, BOMB_COUNT));
+    }
+
+    function createBoard() {
+    board = Array.from({ length: ROWS }, () =>
+        Array.from(
+        { length: COLS },
+        () => randomItem(activeColors).name
+        )
+    );
+
+    // Bombs are placed only if a safe orthogonal path remains.
+    bombs = generateReachableBombLayout();
+
+    token = { ...startPosition };
+    success = false;
+    exploded = false;
+    renderBoard();
+    setStatus("New problem ready. Edit the code, then select Go.");
+    }
+
+    function shuffle(items) {
+      for (let index = items.length - 1; index > 0; index--) {
+        const swapIndex = Math.floor(Math.random() * (index + 1));
+        [items[index], items[swapIndex]] =
+          [items[swapIndex], items[index]];
+      }
+      return items;
+    }
+
+    function renderLegend() {
+      colorLegend.replaceChildren();
+
+      for (const color of activeColors) {
+        const chip = document.createElement("span");
+        chip.className = "color-chip";
+
+        const swatch = document.createElement("span");
+        swatch.className = "swatch";
+        swatch.style.backgroundColor = color.value;
+
+        const text = document.createElement("span");
+        text.textContent = `"${color.name}"`;
+
+        chip.append(swatch, text);
+        colorLegend.append(chip);
+      }
+    }
+
+    function renderBoard() {
+      gridElement.replaceChildren();
+      gridElement.style.gridTemplateColumns = `repeat(${COLS}, var(--cell-size))`;
+      cellElements = [];
+
+      for (let row = 0; row < ROWS; row++) {
+        cellElements[row] = [];
+
+        for (let col = 0; col < COLS; col++) {
+          const cell = document.createElement("div");
+          const color = activeColors.find(
+            candidate => candidate.name === board[row][col]
+          );
+
+          cell.className = "cell";
+          cell.style.backgroundColor = color.value;
+          cell.dataset.row = row;
+          cell.dataset.col = col;
+          cell.setAttribute(
+            "aria-label",
+            `Row ${row + 1}, column ${col + 1}, ${color.name}`
+          );
+
+          if (
+            row === startPosition.row &&
+            col === startPosition.col
+          ) {
+            cell.classList.add("start");
+          }
+
+          if (
+            row === targetPosition.row &&
+            col === targetPosition.col
+          ) {
+            const star = document.createElement("span");
+            star.className = "star";
+            star.textContent = "★";
+            star.setAttribute("aria-label", "Target");
+            cell.append(star);
+          }
+
+          if (bombs.has(positionKey(row, col))) {
+            const bomb = document.createElement("span");
+            bomb.className = "bomb";
+            bomb.textContent = "💣";
+            bomb.setAttribute("aria-label", "Bomb");
+            cell.append(bomb);
+          }
+
+          gridElement.append(cell);
+          cellElements[row][col] = cell;
+        }
+      }
+
+      const tokenElement = document.createElement("div");
+      tokenElement.id = "token";
+      tokenElement.className = "token";
+      tokenElement.textContent = "😊";
+      tokenElement.setAttribute("aria-label", "Player token");
+      cellElements[token.row][token.col].append(tokenElement);
+    }
+
+    function updateTokenElement() {
+      const tokenElement = document.querySelector("#token");
+      if (!tokenElement) return;
+
+      cellElements[token.row][token.col].append(tokenElement);
+    }
+
+    function squareColorAt(row, col) {
+      if (row < 0 || row >= ROWS || col < 0 || col >= COLS) {
+        return null;
+      }
+      return board[row][col];
+    }
+
+    function getColorContext() {
+      return {
+        squareColor: squareColorAt(token.row, token.col),
+        squareColorLeft: squareColorAt(token.row, token.col - 1),
+        squareColorRight: squareColorAt(token.row, token.col + 1),
+        squareColorUp: squareColorAt(token.row - 1, token.col),
+        squareColorDown: squareColorAt(token.row + 1, token.col)
+      };
+    }
+
+    function setStatus(message, type = "") {
+      statusElement.textContent = message;
+      statusElement.className = type;
+    }
+
+    function updateProgress() {
+      const percentage = (successes / REQUIRED_SUCCESSES) * 100;
+      progressFill.style.width = `${percentage}%`;
+      progressText.textContent = `${successes} / ${REQUIRED_SUCCESSES}`;
+      progressShell.setAttribute("aria-valuenow", String(successes));
+    }
+
+    function setRunningState(value) {
+      running = value;
+      editor.disabled = value;
+      goButton.disabled = value;
+      stopButton.disabled = !value;
+      newButton.disabled = value;
+    }
+
+    function clearHighlights() {
+      executionLine = null;
+      matchedLines.clear();
+      renderHighlights();
+    }
+
+    function renderHighlights() {
+      highlights.replaceChildren();
+      const lineCount = editor.value.split("\n").length;
+
+      for (let line = 1; line <= lineCount; line++) {
+        if (line !== executionLine && !matchedLines.has(line)) {
+          continue;
+        }
+
+        const mark = document.createElement("div");
+        mark.className = "highlight-line";
+
+        if (matchedLines.has(line)) {
+          mark.classList.add("matched");
+        } else if (line === executionLine) {
+          mark.classList.add("current");
+        }
+
+        mark.style.top =
+          `${14 + (line - 1) * 28 - editor.scrollTop}px`;
+
+        highlights.append(mark);
+      }
+    }
+
+    editor.addEventListener("scroll", renderHighlights);
+    editor.addEventListener("input", clearHighlights);
+
+    editor.addEventListener("keydown", event => {
+      if (event.key !== "Tab") return;
+
+      event.preventDefault();
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      editor.setRangeText("  ", start, end, "end");
+    });
+
+    function sleep(milliseconds) {
+      return new Promise(resolve => setTimeout(resolve, milliseconds));
+    }
+
+    async function highlightLine(line, milliseconds = STEP_DELAY_MS) {
+      executionLine = line;
+      matchedLines.clear();
+      renderHighlights();
+      revealEditorLine(line);
+      await sleep(milliseconds);
+    }
+
+    function revealEditorLine(line) {
+      const lineTop = (line - 1) * 28;
+      const lineBottom = lineTop + 28;
+
+      if (lineTop < editor.scrollTop) {
+        editor.scrollTop = lineTop;
+      } else if (lineBottom > editor.scrollTop + editor.clientHeight - 28) {
+        editor.scrollTop = lineBottom - editor.clientHeight + 28;
+      }
+    }
+
+    async function highlightMatchedBranch(branch) {
+      executionLine = branch.conditionLine ?? branch.headerLine;
+      matchedLines = new Set([
+        branch.headerLine,
+        branch.moveLine,
+        branch.closeLine
+      ]);
+      renderHighlights();
+      revealEditorLine(branch.headerLine);
+      await sleep(STEP_DELAY_MS);
+    }
+
+    /* =========================================================
+       RESTRICTED PROGRAM PARSER
+       ========================================================= */
+
+    const VARIABLE_NAMES = new Set([
+      "squareColor",
+      "squareColorLeft",
+      "squareColorRight",
+      "squareColorUp",
+      "squareColorDown"
+    ]);
+
+    const MOVE_NAMES = new Set([
+      "moveLeft",
+      "moveRight",
+      "moveUp",
+      "moveDown"
+    ]);
+
+    function stripCommentsPreservingLines(source) {
+      let result = "";
+      let inString = false;
+      let quote = "";
+      let inLineComment = false;
+      let inBlockComment = false;
+
+      for (let index = 0; index < source.length; index++) {
+        const character = source[index];
+        const next = source[index + 1];
+
+        if (inLineComment) {
+          if (character === "\n") {
+            inLineComment = false;
+            result += "\n";
+          } else {
+            result += " ";
+          }
+          continue;
+        }
+
+        if (inBlockComment) {
+          if (character === "*" && next === "/") {
+            result += "  ";
+            index++;
+            inBlockComment = false;
+          } else if (character === "\n") {
+            result += "\n";
+          } else {
+            result += " ";
+          }
+          continue;
+        }
+
+        if (inString) {
+          result += character;
+
+          if (character === "\\") {
+            if (index + 1 < source.length) {
+              result += source[index + 1];
+              index++;
+            }
+          } else if (character === quote) {
+            inString = false;
+          }
+          continue;
+        }
+
+        if (character === '"' || character === "'") {
+          inString = true;
+          quote = character;
+          result += character;
+          continue;
+        }
+
+        if (character === "/" && next === "/") {
+          result += "  ";
+          index++;
+          inLineComment = true;
+          continue;
+        }
+
+        if (character === "/" && next === "*") {
+          result += "  ";
+          index++;
+          inBlockComment = true;
+          continue;
+        }
+
+        result += character;
+      }
+
+      if (inString) {
+        throw new SyntaxError("A quoted string is not closed.");
+      }
+
+      if (inBlockComment) {
+        throw new SyntaxError("A block comment is not closed.");
+      }
+
+      return result;
+    }
+
+    function normalizeProgramLines(source) {
+      const stripped = stripCommentsPreservingLines(source);
+      const originalLines = stripped.split("\n");
+      const normalized = [];
+
+      for (let index = 0; index < originalLines.length; index++) {
+        const original = originalLines[index];
+        const expanded = original
+          .replace(/}\s*else\s+if/g, "}\nelse if")
+          .replace(/}\s*else/g, "}\nelse");
+
+        const pieces = expanded.split("\n");
+
+        for (const piece of pieces) {
+          normalized.push({
+            text: piece.trim(),
+            lineNumber: index + 1
+          });
+        }
+      }
+
+      return normalized.filter(line => line.text !== "");
+    }
+
+    function parseProgram(source) {
+      const lines = normalizeProgramLines(source);
+
+      if (lines.length === 0) {
+        throw new SyntaxError("Enter an if statement before selecting Go.");
+      }
+
+      const branches = [];
+      let index = 0;
+      let foundElse = false;
+
+      while (index < lines.length) {
+        const line = lines[index];
+        let type;
+        let conditionText = null;
+
+        if (branches.length === 0) {
+          const match = line.text.match(/^if\s*\((.*)\)\s*\{$/);
+          if (!match) {
+            throw new SyntaxError(
+              `Line ${line.lineNumber}: the program must begin with if (condition) {.`
+            );
+          }
+          type = "if";
+          conditionText = match[1];
+        } else {
+          const elseIfMatch = line.text.match(
+            /^else\s+if\s*\((.*)\)\s*\{$/
+          );
+          const elseMatch = line.text.match(/^else\s*\{$/);
+
+          if (elseIfMatch && !foundElse) {
+            type = "else-if";
+            conditionText = elseIfMatch[1];
+          } else if (elseMatch && !foundElse) {
+            type = "else";
+            foundElse = true;
+          } else {
+            throw new SyntaxError(
+              `Line ${line.lineNumber}: expected else if (...) { or else {.`
+            );
+          }
+        }
+
+        index++;
+
+        const body = [];
+
+        while (index < lines.length && lines[index].text !== "}") {
+          body.push(lines[index]);
+          index++;
+        }
+
+        if (index >= lines.length) {
+          throw new SyntaxError(
+            `Line ${line.lineNumber}: this branch is missing a closing }.`
+          );
+        }
+
+        const closeLine = lines[index];
+
+        if (body.length !== 1) {
+          throw new SyntaxError(
+            `Line ${line.lineNumber}: each branch must contain exactly one move call.`
+          );
+        }
+
+        const moveMatch = body[0].text.match(
+          /^(moveLeft|moveRight|moveUp|moveDown)\s*\((\d+)\)\s*;\s*$/
+        );
+
+        if (!moveMatch || !MOVE_NAMES.has(moveMatch[1])) {
+          throw new SyntaxError(
+            `Line ${body[0].lineNumber}: use one permitted move such as moveRight(2);`
+          );
+        }
+
+        const distance = Number(moveMatch[2]);
+
+        if (!Number.isSafeInteger(distance) || distance < 1) {
+          throw new SyntaxError(
+            `Line ${body[0].lineNumber}: distance must be a positive whole number.`
+          );
+        }
+
+        let condition = null;
+
+        if (conditionText !== null) {
+          condition = parseCondition(conditionText, line.lineNumber);
+        }
+
+        branches.push({
+          type,
+          condition,
+          headerLine: line.lineNumber,
+          conditionLine: conditionText === null ? null : line.lineNumber,
+          move: moveMatch[1],
+          distance,
+          moveLine: body[0].lineNumber,
+          closeLine: closeLine.lineNumber
+        });
+
+        index++;
+      }
+
+      if (branches.length === 0) {
+        throw new SyntaxError("The program needs an if branch.");
+      }
+
+      return branches;
+    }
+
+    function tokenizeCondition(text, lineNumber) {
+      const tokens = [];
+      let index = 0;
+
+      while (index < text.length) {
+        const rest = text.slice(index);
+        const whitespace = rest.match(/^\s+/);
+
+        if (whitespace) {
+          index += whitespace[0].length;
+          continue;
+        }
+
+        const stringMatch = rest.match(/^("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/);
+
+        if (stringMatch) {
+          let value;
+          try {
+            value = JSON.parse(
+              stringMatch[1][0] === "'"
+                ? `"${stringMatch[1]
+                    .slice(1, -1)
+                    .replace(/\\/g, "\\\\")
+                    .replace(/"/g, '\\"')
+                    .replace(/\\'/g, "'")}"`
+                : stringMatch[1]
+            );
+          } catch {
+            throw new SyntaxError(
+              `Line ${lineNumber}: invalid quoted color string.`
+            );
+          }
+
+          tokens.push({ type: "literal", value });
+          index += stringMatch[1].length;
+          continue;
+        }
+
+        const operatorMatch = rest.match(/^(===|!==|==|!=|&&|\|\||!|\(|\))/);
+
+        if (operatorMatch) {
+          const operator = operatorMatch[1];
+          const type =
+            operator === "(" || operator === ")" ? operator : "operator";
+          tokens.push({ type, value: operator });
+          index += operator.length;
+          continue;
+        }
+
+        const identifierMatch = rest.match(/^[A-Za-z_$][A-Za-z0-9_$]*/);
+
+        if (identifierMatch) {
+          const identifier = identifierMatch[0];
+
+          if (identifier === "null") {
+            tokens.push({ type: "literal", value: null });
+          } else if (identifier === "true") {
+            tokens.push({ type: "literal", value: true });
+          } else if (identifier === "false") {
+            tokens.push({ type: "literal", value: false });
+          } else if (VARIABLE_NAMES.has(identifier)) {
+            tokens.push({ type: "variable", value: identifier });
+          } else {
+            throw new SyntaxError(
+              `Line ${lineNumber}: "${identifier}" is not an allowed variable.`
+            );
+          }
+
+          index += identifier.length;
+          continue;
+        }
+
+        throw new SyntaxError(
+          `Line ${lineNumber}: unsupported condition syntax near "${rest.slice(0, 12)}".`
+        );
+      }
+
+      tokens.push({ type: "eof", value: "" });
+      return tokens;
+    }
+
+    function parseCondition(text, lineNumber) {
+      const tokens = tokenizeCondition(text, lineNumber);
+      let index = 0;
+
+      function peek() {
+        return tokens[index];
+      }
+
+      function consume(type, value) {
+        const token = peek();
+
+        if (
+          token.type !== type ||
+          (value !== undefined && token.value !== value)
+        ) {
+          throw new SyntaxError(
+            `Line ${lineNumber}: unexpected token "${token.value || "end of condition"}".`
+          );
+        }
+
+        index++;
+        return token;
+      }
+
+      function parsePrimary() {
+        const token = peek();
+
+        if (token.type === "variable") {
+          index++;
+          return { kind: "variable", name: token.value };
+        }
+
+        if (token.type === "literal") {
+          index++;
+
+          if (
+            typeof token.value === "string" &&
+            !colorNames.has(token.value)
+          ) {
+            throw new SyntaxError(
+              `Line ${lineNumber}: "${token.value}" is not one of this activity's colors.`
+            );
+          }
+
+          return { kind: "literal", value: token.value };
+        }
+
+        if (token.type === "(") {
+          consume("(");
+          const expression = parseOr();
+          consume(")");
+          return expression;
+        }
+
+        throw new SyntaxError(
+          `Line ${lineNumber}: expected a variable, color string, null, or parenthesized condition.`
+        );
+      }
+
+      function parseUnary() {
+        if (peek().type === "operator" && peek().value === "!") {
+          consume("operator", "!");
+          return {
+            kind: "unary",
+            operator: "!",
+            value: parseUnary()
+          };
+        }
+
+        return parsePrimary();
+      }
+
+      function parseEquality() {
+        let left = parseUnary();
+
+        while (
+          peek().type === "operator" &&
+          ["===", "!==", "==", "!="].includes(peek().value)
+        ) {
+          const operator = peek().value;
+          index++;
+          const right = parseUnary();
+
+          left = {
+            kind: "binary",
+            operator,
+            left,
+            right
+          };
+        }
+
+        return left;
+      }
+
+      function parseAnd() {
+        let left = parseEquality();
+
+        while (
+          peek().type === "operator" &&
+          peek().value === "&&"
+        ) {
+          index++;
+          left = {
+            kind: "binary",
+            operator: "&&",
+            left,
+            right: parseEquality()
+          };
+        }
+
+        return left;
+      }
+
+      function parseOr() {
+        let left = parseAnd();
+
+        while (
+          peek().type === "operator" &&
+          peek().value === "||"
+        ) {
+          index++;
+          left = {
+            kind: "binary",
+            operator: "||",
+            left,
+            right: parseAnd()
+          };
+        }
+
+        return left;
+      }
+
+      const expression = parseOr();
+
+      if (peek().type !== "eof") {
+        throw new SyntaxError(
+          `Line ${lineNumber}: unexpected token "${peek().value}".`
+        );
+      }
+
+      return expression;
+    }
+
+    function evaluateCondition(node, context) {
+      switch (node.kind) {
+        case "literal":
+          return node.value;
+
+        case "variable":
+          return context[node.name];
+
+        case "unary":
+          return !Boolean(evaluateCondition(node.value, context));
+
+        case "binary": {
+          if (node.operator === "&&") {
+            return Boolean(evaluateCondition(node.left, context)) &&
+              Boolean(evaluateCondition(node.right, context));
+          }
+
+          if (node.operator === "||") {
+            return Boolean(evaluateCondition(node.left, context)) ||
+              Boolean(evaluateCondition(node.right, context));
+          }
+
+          const left = evaluateCondition(node.left, context);
+          const right = evaluateCondition(node.right, context);
+
+          switch (node.operator) {
+            case "===":
+              return left === right;
+            case "!==":
+              return left !== right;
+            case "==":
+              return left == right;
+            case "!=":
+              return left != right;
+            default:
+              throw new Error("Unknown comparison operator.");
+          }
+        }
+
+        default:
+          throw new Error("Unknown condition node.");
+      }
+    }
+
+    /* =========================================================
+       EXECUTION
+       ========================================================= */
+
+    async function executeProgram(program) {
+      setRunningState(true);
+      cancelled = false;
+      success = false;
+      exploded = false;
+      setStatus("Running…");
+
+      let iterations = 0;
+
+      try {
+        while (!success && !exploded && !cancelled) {
+          iterations++;
+
+          if (iterations > MAX_LOOP_ITERATIONS) {
+            throw new Error(
+              `Stopped after ${MAX_LOOP_ITERATIONS} loops. The program may not reach the star.`
+            );
+          }
+
+          const context = getColorContext();
+          let chosenBranch = null;
+
+          for (const branch of program) {
+            await highlightLine(branch.headerLine);
+
+            if (cancelled) break;
+
+            const matches =
+              branch.type === "else" ||
+              Boolean(evaluateCondition(branch.condition, context));
+
+            if (matches) {
+              chosenBranch = branch;
+              await highlightMatchedBranch(branch);
+              break;
+            }
+          }
+
+          if (cancelled) break;
+
+          if (!chosenBranch) {
+            setStatus(
+              "No condition was true, and there is no else branch. The run stopped."
+            );
+            break;
+          }
+
+          await highlightLine(chosenBranch.moveLine, 320);
+          await performMove(chosenBranch.move, chosenBranch.distance);
+
+          if (!success && !exploded && !cancelled) {
+            await sleep(180);
+          }
+        }
+
+        if (cancelled) {
+          setStatus("Run stopped. You can edit the code.");
+        } else if (exploded) {
+          await handleExplosion();
+        } else if (success) {
+          await handleSuccess();
+        }
+      } catch (error) {
+        setStatus(error.message, "error");
+      } finally {
+        clearHighlights();
+        setRunningState(false);
+      }
+    }
+
+    async function performMove(moveName, distance) {
+      const directions = {
+        moveLeft: { row: 0, col: -1 },
+        moveRight: { row: 0, col: 1 },
+        moveUp: { row: -1, col: 0 },
+        moveDown: { row: 1, col: 0 }
+      };
+
+      const direction = directions[moveName];
+
+      for (let step = 0; step < distance; step++) {
+        if (cancelled) return;
+
+        const nextRow = token.row + direction.row;
+        const nextCol = token.col + direction.col;
+
+        if (
+          nextRow < 0 ||
+          nextRow >= ROWS ||
+          nextCol < 0 ||
+          nextCol >= COLS
+        ) {
+          setStatus("The token reached an edge and stopped that move early.");
+          break;
+        }
+
+        token.row = nextRow;
+        token.col = nextCol;
+        updateTokenElement();
+        await sleep(MOVE_DELAY_MS);
+
+        if (bombs.has(positionKey(token.row, token.col))) {
+          exploded = true;
+          return;
+        }
+
+        if (
+          token.row === targetPosition.row &&
+          token.col === targetPosition.col
+        ) {
+          success = true;
+          return;
+        }
+      }
+    }
+
+    async function handleExplosion() {
+      const tokenElement = document.querySelector("#token");
+      tokenElement?.classList.add("exploding");
+      setStatus("Boom! The token hit a bomb.", "error");
+      await sleep(650);
+
+      token = { ...startPosition };
+      updateTokenElement();
+      tokenElement?.classList.remove("exploding");
+      exploded = false;
+
+      setStatus(
+        "The token returned to START. Edit the code and try again.",
+        "error"
+      );
+    }
+
+    async function handleSuccess() {
+      successes++;
+      updateProgress();
+
+      successMessage.textContent =
+        successes >= REQUIRED_SUCCESSES
+          ? "Activity complete!"
+          : "Loading the next problem…";
+
+      successOverlay.classList.add("show");
+      setStatus("Great Job!", "success");
+
+      await sleep(NEW_PROBLEM_DELAY_MS);
+
+      if (successes >= REQUIRED_SUCCESSES) {
+        activityComplete();
+        return;
+      }
+
+      successOverlay.classList.remove("show");
+      createBoard();
+    }
+
+    /*
+      Replace or extend this function if the hosting platform needs to
+      record completion elsewhere.
+    */
+    // function activityComplete() {
+    //   setStatus("Activity complete! You solved all five problems.", "success");
+    //   successMessage.textContent = "You completed all five problems!";
+    //   successOverlay.classList.add("show");
+
+    //   window.dispatchEvent(
+    //     new CustomEvent("activityComplete", {
+    //       detail: { successes }
+    //     })
+    //   );
+
+    //   console.log("activityComplete() called");
+    // }
+
+    goButton.addEventListener("click", () => {
+      if (running) return;
+
+      clearHighlights();
+
+      try {
+        const program = parseProgram(editor.value);
+        executeProgram(program);
+      } catch (error) {
+        setStatus(error.message, "error");
+      }
+    });
+
+    stopButton.addEventListener("click", () => {
+      cancelled = true;
+      stopButton.disabled = true;
+    });
+
+    newButton.addEventListener("click", () => {
+      if (running) return;
+      clearHighlights();
+      createBoard();
+    });
+
+    renderLegend();
+    updateProgress();
+    createBoard();
+    renderHighlights();
+  </script>
+<script src="/static/puzzle/js/activity.js"></script>
+</body>
+</html>

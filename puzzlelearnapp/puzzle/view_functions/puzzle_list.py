@@ -106,6 +106,7 @@ puzzle_list = [
         'display_name': 'Coding',
         'puzzle_list': [
             {'type': 'file', 'name': 'if_else_branching', 'display_name': 'If Else Branching'},
+            {'type': 'file', 'name': 'if_else_minefield', 'display_name': 'If Else Minefield'},
             {'type': 'file', 'name': 'nba_queries', 'display_name': 'NBA Queries'},
             {'type': 'file', 'name': 'n-gram_language_models', 'display_name': 'n-Gram Language Models'},
         ]

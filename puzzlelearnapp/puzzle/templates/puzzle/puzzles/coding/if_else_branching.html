@@ -84,6 +84,29 @@
       min-height: 260px;
     }
 
+    .language-toggle {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .language-button {
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      background: #dbe3ef;
+      color: #1f2937;
+    }
+
+    .language-button:hover {
+      background: #cbd5e1;
+    }
+
+    .language-button.active {
+      background: #00274c;
+      color: white;
+    }
+
     code {
       font-family: Consolas, Monaco, "Courier New", monospace;
     }
@@ -182,7 +205,7 @@
     <!-- <h1>Python Branching Prediction</h1> -->
 
     <p class="instructions">
-      Read the randomly generated Python code. Follow the logic of the
+      Read the randomly generated code. Follow the logic of the
       <code>if</code>, <code>elif</code>, and <code>else</code> statements.
       Then type the animal name that the program would print.
     </p>
@@ -190,6 +213,11 @@
     <div class="progress-wrapper" aria-label="Activity progress">
       <div id="progressBar" class="progress-bar"></div>
       <div id="progressText" class="progress-text">0 / 5</div>
+    </div>
+
+    <div class="language-toggle" role="group" aria-label="Code language">
+      <button type="button" class="language-button active" data-language="python" aria-pressed="true">Python</button>
+      <button type="button" class="language-button" data-language="javascript" aria-pressed="false">JavaScript</button>
     </div>
 
     <pre><code id="codeDisplay"></code></pre>
@@ -234,6 +262,8 @@
     let currentAnswer = "";
     let correctCount = 0;
     let usedAnimalsForQuestion = [];
+    let currentLanguage = "python";
+    let currentTree = null;
 
     const codeDisplay = document.getElementById("codeDisplay");
     const answerInput = document.getElementById("answerInput");
@@ -243,6 +273,7 @@
     const progressBar = document.getElementById("progressBar");
     const progressText = document.getElementById("progressText");
     const completedMessage = document.getElementById("completedMessage");
+    const languageButtons = document.querySelectorAll(".language-button");
 
     function randomInt(min, max) {
       return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -320,23 +351,33 @@
       };
     }
 
-    function renderNode(node, indentLevel = 0) {
+    function renderNode(node, indentLevel = 0, language = currentLanguage) {
       const indent = "    ".repeat(indentLevel);
 
       if (node.type === "print") {
-        return `${indent}print("${node.animal}")\n`;
+        return language === "python"
+          ? `${indent}print("${node.animal}")\n`
+          : `${indent}console.log("${node.animal}");\n`;
       }
 
       let code = "";
 
       node.branches.forEach(branch => {
-        if (branch.keyword === "else") {
-          code += `${indent}else:\n`;
-        } else {
-          code += `${indent}${branch.keyword} ${branch.condition.text}:\n`;
-        }
+        if (language === "python") {
+          if (branch.keyword === "else") {
+            code += `${indent}else:\n`;
+          } else {
+            code += `${indent}${branch.keyword} ${branch.condition.text}:\n`;
+          }
 
-        code += renderNode(branch.child, indentLevel + 1);
+          code += renderNode(branch.child, indentLevel + 1, language);
+        } else {
+          const keyword = branch.keyword === "elif" ? "else if" : branch.keyword;
+          const condition = branch.condition ? ` (${branch.condition.text})` : "";
+          code += `${indent}${keyword}${condition} {\n`;
+          code += renderNode(branch.child, indentLevel + 1, language);
+          code += `${indent}}\n`;
+        }
       });
 
       return code;
@@ -361,15 +402,26 @@
     function generateQuestion() {
       usedAnimalsForQuestion = [];
 
-      const tree = makeDecisionNode(1);
-      const code = renderNode(tree).trimEnd();
+      currentTree = makeDecisionNode(1);
+      const code = renderNode(currentTree).trimEnd();
 
-      currentAnswer = evaluateNode(tree);
+      currentAnswer = evaluateNode(currentTree);
 
       codeDisplay.textContent = code;
       answerInput.value = "";
       // answerInput.focus();
       message.textContent = "";
+    }
+
+    function setLanguage(language) {
+      currentLanguage = language;
+      languageButtons.forEach(button => {
+        const isActive = button.dataset.language === language;
+        button.classList.toggle("active", isActive);
+        button.setAttribute("aria-pressed", String(isActive));
+      });
+
+      codeDisplay.textContent = renderNode(currentTree).trimEnd();
     }
 
     function normalizeAnswer(text) {
@@ -441,6 +493,12 @@
       if (event.key === "Enter") {
         checkAnswer();
       }
+    });
+
+    languageButtons.forEach(button => {
+      button.addEventListener("click", () => {
+        setLanguage(button.dataset.language);
+      });
     });
 
     updateProgress();
