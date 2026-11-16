@@ -21,3 +21,6 @@ Use Google lighthouse
 
 Have a user login
 Users would see what activities they have completed and what their high score / lowest time was
+
+Move the puzzle page of openmath over to this website, host images and puzzle text db content in a different way
+Consider deleting AWS account if everything migrated out
